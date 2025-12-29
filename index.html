@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link
+    href ="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap"
+    rel ="stylesheet"
+    />
+    <style>
+        :root {
+            --bg-1: #0b1020;
+            --bg-2: #0a0f1a;
+            --card: rgba(255, 255, 255, 0.10);
+            --card-border: rgba(255, 255, 255, 0.18);
+            --text: rgba(255, 255, 255, 0.92);
+            --muted: rgba(255, 255, 255, 0.72);
+            --input: rgba(255, 255, 255, 0.12);
+            --input-border: rgba(255, 255, 255, 0.18);
+            --primary-1: #7c3aed;
+            --primary-2: #06b6d4;
+            --focus: rgba(6, 182, 212, 0.28);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Poppins", sans-serif;
+            width: 100vw;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(900px circle at 15% 20%, rgba(124, 58, 237, 0.30), transparent 45%),
+                radial-gradient(800px circle at 85% 10%, rgba(6, 182, 212, 0.26), transparent 40%),
+                linear-gradient(180deg, var(--bg-1), var(--bg-2));
+            color: var(--text);
+            padding: 24px;
+        }
+
+        form {
+            width: 360px;
+            padding: 22px 22px 18px;
+            gap: 12px;
+            display: flex;
+            flex-direction: column;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            border-radius: 14px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+        }
+
+        h3 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            margin-bottom: 4px;
+        }
+
+        label {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        input {
+            padding: 12px 12px;
+            background: var(--input);
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text);
+            outline: none;
+        }
+
+        input:focus {
+            border-color: rgba(6, 182, 212, 0.55);
+            box-shadow: 0 0 0 4px var(--focus);
+        }
+
+        ::placeholder {
+            color: rgba(255, 255, 255, 0.55);
+        }
+
+        .login {
+            margin-top: 8px;
+            padding: 12px 14px;
+            border: 0;
+            border-radius: 11px;
+            cursor: pointer;
+            color: white;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+        }
+
+        .login:hover {
+            filter: brightness(1.05);
+        }
+
+        .social {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 13px;
+            align-items: center;
+        }
+
+        .social a {
+            color: rgba(255, 255, 255, 0.92);
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        .social a:hover {
+            border-bottom-color: rgba(6, 182, 212, 0.65);
+            color: #a5f3fc;
+        }
+    </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="background">
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+        <form id="loginForm" action="">
+            <h3>Login Here</h3>
+            <label for="">Username</label>
+            <input id="email" type="email" placeholder="Email" required />
+            <label for="">Password</label>
+            <input id="password" type="password" placeholder="Password" required />
+            <button id="login" class="login" type="submit">Log In</button>
+           <div class="social">
+            Don't hava an account? <a href="register.html" >Register</a>
+           </div>
+        </form>
+        </div>
+        <script type="module" src="login.js" defer></script>
+    </body>
+</html>

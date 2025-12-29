@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Secure File Sharing Platform</title>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap"
+			rel="stylesheet"
+		/>
+		<style>
+			:root {
+				--bg-1: #0b1020;
+				--bg-2: #0a0f1a;
+				--card: rgba(255, 255, 255, 0.08);
+				--card-border: rgba(255, 255, 255, 0.16);
+				--text: rgba(255, 255, 255, 0.92);
+				--muted: rgba(255, 255, 255, 0.72);
+				--primary-1: #7c3aed;
+				--primary-2: #06b6d4;
+				--focus: rgba(6, 182, 212, 0.28);
+				--shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			html {
+				scroll-behavior: smooth;
+			}
+
+			body {
+				font-family: "Poppins", sans-serif;
+				color: var(--text);
+				background: radial-gradient(900px circle at 15% 20%, rgba(124, 58, 237, 0.30), transparent 45%),
+					radial-gradient(800px circle at 85% 10%, rgba(6, 182, 212, 0.26), transparent 40%),
+					linear-gradient(180deg, var(--bg-1), var(--bg-2));
+				min-height: 100vh;
+			}
+
+			a {
+				color: inherit;
+				text-decoration: none;
+			}
+
+			.container {
+				width: min(1100px, 92vw);
+				margin: 0 auto;
+			}
+
+			.nav {
+				position: sticky;
+				top: 0;
+				z-index: 20;
+				background: rgba(10, 15, 26, 0.72);
+				backdrop-filter: blur(12px);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+			}
+
+			.nav__inner {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 14px 0;
+				gap: 14px;
+			}
+
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				font-weight: 600;
+				letter-spacing: 0.2px;
+			}
+
+			.brand__mark {
+				width: 34px;
+				height: 34px;
+				border-radius: 10px;
+				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+				box-shadow: 0 14px 40px rgba(124, 58, 237, 0.25);
+			}
+
+			.nav__links {
+				display: flex;
+				align-items: center;
+				gap: 16px;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+			}
+
+			.nav__link {
+				color: var(--muted);
+				font-size: 13px;
+				padding: 6px 8px;
+				border-radius: 10px;
+			}
+
+			.nav__link:hover {
+				color: var(--text);
+				background: rgba(255, 255, 255, 0.06);
+			}
+
+			.nav__cta {
+				display: inline-flex;
+				align-items: center;
+				padding: 8px 12px;
+				border-radius: 12px;
+				font-size: 13px;
+				font-weight: 600;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(255, 255, 255, 0.06);
+			}
+
+			/* Logout is a link (logout.html) for reliability */
+
+			.nav__cta--primary {
+				border: 0;
+				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+			}
+
+			.hero {
+				padding: 56px 0 18px;
+			}
+
+			.hero__grid {
+				display: grid;
+				grid-template-columns: 1.25fr 0.75fr;
+				gap: 20px;
+				align-items: stretch;
+			}
+
+			.panel {
+				background: var(--card);
+				border: 1px solid var(--card-border);
+				border-radius: 16px;
+				box-shadow: var(--shadow);
+			}
+
+			.hero__main {
+				padding: 22px;
+			}
+
+			.hero__title {
+				font-size: clamp(26px, 3.2vw, 40px);
+				line-height: 1.2;
+				margin-bottom: 12px;
+				font-weight: 600;
+			}
+
+			.hero__subtitle {
+				color: var(--muted);
+				font-size: 14px;
+				line-height: 1.6;
+				max-width: 62ch;
+			}
+
+			.hero__actions {
+				display: flex;
+				gap: 12px;
+				flex-wrap: wrap;
+				margin-top: 18px;
+			}
+
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				padding: 12px 14px;
+				border-radius: 12px;
+				font-weight: 600;
+				font-size: 13px;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(255, 255, 255, 0.06);
+			}
+
+			.btn:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.btn--primary {
+				border: 0;
+				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+			}
+
+			.hero__side {
+				padding: 18px;
+				display: grid;
+				gap: 10px;
+				align-content: start;
+			}
+
+			.pill {
+				padding: 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.05);
+			}
+
+			.pill__k {
+				font-size: 12px;
+				color: var(--muted);
+				margin-bottom: 4px;
+			}
+
+			.pill__v {
+				font-size: 14px;
+				font-weight: 500;
+			}
+
+			.section {
+				padding: 34px 0;
+			}
+
+			.section__title {
+				font-size: 18px;
+				font-weight: 600;
+				margin-bottom: 10px;
+			}
+
+			.section__desc {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.7;
+				max-width: 80ch;
+			}
+
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 14px;
+				margin-top: 16px;
+			}
+
+			.card {
+				background: var(--card);
+				border: 1px solid var(--card-border);
+				border-radius: 16px;
+				padding: 16px;
+			}
+
+			.card__title {
+				font-size: 14px;
+				font-weight: 600;
+				margin-bottom: 6px;
+			}
+
+			.card__text {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.7;
+			}
+
+			.steps {
+				margin-top: 16px;
+				display: grid;
+				gap: 10px;
+			}
+
+			.step {
+				display: grid;
+				grid-template-columns: 40px 1fr;
+				gap: 12px;
+				align-items: start;
+				padding: 14px 16px;
+				border-radius: 16px;
+				background: rgba(255, 255, 255, 0.05);
+				border: 1px solid rgba(255, 255, 255, 0.12);
+			}
+
+			.step__n {
+				width: 40px;
+				height: 40px;
+				border-radius: 14px;
+				display: grid;
+				place-items: center;
+				background: linear-gradient(135deg, rgba(124, 58, 237, 0.75), rgba(6, 182, 212, 0.65));
+				font-weight: 600;
+			}
+
+			.step__t {
+				font-size: 14px;
+				font-weight: 600;
+				margin-bottom: 2px;
+			}
+
+			.step__d {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.7;
+			}
+
+			.cta {
+				padding: 28px 0 52px;
+			}
+
+			.cta__box {
+				padding: 22px;
+				border-radius: 18px;
+				background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(6, 182, 212, 0.18));
+				border: 1px solid rgba(255, 255, 255, 0.14);
+			}
+
+			.footer {
+				border-top: 1px solid rgba(255, 255, 255, 0.10);
+				padding: 18px 0 26px;
+				color: var(--muted);
+				font-size: 12px;
+			}
+
+			.footer__inner {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+
+			.footer__links {
+				display: flex;
+				gap: 14px;
+				flex-wrap: wrap;
+			}
+
+			.footer__links a:hover {
+				color: var(--text);
+			}
+
+			@media (max-width: 900px) {
+				.hero__grid {
+					grid-template-columns: 1fr;
+				}
+				.grid {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+		<script type="module">
+			import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+			import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+			const firebaseConfig = {
+				apiKey: "AIzaSyD7f6dVud8ScJtsfu9K_RZh4gJqgkIbvqk",
+				authDomain: "fir-56c08.firebaseapp.com",
+				projectId: "fir-56c08",
+				storageBucket: "fir-56c08.firebasestorage.app",
+				messagingSenderId: "1044236312500",
+				appId: "1:1044236312500:web:9aa914b0b61f7cf1899ce1",
+				measurementId: "G-NPQ69E5X69"
+			};
+
+			initializeApp(firebaseConfig);
+			const auth = getAuth();
+
+			function whenReady(fn) {
+				if (document.readyState === "loading") {
+					document.addEventListener("DOMContentLoaded", fn, { once: true });
+				} else {
+					fn();
+				}
+			}
+
+			function setNavForAuth(isLoggedIn) {
+				whenReady(() => {
+					const loginLink = document.getElementById("loginLink");
+					const registerLink = document.getElementById("registerLink");
+					const logoutLink = document.getElementById("logoutLink");
+
+					if (loginLink) loginLink.hidden = isLoggedIn;
+					if (registerLink) registerLink.hidden = isLoggedIn;
+					if (logoutLink) logoutLink.hidden = !isLoggedIn;
+				});
+			}
+
+			// Block access to home page when logged out.
+			onAuthStateChanged(auth, (user) => {
+				if (!user) {
+					window.location.replace("index.html");
+					return;
+				}
+				setNavForAuth(true);
+			});
+			// Initial state while auth loads
+			setNavForAuth(false);
+		</script>
+	</head>
+	<body>
+		<header class="nav" aria-label="Primary">
+			<div class="container nav__inner">
+				<a class="brand" href="#top" aria-label="Secure File Sharing Platform">
+					<span class="brand__mark" aria-hidden="true"></span>
+					<span>Secure File Sharing</span>
+				</a>
+
+				<nav class="nav__links" aria-label="Site">
+					<a class="nav__link" href="home.html">Home</a>
+					<a class="nav__link" href="#features">Features</a>
+					<a class="nav__link" href="#security">Security</a>
+					<a class="nav__cta" id="loginLink" href="index.html">Login</a>
+					<a class="nav__cta nav__cta--primary" id="registerLink" href="register.html">Registration</a>
+					<a class="nav__cta nav__cta--primary" id="logoutLink" href="logout.html" hidden>Logout</a>
+				</nav>
+			</div>
+		</header>
+
+		<main id="top">
+			<section class="hero">
+				<div class="container hero__grid">
+					<div class="panel hero__main">
+						<h1 class="hero__title">End-to-end encrypted file sharing you can trust</h1>
+						<p class="hero__subtitle">
+							This platform is built for secure file handling. Files are encrypted on your device before upload, stored
+							securely, and verified for integrity before you download and decrypt.
+						</p>
+
+						<div class="hero__actions" aria-label="Actions">
+							<a class="btn btn--primary" href="index.html">Login</a>
+							<a class="btn" href="register.html">Create an account</a>
+						</div>
+					</div>
+
+					<aside class="panel hero__side" aria-label="Quick security summary">
+						<div class="pill">
+							<div class="pill__k">Encryption</div>
+							<div class="pill__v">Client-side AES before upload</div>
+						</div>
+						<div class="pill">
+							<div class="pill__k">Integrity</div>
+							<div class="pill__v">Cryptographic hashing verification</div>
+						</div>
+						<div class="pill">
+							<div class="pill__k">Privacy</div>
+							<div class="pill__v">No plaintext stored on server</div>
+						</div>
+					</aside>
+				</div>
+			</section>
+
+			<section class="section" id="features">
+				<div class="container">
+					<h2 class="section__title">Features</h2>
+					<p class="section__desc">
+						The platform focuses on practical security controls that users can understand and trust.
+					</p>
+
+					<div class="grid" role="list">
+						<div class="card" role="listitem">
+							<div class="card__title">Client-side AES encryption</div>
+							<div class="card__text">
+								Files are encrypted in the browser before they leave your device, reducing exposure of sensitive data.
+							</div>
+						</div>
+
+						<div class="card" role="listitem">
+							<div class="card__title">Integrity verification (hashing)</div>
+							<div class="card__text">
+								Cryptographic hashes help verify that a file has not been changed or corrupted during upload/download.
+							</div>
+						</div>
+
+						<div class="card" role="listitem">
+							<div class="card__title">Secure authentication</div>
+							<div class="card__text">
+								Users authenticate before accessing uploads/downloads, helping prevent unauthorized access.
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="section" id="how-it-works">
+				<div class="container">
+					<h2 class="section__title">How it works</h2>
+					<p class="section__desc">
+						A transparent, step-by-step workflow builds confidence in how your data is protected.
+					</p>
+
+					<div class="steps" aria-label="Workflow steps">
+						<div class="step">
+							<div class="step__n" aria-hidden="true">1</div>
+							<div>
+								<div class="step__t">Authenticate</div>
+								<div class="step__d">Login or register to securely access your account and files.</div>
+							</div>
+						</div>
+
+						<div class="step">
+							<div class="step__n" aria-hidden="true">2</div>
+							<div>
+								<div class="step__t">Encrypt & upload</div>
+								<div class="step__d">
+									The file is encrypted on your device and then uploaded for secure cloud storage.
+								</div>
+							</div>
+						</div>
+
+						<div class="step">
+							<div class="step__n" aria-hidden="true">3</div>
+							<div>
+								<div class="step__t">Store securely</div>
+								<div class="step__d">
+									The server stores only the encrypted data (ciphertext), aligned with secure handling practices.
+								</div>
+							</div>
+						</div>
+
+						<div class="step">
+							<div class="step__n" aria-hidden="true">4</div>
+							<div>
+								<div class="step__t">Verify integrity</div>
+								<div class="step__d">Before use, hashes are compared to validate file integrity.</div>
+							</div>
+						</div>
+
+						<div class="step">
+							<div class="step__n" aria-hidden="true">5</div>
+							<div>
+								<div class="step__t">Download & decrypt</div>
+								<div class="step__d">
+									Encrypted files are downloaded and decrypted on your device so plaintext remains private.
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="section" id="security">
+				<div class="container">
+					<h2 class="section__title">Security assurance</h2>
+					<p class="section__desc">
+						Files are encrypted before leaving your device, and the server does not store plaintext data. This improves
+						privacy, supports secure deployment expectations, and reinforces user trust.
+					</p>
+
+					<div class="grid" role="list">
+						<div class="card" role="listitem">
+							<div class="card__title">Encrypted before upload</div>
+							<div class="card__text">Your file is protected client-side prior to network transfer.</div>
+						</div>
+						<div class="card" role="listitem">
+							<div class="card__title">No plaintext storage</div>
+							<div class="card__text">The server stores ciphertext, not readable file content.</div>
+						</div>
+						<div class="card" role="listitem">
+							<div class="card__title">Integrity transparency</div>
+							<div class="card__text">Hash checks help detect changes and validate downloads.</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section class="cta">
+				<div class="container">
+					<div class="cta__box">
+						<h2 class="section__title">Ready to share securely?</h2>
+						<p class="section__desc">
+							Create an account to start using encrypted uploads and integrity-checked downloads.
+						</p>
+						<div class="hero__actions" style="margin-top: 14px">
+							<a class="btn btn--primary" href="register.html">Register</a>
+							<a class="btn" href="index.html">Login</a>
+						</div>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<footer class="footer" aria-label="Footer">
+			<div class="container footer__inner">
+				<div>© 2025 Secure File Sharing Platform</div>
+				<div class="footer__links" aria-label="Legal links">
+					<a href="#">Privacy</a>
+					<a href="#">Terms</a>
+					<a href="#">About</a>
+					<a href="#">Contact</a>
+				</div>
+			</div>
+		</footer>
+	</body>
+</html>
