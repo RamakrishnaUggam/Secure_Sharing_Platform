@@ -20,6 +20,82 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 
 const form = document.getElementById("loginForm") || document.querySelector("form");
+const messageEl = document.getElementById("formMessage");
+
+let messageTimer;
+
+function clearMessage() {
+  if (!messageEl) return;
+  messageEl.textContent = "";
+  messageEl.classList.remove("is-visible");
+}
+
+function showMessage(text, autoHideMs) {
+  if (!messageEl) return;
+  if (messageTimer) {
+    clearTimeout(messageTimer);
+    messageTimer = undefined;
+  }
+
+  messageEl.textContent = String(text || "");
+  if (messageEl.textContent.trim().length > 0) {
+    messageEl.classList.add("is-visible");
+  } else {
+    messageEl.classList.remove("is-visible");
+  }
+
+  if (autoHideMs && Number.isFinite(autoHideMs) && autoHideMs > 0) {
+    messageTimer = setTimeout(() => {
+      clearMessage();
+    }, autoHideMs);
+  }
+}
+
+function setupPasswordToggle(inputId, buttonId) {
+  const input = document.getElementById(inputId);
+  const button = document.getElementById(buttonId);
+  if (!input || !button) return;
+
+  button.addEventListener("click", () => {
+    const willShow = input.type === "password";
+    input.type = willShow ? "text" : "password";
+    button.textContent = willShow ? "Hide" : "View";
+  });
+}
+
+function friendlyAuthError(error) {
+  const code = error?.code || "";
+  switch (code) {
+    case "auth/invalid-login-credentials":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Invalid credentials";
+    case "auth/invalid-email":
+      return "Please enter a valid email";
+    case "auth/too-many-requests":
+      return "Too many attempts. Try again later";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection";
+    default:
+      return "Login failed. Please try again";
+  }
+}
+
+// Show a one-time success message after registration.
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("registered") === "1") {
+    showMessage("Account created. Please log in.", 6000);
+
+    // Remove the query flag so refresh/back doesn't keep showing it.
+    params.delete("registered");
+    const cleaned = params.toString();
+    const newUrl = cleaned ? `${window.location.pathname}?${cleaned}` : window.location.pathname;
+    window.history.replaceState({}, "", newUrl);
+  }
+})();
+
+setupPasswordToggle("password", "togglePassword");
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -28,17 +104,21 @@ form.addEventListener("submit", (event) => {
   const password = document.getElementById("password")?.value;
 
   if (!email || !password) {
-    alert("Please enter email and password");
+    showMessage("Please enter email and password");
     return;
   }
 
+  showMessage("Signing in…");
+
   signInWithEmailAndPassword(auth, email, password)
     .then(() => {
-      alert("Logged In Successfully");
-      window.location.href = "home.html";
+      showMessage("Logged in successfully");
+      setTimeout(() => {
+        window.location.href = "home.html";
+      }, 900);
     })
     .catch((error) => {
-      alert(error.message);
+      showMessage(friendlyAuthError(error));
     });
 });
 

@@ -20,28 +20,75 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 
 const register = document.getElementById("register");
+const messageEl = document.getElementById("formMessage");
+
+function showMessage(text) {
+  if (!messageEl) return;
+  messageEl.textContent = String(text || "");
+  if (messageEl.textContent.trim().length > 0) {
+    messageEl.classList.add("is-visible");
+  } else {
+    messageEl.classList.remove("is-visible");
+  }
+}
+
+function setupPasswordToggle(inputId, buttonId) {
+  const input = document.getElementById(inputId);
+  const button = document.getElementById(buttonId);
+  if (!input || !button) return;
+
+  button.addEventListener("click", () => {
+    const willShow = input.type === "password";
+    input.type = willShow ? "text" : "password";
+    button.textContent = willShow ? "Hide" : "View";
+  });
+}
+
+function friendlyAuthError(error) {
+  const code = error?.code || "";
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "Email already in use";
+    case "auth/invalid-email":
+      return "Please enter a valid email";
+    case "auth/weak-password":
+      return "Password should be at least 6 characters";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection";
+    default:
+      return "Registration failed. Please try again";
+  }
+}
+
+setupPasswordToggle("password", "togglePassword");
+
 register.addEventListener("click", function(event) {
     event.preventDefault()
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const confirm = document.getElementById("confirm")?.value;
 
-    if (confirm !== undefined && confirm !== password) {
-      alert("Passwords do not match");
+    if (!email || !password) {
+      showMessage("Please enter email and password");
       return;
     }
+
+    if (confirm !== undefined && confirm !== password) {
+      showMessage("Passwords do not match");
+      return;
+    }
+
+showMessage("Creating account…");
 
 createUserWithEmailAndPassword(auth, email, password)
   .then((userCredential) => {
     // Signed up 
     const user = userCredential.user;
-    alert("Account Registered Successfully");
-    window.location.href = "index.html";
+    showMessage("Account registered successfully. Redirecting…");
+    window.location.href = "index.html?registered=1";
   })
   .catch((error) => {
-    const errorCode = error.code;
-    const errorMessage = error.message;
-    alert(errorMessage);
+    showMessage(friendlyAuthError(error));
   });
 })
 
