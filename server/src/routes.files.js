@@ -4,6 +4,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import admin from "firebase-admin";
 
 import { requireAuth } from "./auth.js";
 import { config } from "./config.js";
@@ -118,6 +119,20 @@ export function filesRouter() {
 		const recipientEmail = normalizeEmail(req.body?.recipientEmail);
 		if (!recipientEmail) return res.status(400).json({ error: "Missing recipientEmail" });
 		if (!recipientEmail.includes("@")) return res.status(400).json({ error: "Invalid recipientEmail" });
+
+		// Only allow sharing to a real Firebase Auth user with a verified email.
+		try {
+			const recipientUser = await admin.auth().getUserByEmail(recipientEmail);
+			if (!recipientUser.emailVerified) {
+				return res.status(400).json({ error: "Recipient email is not verified" });
+			}
+		} catch (e) {
+			const code = String(e?.code || e?.errorInfo?.code || "");
+			if (code === "auth/user-not-found") {
+				return res.status(400).json({ error: "Recipient email is not registered" });
+			}
+			throw e;
+		}
 
 		const record = await FileRecord.findOne({ _id: req.params.id, ownerUid: req.user.uid }).lean();
 		if (!record) return res.status(404).json({ error: "Not found" });
