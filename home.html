@@ -719,7 +719,7 @@
 		</style>
 		<script type="module">
 			import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-			import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+			import { getAuth, onAuthStateChanged, signOut, reload } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 			const firebaseConfig = {
 				apiKey: "AIzaSyD7f6dVud8ScJtsfu9K_RZh4gJqgkIbvqk",
@@ -804,13 +804,32 @@
 				});
 			}
 
-			// Block access to home page when logged out.
+			// Block access to home page when logged out or email is unverified.
 			onAuthStateChanged(auth, (user) => {
-				if (!user) {
-					window.location.replace("index.html");
-					return;
-				}
-				setNavForAuth(user);
+				(async () => {
+					if (!user) {
+						window.location.replace("index.html");
+						return;
+					}
+
+					try {
+						await reload(user);
+					} catch {
+						// ignore
+					}
+
+					if (!user.emailVerified) {
+						try {
+							await signOut(auth);
+						} catch {
+							// ignore
+						}
+						window.location.replace("index.html?verify=1");
+						return;
+					}
+
+					setNavForAuth(user);
+				})();
 			});
 			// Initial state while auth loads
 			setNavForAuth(null);

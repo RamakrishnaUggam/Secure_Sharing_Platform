@@ -26,6 +26,9 @@ export function requireAuth() {
 			if (!match) return res.status(401).json({ error: "Missing Authorization Bearer token" });
 
 			const decoded = await admin.auth().verifyIdToken(match[1]);
+			if (decoded.email_verified === false) {
+				return res.status(403).json({ error: "Email not verified" });
+			}
 			req.user = { uid: decoded.uid, email: decoded.email || null };
 			next();
 		} catch (e) {

@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, sendEmailVerification, signOut, reload } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -87,14 +87,62 @@ function friendlyAuthError(error) {
   }
 }
 
+function getContinueUrl() {
+  try {
+    const origin = window.location?.origin;
+    if (!origin || origin === "null") return null;
+    return `${origin}/index.html?verified=1`;
+  } catch {
+    return null;
+  }
+}
+
+function shouldThrottleVerificationSend(uid) {
+  if (!uid) return false;
+  try {
+    const key = `verifyEmailSentAt:${uid}`;
+    const last = Number(localStorage.getItem(key) || "0");
+    const now = Date.now();
+    if (!Number.isFinite(last) || last <= 0) return false;
+    // Avoid spamming: allow one send per 2 minutes per user.
+    return now - last < 2 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
+function markVerificationEmailSent(uid) {
+  try {
+    if (!uid) return;
+    localStorage.setItem(`verifyEmailSentAt:${uid}`, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
+
 // Show a one-time success message after registration.
 (() => {
   const params = new URLSearchParams(window.location.search);
-  if (params.get("registered") === "1") {
+  const registered = params.get("registered") === "1";
+  const verify = params.get("verify") === "1";
+  const verified = params.get("verified") === "1";
+
+  if (verified) {
+    showMessage("Email verified. You can log in now.", 7000);
+  } else if (registered && verify) {
+    showMessage("Account created. Please verify your email (check Inbox/Spam), then log in.", 9000);
+  } else if (verify) {
+    showMessage("Please verify your email, then log in.", 8000);
+  } else if (registered) {
     showMessage("Account created. Please log in.", 6000);
+  }
+
+  if (registered || verify || verified) {
 
     // Remove the query flag so refresh/back doesn't keep showing it.
     params.delete("registered");
+    params.delete("verify");
+    params.delete("verified");
     const cleaned = params.toString();
     const newUrl = cleaned ? `${window.location.pathname}?${cleaned}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
@@ -124,7 +172,40 @@ form.addEventListener("submit", (event) => {
   setForgotVisible(false);
 
   signInWithEmailAndPassword(auth, email, password)
-    .then(() => {
+    .then(async () => {
+      const user = auth.currentUser;
+      if (!user) throw new Error("No authenticated user");
+
+      // Ensure we have fresh emailVerified state.
+      try {
+        await reload(user);
+      } catch {
+        // ignore
+      }
+
+      if (!user.emailVerified) {
+        // Optionally send verification email again (throttled).
+        try {
+          if (!shouldThrottleVerificationSend(user.uid)) {
+            const continueUrl = getContinueUrl();
+            const actionCodeSettings = continueUrl ? { url: continueUrl } : undefined;
+            await sendEmailVerification(user, actionCodeSettings);
+            markVerificationEmailSent(user.uid);
+          }
+        } catch {
+          // ignore (we'll still block access)
+        }
+
+        try {
+          await signOut(auth);
+        } catch {
+          // ignore
+        }
+
+        showMessage("Email not verified. We sent a verification link (if not recently sent). Please verify and then log in.");
+        return;
+      }
+
       showMessage("Logged in successfully");
       setTimeout(() => {
         window.location.href = "home.html";

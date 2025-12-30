@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -21,6 +21,25 @@ const auth = getAuth();
 
 const register = document.getElementById("register");
 const messageEl = document.getElementById("formMessage");
+
+function getContinueUrl() {
+  try {
+    const origin = window.location?.origin;
+    if (!origin || origin === "null") return null;
+    return `${origin}/index.html?verified=1`;
+  } catch {
+    return null;
+  }
+}
+
+function markVerificationEmailSent(uid) {
+  try {
+    if (!uid) return;
+    localStorage.setItem(`verifyEmailSentAt:${uid}`, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
 
 function showMessage(text) {
   if (!messageEl) return;
@@ -95,8 +114,26 @@ createUserWithEmailAndPassword(auth, email, password)
       }
     }
 
-    showMessage("Account registered successfully. Redirecting…");
-    window.location.href = "index.html?registered=1";
+    try {
+      const continueUrl = getContinueUrl();
+      const actionCodeSettings = continueUrl ? { url: continueUrl } : undefined;
+      await sendEmailVerification(user, actionCodeSettings);
+      markVerificationEmailSent(user.uid);
+    } catch (e) {
+      console.warn(e);
+      showMessage("Account created, but we couldn't send a verification email. Please try logging in and resend verification.");
+      return;
+    }
+
+    // Force verification before allowing access.
+    try {
+      await signOut(auth);
+    } catch {
+      // ignore
+    }
+
+    showMessage("Verification email sent. Please verify your email, then log in.");
+    window.location.href = "index.html?registered=1&verify=1";
   })
   .catch((error) => {
     showMessage(friendlyAuthError(error));
