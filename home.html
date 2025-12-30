@@ -430,6 +430,138 @@
 				max-width: 80ch;
 			}
 
+			.upload__panel {
+				padding: 18px;
+			}
+
+			.upload__actions {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+				align-items: center;
+				margin-top: 14px;
+			}
+
+			.dropzone {
+				margin-top: 12px;
+				border: 1px dashed rgba(255, 255, 255, 0.22);
+				border-radius: 16px;
+				padding: 16px;
+				background: rgba(255, 255, 255, 0.03);
+				transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+				cursor: pointer;
+			}
+
+			.dropzone:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.dropzone.is-active {
+				border-color: rgba(34, 211, 238, 0.80);
+				background: rgba(34, 211, 238, 0.10);
+				transform: translateY(-1px);
+			}
+
+			html[data-theme="light"] .dropzone {
+				border-color: rgba(15, 23, 42, 0.18);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			html[data-theme="light"] .dropzone.is-active {
+				border-color: rgba(2, 132, 199, 0.50);
+				background: rgba(2, 132, 199, 0.08);
+			}
+
+			.dropzone__title {
+				font-weight: 600;
+				font-size: 14px;
+				margin-bottom: 4px;
+			}
+
+			.dropzone__hint {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.6;
+			}
+
+			.upload__message {
+				margin-top: 12px;
+				padding: 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(255, 255, 255, 0.04);
+				color: var(--text);
+				display: none;
+			}
+
+			.upload__message.is-visible {
+				display: block;
+			}
+
+			.upload__list {
+				margin-top: 12px;
+				display: grid;
+				gap: 10px;
+			}
+
+			.upload__item {
+				display: grid;
+				grid-template-columns: 1fr auto;
+				gap: 12px;
+				align-items: center;
+				padding: 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			html[data-theme="light"] .upload__item {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.upload__name {
+				font-weight: 600;
+				font-size: 13px;
+				margin-bottom: 2px;
+				word-break: break-word;
+			}
+
+			.upload__meta {
+				color: var(--muted);
+				font-size: 12px;
+				line-height: 1.5;
+			}
+
+			.iconbtn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 36px;
+				height: 36px;
+				border-radius: 12px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+				cursor: pointer;
+				color: var(--text);
+			}
+
+			.iconbtn:hover {
+				background: rgba(255, 255, 255, 0.07);
+				border-color: rgba(255, 255, 255, 0.16);
+			}
+
+			html[data-theme="light"] .iconbtn {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.iconbtn svg {
+				width: 16px;
+				height: 16px;
+			}
+
 			.grid {
 				display: grid;
 				grid-template-columns: repeat(3, 1fr);
@@ -765,6 +897,32 @@
 				</div>
 			</section>
 
+			<section class="section" id="uploads">
+				<div class="container">
+					<h2 class="section__title">Upload</h2>
+					<p class="section__desc">
+						Drag & drop files into the container (or choose files) and they will be added to the uploaded list below.
+						This feature stores only file metadata in this browser and does not upload anything to Firebase.
+					</p>
+
+					<div class="panel upload__panel" aria-label="Upload container">
+						<div class="upload__actions" aria-label="Upload actions">
+							<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
+							<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
+							<input id="uploadInput" type="file" multiple hidden />
+						</div>
+
+						<div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="Drop files here">
+							<div class="dropzone__title">Drop files here</div>
+							<div class="dropzone__hint">Nothing is uploaded. We only keep a local list on this device.</div>
+						</div>
+
+						<div id="uploadMessage" class="upload__message" role="status" aria-live="polite"></div>
+						<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
+					</div>
+				</div>
+			</section>
+
 			<section class="section" id="features">
 				<div class="container">
 					<h2 class="section__title">Features</h2>
@@ -931,6 +1089,205 @@
 				button.addEventListener("click", () => {
 					setTheme(getTheme() === "dark" ? "light" : "dark");
 				});
+			})();
+		</script>
+		<script>
+			(function () {
+				const STORAGE_KEY = "localUploads";
+
+				const chooseBtn = document.getElementById("chooseFilesBtn");
+				const uploadBtn = document.getElementById("uploadBtn");
+				const input = document.getElementById("uploadInput");
+				const dropZone = document.getElementById("dropZone");
+				const listEl = document.getElementById("uploadedList");
+				const messageEl = document.getElementById("uploadMessage");
+
+				/** @type {File[]} */
+				let pending = [];
+
+				function setMessage(text) {
+					if (!messageEl) return;
+					messageEl.textContent = String(text || "");
+					messageEl.classList.toggle("is-visible", messageEl.textContent.trim().length > 0);
+				}
+
+				function formatBytes(bytes) {
+					if (!Number.isFinite(bytes) || bytes < 0) return "—";
+					const units = ["B", "KB", "MB", "GB"];
+					let value = bytes;
+					let unitIndex = 0;
+					while (value >= 1024 && unitIndex < units.length - 1) {
+						value /= 1024;
+						unitIndex++;
+					}
+					return `${value.toFixed(unitIndex === 0 ? 0 : 2)} ${units[unitIndex]}`;
+				}
+
+				function fileKey(file) {
+					return `${file.name}::${file.size}::${file.lastModified}`;
+				}
+
+				function loadRecords() {
+					try {
+						const raw = localStorage.getItem(STORAGE_KEY);
+						if (!raw) return [];
+						const parsed = JSON.parse(raw);
+						return Array.isArray(parsed) ? parsed : [];
+					} catch {
+						return [];
+					}
+				}
+
+				function saveRecords(records) {
+					try {
+						localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+					} catch {
+						// ignore
+					}
+				}
+
+				function makeId() {
+					return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+				}
+
+				function renderList() {
+					if (!listEl) return;
+					const records = loadRecords();
+					listEl.innerHTML = "";
+
+					if (records.length === 0) {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "No uploaded files yet.";
+						listEl.appendChild(empty);
+						return;
+					}
+
+					for (const item of records) {
+						const row = document.createElement("div");
+						row.className = "upload__item";
+
+						const left = document.createElement("div");
+						const name = document.createElement("div");
+						name.className = "upload__name";
+						name.textContent = item.name || "(unnamed)";
+
+						const meta = document.createElement("div");
+						meta.className = "upload__meta";
+						const parts = [];
+						if (typeof item.size === "number") parts.push(formatBytes(item.size));
+						if (item.type) parts.push(item.type);
+						if (item.addedAt) parts.push(`Added: ${new Date(item.addedAt).toLocaleString()}`);
+						meta.textContent = parts.filter(Boolean).join(" • ") || "—";
+
+						left.appendChild(name);
+						left.appendChild(meta);
+
+						const del = document.createElement("button");
+						del.type = "button";
+						del.className = "iconbtn";
+						del.title = "Delete";
+						del.setAttribute("aria-label", `Delete ${item.name || "file"}`);
+						del.innerHTML = `
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M3 6h18"></path>
+								<path d="M8 6V4h8v2"></path>
+								<path d="M19 6l-1 14H6L5 6"></path>
+								<path d="M10 11v6"></path>
+								<path d="M14 11v6"></path>
+							</svg>
+						`;
+						del.addEventListener("click", () => {
+							const next = loadRecords().filter((r) => r.id !== item.id);
+							saveRecords(next);
+							renderList();
+							setMessage("Deleted from list.");
+						});
+
+						row.appendChild(left);
+						row.appendChild(del);
+						listEl.appendChild(row);
+					}
+				}
+
+				function updateUploadButton() {
+					if (!uploadBtn) return;
+					uploadBtn.disabled = pending.length === 0;
+				}
+
+				function addPending(files) {
+					if (!files || files.length === 0) return;
+					const incoming = Array.from(files);
+					const existing = new Set(pending.map(fileKey));
+					for (const file of incoming) {
+						const key = fileKey(file);
+						if (existing.has(key)) continue;
+						pending.push(file);
+						existing.add(key);
+					}
+					updateUploadButton();
+					setMessage(`${pending.length} file(s) selected. Click Upload to add them to the list.`);
+				}
+
+				function uploadLocalOnly() {
+					if (pending.length === 0) return;
+					const existing = loadRecords();
+					const now = new Date().toISOString();
+					const additions = pending.map((file) => ({
+						id: makeId(),
+						name: file.name,
+						size: file.size,
+						type: file.type || "",
+						lastModified: file.lastModified,
+						addedAt: now
+					}));
+					saveRecords(existing.concat(additions));
+					pending = [];
+					updateUploadButton();
+					renderList();
+					setMessage(`Added ${additions.length} file(s) to uploaded list.`);
+				}
+
+				chooseBtn?.addEventListener("click", () => input?.click());
+				input?.addEventListener("change", () => {
+					addPending(input.files);
+					input.value = "";
+				});
+
+				uploadBtn?.addEventListener("click", uploadLocalOnly);
+
+				if (dropZone) {
+					dropZone.addEventListener("click", () => input?.click());
+					dropZone.addEventListener("keydown", (e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							input?.click();
+						}
+					});
+
+					for (const ev of ["dragenter", "dragover"]) {
+						dropZone.addEventListener(ev, (e) => {
+							e.preventDefault();
+							dropZone.classList.add("is-active");
+						});
+					}
+
+					for (const ev of ["dragleave", "dragend"]) {
+						dropZone.addEventListener(ev, () => dropZone.classList.remove("is-active"));
+					}
+
+					dropZone.addEventListener("drop", (e) => {
+						e.preventDefault();
+						dropZone.classList.remove("is-active");
+						addPending(e.dataTransfer?.files);
+					});
+				}
+
+				document.addEventListener("dragover", (e) => e.preventDefault());
+				document.addEventListener("drop", (e) => e.preventDefault());
+
+				renderList();
+				updateUploadButton();
 			})();
 		</script>
 	</body>
