@@ -1,0 +1,19 @@
+# Node
+server/node_modules/
+
+# Env
+server/.env
+
+# Firebase Admin service account keys (do not commit)
+server/*service-account*.json
+server/*firebase*admin*.json
+server/firebase-admin.json
+
+# Local encrypted file blobs
+server/storage/
+
+# Logs
+*.log
+
+# OS
+.DS_Store

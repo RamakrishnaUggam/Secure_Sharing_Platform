@@ -733,6 +733,7 @@
 
 			initializeApp(firebaseConfig);
 			const auth = getAuth();
+			window.__auth = auth;
 
 			function whenReady(fn) {
 				if (document.readyState === "loading") {
@@ -1093,7 +1094,7 @@
 		</script>
 		<script>
 			(function () {
-				const STORAGE_KEY = "localUploads";
+				const API_BASE = "http://localhost:3001";
 
 				const chooseBtn = document.getElementById("chooseFilesBtn");
 				const uploadBtn = document.getElementById("uploadBtn");
@@ -1127,87 +1128,50 @@
 					return `${file.name}::${file.size}::${file.lastModified}`;
 				}
 
-				function loadRecords() {
-					try {
-						const raw = localStorage.getItem(STORAGE_KEY);
-						if (!raw) return [];
-						const parsed = JSON.parse(raw);
-						return Array.isArray(parsed) ? parsed : [];
-					} catch {
-						return [];
+				function bytesToB64(bytes) {
+					let binary = "";
+					const chunkSize = 0x8000;
+					for (let i = 0; i < bytes.length; i += chunkSize) {
+						const chunk = bytes.subarray(i, i + chunkSize);
+						binary += String.fromCharCode(...chunk);
 					}
+					return btoa(binary);
 				}
 
-				function saveRecords(records) {
+				function b64ToBytes(b64) {
+					const binary = atob(String(b64 || ""));
+					const out = new Uint8Array(binary.length);
+					for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+					return out;
+				}
+
+				async function getClientKeyBytes() {
+					const auth = window.__auth;
+					const user = auth?.currentUser;
+					if (!user) throw new Error("Not logged in");
+					const storageKey = `clientEncKeyB64:${user.uid}`;
+					let b64 = null;
 					try {
-						localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+						b64 = localStorage.getItem(storageKey);
 					} catch {
 						// ignore
 					}
+					if (!b64) {
+						const raw = new Uint8Array(32);
+						crypto.getRandomValues(raw);
+						b64 = bytesToB64(raw);
+						try {
+							localStorage.setItem(storageKey, b64);
+						} catch {
+							// ignore
+						}
+					}
+					return b64ToBytes(b64);
 				}
 
-				function makeId() {
-					return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-				}
-
-				function renderList() {
-					if (!listEl) return;
-					const records = loadRecords();
-					listEl.innerHTML = "";
-
-					if (records.length === 0) {
-						const empty = document.createElement("div");
-						empty.className = "upload__meta";
-						empty.textContent = "No uploaded files yet.";
-						listEl.appendChild(empty);
-						return;
-					}
-
-					for (const item of records) {
-						const row = document.createElement("div");
-						row.className = "upload__item";
-
-						const left = document.createElement("div");
-						const name = document.createElement("div");
-						name.className = "upload__name";
-						name.textContent = item.name || "(unnamed)";
-
-						const meta = document.createElement("div");
-						meta.className = "upload__meta";
-						const parts = [];
-						if (typeof item.size === "number") parts.push(formatBytes(item.size));
-						if (item.type) parts.push(item.type);
-						if (item.addedAt) parts.push(`Added: ${new Date(item.addedAt).toLocaleString()}`);
-						meta.textContent = parts.filter(Boolean).join(" • ") || "—";
-
-						left.appendChild(name);
-						left.appendChild(meta);
-
-						const del = document.createElement("button");
-						del.type = "button";
-						del.className = "iconbtn";
-						del.title = "Delete";
-						del.setAttribute("aria-label", `Delete ${item.name || "file"}`);
-						del.innerHTML = `
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-								<path d="M3 6h18"></path>
-								<path d="M8 6V4h8v2"></path>
-								<path d="M19 6l-1 14H6L5 6"></path>
-								<path d="M10 11v6"></path>
-								<path d="M14 11v6"></path>
-							</svg>
-						`;
-						del.addEventListener("click", () => {
-							const next = loadRecords().filter((r) => r.id !== item.id);
-							saveRecords(next);
-							renderList();
-							setMessage("Deleted from list.");
-						});
-
-						row.appendChild(left);
-						row.appendChild(del);
-						listEl.appendChild(row);
-					}
+				async function importAesKey() {
+					const raw = await getClientKeyBytes();
+					return await crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 				}
 
 				function updateUploadButton() {
@@ -1226,26 +1190,201 @@
 						existing.add(key);
 					}
 					updateUploadButton();
-					setMessage(`${pending.length} file(s) selected. Click Upload to add them to the list.`);
+					setMessage(`${pending.length} file(s) selected. Click Upload to encrypt in your browser (AES-GCM) then upload ciphertext to server.`);
 				}
 
-				function uploadLocalOnly() {
+				async function getIdToken() {
+					const auth = window.__auth;
+					const user = auth?.currentUser;
+					if (!user) throw new Error("Not logged in");
+					return await user.getIdToken();
+				}
+
+				async function apiFetch(path, options = {}) {
+					const token = await getIdToken();
+					const headers = new Headers(options.headers || {});
+					headers.set("Authorization", `Bearer ${token}`);
+					return await fetch(`${API_BASE}${path}`, { ...options, headers });
+				}
+
+				async function loadList() {
+					if (!listEl) return;
+					listEl.innerHTML = "";
+					try {
+						const res = await apiFetch("/api/files");
+						if (!res.ok) throw new Error("Failed to load files");
+						const items = await res.json();
+						if (!Array.isArray(items) || items.length === 0) {
+							const empty = document.createElement("div");
+							empty.className = "upload__meta";
+							empty.textContent = "No uploaded files yet.";
+							listEl.appendChild(empty);
+							return;
+						}
+
+						for (const item of items) {
+							const row = document.createElement("div");
+							row.className = "upload__item";
+
+							const left = document.createElement("div");
+							const name = document.createElement("div");
+							name.className = "upload__name";
+							name.textContent = item.originalName || "(unnamed)";
+
+							const meta = document.createElement("div");
+							meta.className = "upload__meta";
+							const parts = [];
+							if (typeof item.size === "number") parts.push(formatBytes(item.size));
+							if (item.mimeType) parts.push(item.mimeType);
+							if (item.createdAt) parts.push(`Uploaded: ${new Date(item.createdAt).toLocaleString()}`);
+							meta.textContent = parts.filter(Boolean).join(" • ") || "—";
+
+							left.appendChild(name);
+							left.appendChild(meta);
+
+							async function downloadItem() {
+								try {
+									setMessage("Downloading…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/download`);
+									if (!r.ok) throw new Error("Download failed");
+
+									const encMode = String(r.headers.get("x-enc-mode") || "").toLowerCase();
+									if (encMode === "client") {
+										const ivB64 = r.headers.get("x-client-iv-b64") || "";
+										const nameHeader = r.headers.get("x-original-name") || "";
+										const mimeHeader = r.headers.get("x-original-mime") || "";
+										const originalName = decodeURIComponent(nameHeader || "") || item.originalName || "file";
+										const originalMime = decodeURIComponent(mimeHeader || "") || item.mimeType || "application/octet-stream";
+										if (!ivB64) throw new Error("Missing IV");
+
+										const iv = b64ToBytes(ivB64);
+										const key = await importAesKey();
+										const ciphertext = await r.arrayBuffer();
+										const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+										const outBlob = new Blob([plaintext], { type: originalMime });
+										const url = URL.createObjectURL(outBlob);
+										const a = document.createElement("a");
+										a.href = url;
+										a.download = originalName;
+										document.body.appendChild(a);
+										a.click();
+										a.remove();
+										URL.revokeObjectURL(url);
+										setMessage("Decrypted and downloaded.");
+										return;
+									}
+
+									// Server-encrypted mode: backend returns plaintext.
+									const blob = await r.blob();
+									const url = URL.createObjectURL(blob);
+									const a = document.createElement("a");
+									a.href = url;
+									a.download = item.originalName || "file";
+									document.body.appendChild(a);
+									a.click();
+									a.remove();
+									URL.revokeObjectURL(url);
+									setMessage("Download started.");
+								} catch {
+									setMessage("Failed to download.");
+								}
+							}
+
+							const actions = document.createElement("div");
+							actions.style.display = "flex";
+							actions.style.alignItems = "center";
+							actions.style.gap = "10px";
+
+							const downloadBtn = document.createElement("button");
+							downloadBtn.type = "button";
+							downloadBtn.className = "iconbtn";
+							downloadBtn.title = "Download";
+							downloadBtn.setAttribute("aria-label", `Download ${item.originalName || "file"}`);
+							downloadBtn.innerHTML = `
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+									<path d="M7 10l5 5 5-5"></path>
+									<path d="M12 15V3"></path>
+								</svg>
+							`;
+							downloadBtn.addEventListener("click", downloadItem);
+
+							const del = document.createElement("button");
+							del.type = "button";
+							del.className = "iconbtn";
+							del.title = "Delete";
+							del.setAttribute("aria-label", `Delete ${item.originalName || "file"}`);
+							del.innerHTML = `
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M3 6h18"></path>
+								<path d="M8 6V4h8v2"></path>
+								<path d="M19 6l-1 14H6L5 6"></path>
+								<path d="M10 11v6"></path>
+								<path d="M14 11v6"></path>
+							</svg>
+						`;
+							del.addEventListener("click", async () => {
+								try {
+									setMessage("Deleting…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}`, { method: "DELETE" });
+									if (!r.ok) throw new Error("Delete failed");
+									setMessage("Deleted.");
+									await loadList();
+								} catch {
+									setMessage("Failed to delete.");
+								}
+							});
+
+							actions.appendChild(downloadBtn);
+							actions.appendChild(del);
+							row.appendChild(left);
+							row.appendChild(actions);
+							listEl.appendChild(row);
+						}
+					} catch (e) {
+						const msg = e?.message || "Failed to load list";
+						setMessage(`${msg}. Is the backend running on ${API_BASE}?`);
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Backend not available.";
+						listEl.appendChild(empty);
+					}
+				}
+
+				async function uploadEncryptedToServer() {
 					if (pending.length === 0) return;
-					const existing = loadRecords();
-					const now = new Date().toISOString();
-					const additions = pending.map((file) => ({
-						id: makeId(),
-						name: file.name,
-						size: file.size,
-						type: file.type || "",
-						lastModified: file.lastModified,
-						addedAt: now
-					}));
-					saveRecords(existing.concat(additions));
-					pending = [];
-					updateUploadButton();
-					renderList();
-					setMessage(`Added ${additions.length} file(s) to uploaded list.`);
+					if (uploadBtn) uploadBtn.disabled = true;
+					try {
+						setMessage("Encrypting in browser…");
+						const key = await importAesKey();
+						setMessage("Uploading encrypted files…");
+						for (const file of pending) {
+							const iv = new Uint8Array(12);
+							crypto.getRandomValues(iv);
+							const plaintext = await file.arrayBuffer();
+							const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+							const cipherBlob = new Blob([ciphertext], { type: "application/octet-stream" });
+							const ivB64 = bytesToB64(iv);
+
+							const form = new FormData();
+							form.append("file", cipherBlob, `${file.name}.cipher`);
+							form.append("encMode", "client");
+							form.append("clientIvB64", ivB64);
+							form.append("originalName", file.name);
+							form.append("mimeType", file.type || "application/octet-stream");
+							form.append("originalSize", String(file.size));
+							const res = await apiFetch("/api/files", { method: "POST", body: form });
+							if (!res.ok) throw new Error("Upload failed");
+						}
+						pending = [];
+						setMessage("Uploaded. Refreshing list…");
+						await loadList();
+						setMessage("Done.");
+					} catch {
+						setMessage("Upload failed. Check backend + MongoDB config.");
+					} finally {
+						updateUploadButton();
+					}
 				}
 
 				chooseBtn?.addEventListener("click", () => input?.click());
@@ -1254,7 +1393,7 @@
 					input.value = "";
 				});
 
-				uploadBtn?.addEventListener("click", uploadLocalOnly);
+				uploadBtn?.addEventListener("click", uploadEncryptedToServer);
 
 				if (dropZone) {
 					dropZone.addEventListener("click", () => input?.click());
@@ -1286,8 +1425,9 @@
 				document.addEventListener("dragover", (e) => e.preventDefault());
 				document.addEventListener("drop", (e) => e.preventDefault());
 
-				renderList();
 				updateUploadButton();
+				// Wait a tick so auth state has time to populate.
+				setTimeout(() => void loadList(), 700);
 			})();
 		</script>
 	</body>
