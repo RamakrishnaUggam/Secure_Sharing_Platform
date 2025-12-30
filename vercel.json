@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/health", "destination": "https://secure-sharing-platform.onrender.com/health" },
+    { "source": "/api/:path*", "destination": "https://secure-sharing-platform.onrender.com/api/:path*" }
+  ]
+}
