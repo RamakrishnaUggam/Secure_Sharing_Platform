@@ -6,13 +6,13 @@
 # with the real URL (example: https://secure-sharing-api.onrender.com).
 [[redirects]]
   from = "/api/*"
-  to = "https://YOUR_RENDER_BACKEND_URL/api/:splat"
+  to = "https://secure-sharing-platform.onrender.com/api/:splat"
   status = 200
   force = true
 
 # Optional (nice): keep health reachable via the same proxy
 [[redirects]]
   from = "/health"
-  to = "https://YOUR_RENDER_BACKEND_URL/health"
+  to = "https://secure-sharing-platform.onrender.com/health"
   status = 200
   force = true
