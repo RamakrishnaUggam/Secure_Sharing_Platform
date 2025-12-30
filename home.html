@@ -1267,7 +1267,70 @@
 							`;
 							downloadBtn.addEventListener("click", downloadItem);
 
+							const shareBtn = document.createElement("button");
+							shareBtn.type = "button";
+							shareBtn.className = "iconbtn";
+							shareBtn.title = "Share";
+							shareBtn.setAttribute("aria-label", `Share ${item.originalName || "file"}`);
+							shareBtn.innerHTML = `
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<circle cx="18" cy="5" r="3"></circle>
+									<circle cx="6" cy="12" r="3"></circle>
+									<circle cx="18" cy="19" r="3"></circle>
+									<path d="M8.7 10.7l6.6-3.4"></path>
+									<path d="M8.7 13.3l6.6 3.4"></path>
+								</svg>
+							`;
+							shareBtn.addEventListener("click", async () => {
+								try {
+									const recipientEmail = prompt("Enter recipient Gmail/Email (must be verified):");
+									if (!recipientEmail) return;
+									setMessage("Sharing…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/share`, {
+										method: "POST",
+										headers: { "Content-Type": "application/json" },
+										body: JSON.stringify({ recipientEmail })
+									});
+									const j = await r.json().catch(() => null);
+									if (!r.ok) throw new Error(j?.error || "Share failed");
+									setMessage("Shared.");
+								} catch (e) {
+									setMessage(e?.message || "Failed to share.");
+								}
+							});
+
+							const delBtn = document.createElement("button");
+							delBtn.type = "button";
+							delBtn.className = "iconbtn";
+							delBtn.title = "Delete";
+							delBtn.setAttribute("aria-label", `Delete ${item.originalName || "file"}`);
+							delBtn.innerHTML = `
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M3 6h18"></path>
+									<path d="M8 6V4h8v2"></path>
+									<path d="M19 6l-1 14H6L5 6"></path>
+									<path d="M10 11v6"></path>
+									<path d="M14 11v6"></path>
+								</svg>
+							`;
+							delBtn.addEventListener("click", async () => {
+								try {
+									const ok = confirm(`Delete ${item.originalName || "this file"}?`);
+									if (!ok) return;
+									setMessage("Deleting…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}`, { method: "DELETE" });
+									const j = await r.json().catch(() => null);
+									if (!r.ok) throw new Error(j?.error || "Delete failed");
+									setMessage("Deleted.");
+									await loadList();
+								} catch (e) {
+									setMessage(e?.message || "Failed to delete.");
+								}
+							});
+
+							actions.appendChild(shareBtn);
 							actions.appendChild(downloadBtn);
+							actions.appendChild(delBtn);
 							row.appendChild(left);
 							row.appendChild(actions);
 							listEl.appendChild(row);
