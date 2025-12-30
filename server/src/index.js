@@ -10,6 +10,8 @@ import { filesRouter } from "./routes.files.js";
 
 const app = express();
 
+app.use(express.json({ limit: "1mb" }));
+
 app.use(
 	cors({
 		origin(origin, callback) {

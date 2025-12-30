@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { requireAuth } from "./auth.js";
 import { config } from "./config.js";
 import { FileRecord } from "./models/FileRecord.js";
+import { ShareRecord } from "./models/ShareRecord.js";
 import { getMasterKey, wrapDataKey, unwrapDataKey } from "./cryptoBox.js";
 
 const upload = multer({
@@ -27,6 +28,27 @@ function ensureStorageDir() {
 
 function randomId() {
 	return crypto.randomUUID();
+}
+
+function normalizeEmail(value) {
+	return String(value || "")
+		.trim()
+		.toLowerCase();
+}
+
+async function canAccessFile({ fileId, uid, email }) {
+	if (!fileId) return false;
+	if (!uid && !email) return false;
+
+	const record = await FileRecord.findById(fileId).lean();
+	if (!record) return { ok: false, record: null };
+	if (record.ownerUid === uid) return { ok: true, record };
+
+	const norm = normalizeEmail(email);
+	if (!norm) return { ok: false, record };
+	const share = await ShareRecord.findOne({ fileId: record._id, recipientEmail: norm }).lean();
+	if (!share) return { ok: false, record };
+	return { ok: true, record };
 }
 
 function encryptFileBufferToDisk({ buffer, outPath }) {
@@ -58,6 +80,69 @@ export function filesRouter() {
 				updatedAt: f.updatedAt
 			}))
 		);
+	});
+
+	// List files shared with the signed-in user's email.
+	router.get("/shared/with-me", auth, async (req, res) => {
+		const email = normalizeEmail(req.user.email);
+		if (!email) return res.status(400).json({ error: "No email on user" });
+
+		const shares = await ShareRecord.find({ recipientEmail: email }).sort({ createdAt: -1 }).lean();
+		if (shares.length === 0) return res.json([]);
+
+		const fileIds = shares.map((s) => s.fileId);
+		const files = await FileRecord.find({ _id: { $in: fileIds } }).lean();
+		const fileById = new Map(files.map((f) => [String(f._id), f]));
+
+		const out = [];
+		for (const share of shares) {
+			const f = fileById.get(String(share.fileId));
+			if (!f) continue;
+			out.push({
+				shareId: String(share._id),
+				id: String(f._id),
+				ownerUid: f.ownerUid,
+				encryptionMode: f.encryptionMode || "server",
+				originalName: f.originalName,
+				mimeType: f.mimeType,
+				size: f.size,
+				sharedAt: share.createdAt
+			});
+		}
+
+		res.json(out);
+	});
+
+	// Share a file with another user via email (Gmail etc). File stays in-platform.
+	router.post("/:id/share", auth, async (req, res) => {
+		const recipientEmail = normalizeEmail(req.body?.recipientEmail);
+		if (!recipientEmail) return res.status(400).json({ error: "Missing recipientEmail" });
+		if (!recipientEmail.includes("@")) return res.status(400).json({ error: "Invalid recipientEmail" });
+
+		const record = await FileRecord.findOne({ _id: req.params.id, ownerUid: req.user.uid }).lean();
+		if (!record) return res.status(404).json({ error: "Not found" });
+
+		// Client-encrypted files cannot be shared without key exchange.
+		if (record.encryptionMode === "client") {
+			return res.status(400).json({
+				error: "This file is client-encrypted and cannot be shared yet",
+				hint: "Upload using server encryption to share, or implement key sharing."
+			});
+		}
+
+		try {
+			const share = await ShareRecord.create({
+				fileId: record._id,
+				ownerUid: record.ownerUid,
+				recipientEmail,
+				createdByUid: req.user.uid
+			});
+			return res.status(201).json({ ok: true, shareId: String(share._id) });
+		} catch (e) {
+			// Duplicate share -> treat as success.
+			if (String(e?.code || "") === "11000") return res.json({ ok: true, alreadyShared: true });
+			throw e;
+		}
 	});
 
 	router.post("/", auth, upload.single("file"), async (req, res) => {
@@ -131,10 +216,21 @@ export function filesRouter() {
 	});
 
 	router.get("/:id/download", auth, async (req, res) => {
-		const record = await FileRecord.findOne({ _id: req.params.id, ownerUid: req.user.uid }).lean();
-		if (!record) return res.status(404).json({ error: "Not found" });
+		const access = await canAccessFile({ fileId: req.params.id, uid: req.user.uid, email: req.user.email });
+		if (!access.record) return res.status(404).json({ error: "Not found" });
+		if (!access.ok) return res.status(403).json({ error: "Forbidden" });
+		const record = access.record;
 
 		if (record.encryptionMode === "client") {
+			// Client-encrypted files are only decryptable by the uploader's browser key.
+			// Allow owner download as before; for shared recipients, block for now.
+			if (record.ownerUid !== req.user.uid) {
+				return res.status(400).json({
+					error: "This file is client-encrypted and cannot be downloaded by recipients yet",
+					hint: "Key sharing is required to decrypt."
+				});
+			}
+
 			const ciphertext = fs.readFileSync(record.storagePath);
 			res.setHeader("X-Enc-Mode", "client");
 			res.setHeader("X-Client-Iv-B64", record.clientIvB64 || "");

@@ -939,6 +939,9 @@
 
 						<div id="uploadMessage" class="upload__message" role="status" aria-live="polite"></div>
 						<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
+						<div style="height: 12px;"></div>
+						<div class="upload__meta" style="margin-bottom: 10px;">Shared with you</div>
+						<div id="sharedWithMeList" class="upload__list" aria-label="Shared with you list"></div>
 					</div>
 				</div>
 			</section>
@@ -1150,6 +1153,7 @@
 				const input = document.getElementById("uploadInput");
 				const dropZone = document.getElementById("dropZone");
 				const listEl = document.getElementById("uploadedList");
+				const sharedListEl = document.getElementById("sharedWithMeList");
 				const messageEl = document.getElementById("uploadMessage");
 
 				/** @type {File[]} */
@@ -1254,6 +1258,126 @@
 					const headers = new Headers(options.headers || {});
 					headers.set("Authorization", `Bearer ${token}`);
 					return await fetch(`${API_BASE}${path}`, { ...options, headers });
+				}
+
+				async function loadSharedWithMe() {
+					if (!sharedListEl) return;
+					sharedListEl.innerHTML = "";
+					try {
+						const res = await apiFetch("/api/files/shared/with-me");
+						if (!res.ok) throw new Error("Failed to load shared files");
+						const items = await res.json();
+						if (!Array.isArray(items) || items.length === 0) {
+							const empty = document.createElement("div");
+							empty.className = "upload__meta";
+							empty.textContent = "No files shared with you yet.";
+							sharedListEl.appendChild(empty);
+							return;
+						}
+
+						for (const item of items) {
+							const row = document.createElement("div");
+							row.className = "upload__item";
+
+							const left = document.createElement("div");
+							const name = document.createElement("div");
+							name.className = "upload__name";
+							name.textContent = item.originalName || "(unnamed)";
+
+							const meta = document.createElement("div");
+							meta.className = "upload__meta";
+							const parts = [];
+							if (typeof item.size === "number") parts.push(formatBytes(item.size));
+							if (item.mimeType) parts.push(item.mimeType);
+							if (item.sharedAt) parts.push(`Shared: ${new Date(item.sharedAt).toLocaleString()}`);
+							meta.textContent = parts.filter(Boolean).join(" • ") || "—";
+
+							left.appendChild(name);
+							left.appendChild(meta);
+
+							const actions = document.createElement("div");
+							actions.style.display = "flex";
+							actions.style.alignItems = "center";
+							actions.style.gap = "10px";
+
+							const shareBtn = document.createElement("button");
+							shareBtn.type = "button";
+							shareBtn.className = "iconbtn";
+							shareBtn.title = "Share";
+							shareBtn.setAttribute("aria-label", `Share ${item.originalName || "file"}`);
+							shareBtn.innerHTML = `
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<circle cx="18" cy="5" r="3"></circle>
+									<circle cx="6" cy="12" r="3"></circle>
+									<circle cx="18" cy="19" r="3"></circle>
+									<path d="M8.7 10.7l6.6-3.4"></path>
+									<path d="M8.7 13.3l6.6 3.4"></path>
+								</svg>
+							`;
+							shareBtn.addEventListener("click", async () => {
+								try {
+									const recipientEmail = prompt("Enter recipient Gmail/Email (shared inside this platform only):");
+									if (!recipientEmail) return;
+									setMessage("Sharing…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/share`, {
+										method: "POST",
+										headers: { "Content-Type": "application/json" },
+										body: JSON.stringify({ recipientEmail })
+									});
+									const j = await r.json().catch(() => null);
+									if (!r.ok) throw new Error(j?.error || "Share failed");
+									setMessage("Shared.");
+								} catch (e) {
+									setMessage(e?.message || "Failed to share.");
+								}
+							});
+
+							const downloadBtn = document.createElement("button");
+							downloadBtn.type = "button";
+							downloadBtn.className = "iconbtn";
+							downloadBtn.title = "Download";
+							downloadBtn.setAttribute("aria-label", `Download ${item.originalName || "file"}`);
+							downloadBtn.innerHTML = `
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+									<path d="M7 10l5 5 5-5"></path>
+									<path d="M12 15V3"></path>
+								</svg>
+							`;
+							downloadBtn.addEventListener("click", async () => {
+								try {
+									setMessage("Downloading…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/download`);
+									if (!r.ok) {
+										const j = await r.json().catch(() => null);
+										throw new Error(j?.error || "Download failed");
+									}
+									const blob = await r.blob();
+									const url = URL.createObjectURL(blob);
+									const a = document.createElement("a");
+									a.href = url;
+									a.download = item.originalName || "file";
+									document.body.appendChild(a);
+									a.click();
+									a.remove();
+									URL.revokeObjectURL(url);
+									setMessage("Download started.");
+								} catch (e) {
+									setMessage(e?.message || "Failed to download.");
+								}
+							});
+
+							actions.appendChild(downloadBtn);
+							row.appendChild(left);
+							row.appendChild(actions);
+							sharedListEl.appendChild(row);
+						}
+					} catch {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Backend not available.";
+						sharedListEl.appendChild(empty);
+					}
 				}
 
 				async function loadList() {
@@ -1379,11 +1503,13 @@
 									if (!r.ok) throw new Error("Delete failed");
 									setMessage("Deleted.");
 									await loadList();
+									await loadSharedWithMe();
 								} catch {
 									setMessage("Failed to delete.");
 								}
 							});
 
+							actions.appendChild(shareBtn);
 							actions.appendChild(downloadBtn);
 							actions.appendChild(del);
 							row.appendChild(left);
@@ -1428,6 +1554,7 @@
 						pending = [];
 						setMessage("Uploaded. Refreshing list…");
 						await loadList();
+						await loadSharedWithMe();
 						setMessage("Done.");
 					} catch {
 						setMessage("Upload failed. Check backend + MongoDB config.");
@@ -1476,7 +1603,10 @@
 
 				updateUploadButton();
 				// Wait a tick so auth state has time to populate.
-				setTimeout(() => void loadList(), 700);
+				setTimeout(() => {
+					void loadList();
+					void loadSharedWithMe();
+				}, 700);
 			})();
 		</script>
 	</body>
