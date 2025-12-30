@@ -1198,6 +1198,17 @@
 					return out;
 				}
 
+				function bytesToHex(bytes) {
+					let out = "";
+					for (const b of bytes) out += b.toString(16).padStart(2, "0");
+					return out;
+				}
+
+				async function sha256HexFromArrayBuffer(buf) {
+					const digest = await crypto.subtle.digest("SHA-256", buf);
+					return bytesToHex(new Uint8Array(digest));
+				}
+
 				async function getClientKeyBytes() {
 					const auth = window.__auth;
 					const user = auth?.currentUser;
@@ -1423,6 +1434,8 @@
 
 									const encMode = String(r.headers.get("x-enc-mode") || "").toLowerCase();
 									if (encMode === "client") {
+										const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
+										const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
 										const ivB64 = r.headers.get("x-client-iv-b64") || "";
 										const nameHeader = r.headers.get("x-original-name") || "";
 										const mimeHeader = r.headers.get("x-original-mime") || "";
@@ -1433,7 +1446,15 @@
 										const iv = b64ToBytes(ivB64);
 										const key = await importAesKey();
 										const ciphertext = await r.arrayBuffer();
+										if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
+											const computedStored = await sha256HexFromArrayBuffer(ciphertext);
+											if (computedStored !== storedShaExpected) throw new Error("Integrity check failed");
+										}
 										const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+										if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+											const computedOriginal = await sha256HexFromArrayBuffer(plaintext);
+											if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+										}
 										const outBlob = new Blob([plaintext], { type: originalMime });
 										const url = URL.createObjectURL(outBlob);
 										const a = document.createElement("a");
@@ -1448,7 +1469,13 @@
 									}
 
 									// Server-encrypted mode: backend returns plaintext.
-									const blob = await r.blob();
+									const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+									const bytes = await r.arrayBuffer();
+									if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+										const computedOriginal = await sha256HexFromArrayBuffer(bytes);
+										if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+									}
+									const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
 									const url = URL.createObjectURL(blob);
 									const a = document.createElement("a");
 									a.href = url;
@@ -1537,6 +1564,7 @@
 							const iv = new Uint8Array(12);
 							crypto.getRandomValues(iv);
 							const plaintext = await file.arrayBuffer();
+							const originalSha256Hex = await sha256HexFromArrayBuffer(plaintext);
 							const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
 							const cipherBlob = new Blob([ciphertext], { type: "application/octet-stream" });
 							const ivB64 = bytesToB64(iv);
@@ -1548,6 +1576,7 @@
 							form.append("originalName", file.name);
 							form.append("mimeType", file.type || "application/octet-stream");
 							form.append("originalSize", String(file.size));
+							form.append("originalSha256Hex", originalSha256Hex);
 							const res = await apiFetch("/api/files", { method: "POST", body: form });
 							if (!res.ok) throw new Error("Upload failed");
 						}

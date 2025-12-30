@@ -19,7 +19,14 @@ const fileRecordSchema = new mongoose.Schema(
 		wrapTagHex: { type: String, required: false },
 
 		// Client-side encryption metadata
-		clientIvB64: { type: String, required: false }
+		clientIvB64: { type: String, required: false },
+
+		// Integrity (SHA-256)
+		// originalSha256Hex: SHA-256 of original plaintext bytes (from server for server-encrypted,
+		// or provided by client for client-encrypted uploads).
+		originalSha256Hex: { type: String, required: false },
+		// storedSha256Hex: SHA-256 of the stored bytes on disk (ciphertext for both modes).
+		storedSha256Hex: { type: String, required: false }
 	},
 	{ timestamps: true }
 );

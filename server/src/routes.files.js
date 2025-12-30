@@ -31,6 +31,10 @@ function randomId() {
 	return crypto.randomUUID();
 }
 
+function sha256Hex(buf) {
+	return crypto.createHash("sha256").update(buf).digest("hex");
+}
+
 function normalizeEmail(value) {
 	return String(value || "")
 		.trim()
@@ -59,7 +63,7 @@ function encryptFileBufferToDisk({ buffer, outPath }) {
 	const ciphertext = Buffer.concat([cipher.update(buffer), cipher.final()]);
 	const tag = cipher.getAuthTag();
 	fs.writeFileSync(outPath, ciphertext);
-	return { dataKey, fileIvHex: iv.toString("hex"), fileTagHex: tag.toString("hex") };
+	return { dataKey, fileIvHex: iv.toString("hex"), fileTagHex: tag.toString("hex"), storedSha256Hex: sha256Hex(ciphertext) };
 }
 
 export function filesRouter() {
@@ -175,10 +179,15 @@ export function filesRouter() {
 			const originalName = String(req.body?.originalName || "").trim() || req.file.originalname;
 			const mimeType = String(req.body?.mimeType || "").trim() || "application/octet-stream";
 			const size = Number(req.body?.originalSize || req.file.size);
+			const originalSha256Hex = String(req.body?.originalSha256Hex || "").trim().toLowerCase();
 			if (!clientIvB64) return res.status(400).json({ error: "Missing clientIvB64" });
+			if (originalSha256Hex && !/^[a-f0-9]{64}$/.test(originalSha256Hex)) {
+				return res.status(400).json({ error: "Invalid originalSha256Hex" });
+			}
 
 			// Store ciphertext as-is (client already encrypted).
 			fs.writeFileSync(outPath, req.file.buffer);
+			const storedSha256Hex = sha256Hex(req.file.buffer);
 
 			doc = await FileRecord.create({
 				ownerUid: req.user.uid,
@@ -187,10 +196,13 @@ export function filesRouter() {
 				originalName,
 				mimeType,
 				size,
-				storagePath: outPath
+				storagePath: outPath,
+				storedSha256Hex,
+				originalSha256Hex: originalSha256Hex || undefined
 			});
 		} else {
-			const { dataKey, fileIvHex, fileTagHex } = encryptFileBufferToDisk({ buffer: req.file.buffer, outPath });
+			const originalSha256Hex = sha256Hex(req.file.buffer);
+			const { dataKey, fileIvHex, fileTagHex, storedSha256Hex } = encryptFileBufferToDisk({ buffer: req.file.buffer, outPath });
 			const wrapped = wrapDataKey({ masterKey, dataKey });
 
 			doc = await FileRecord.create({
@@ -202,6 +214,8 @@ export function filesRouter() {
 				storagePath: outPath,
 				fileIvHex,
 				fileTagHex,
+				storedSha256Hex,
+				originalSha256Hex,
 				...wrapped
 			});
 		}
@@ -247,10 +261,16 @@ export function filesRouter() {
 			}
 
 			const ciphertext = fs.readFileSync(record.storagePath);
+			const computedStored = sha256Hex(ciphertext);
+			if (record.storedSha256Hex && computedStored !== record.storedSha256Hex) {
+				return res.status(500).json({ error: "Integrity check failed" });
+			}
 			res.setHeader("X-Enc-Mode", "client");
 			res.setHeader("X-Client-Iv-B64", record.clientIvB64 || "");
 			res.setHeader("X-Original-Name", encodeURIComponent(record.originalName || "file"));
 			res.setHeader("X-Original-Mime", encodeURIComponent(record.mimeType || "application/octet-stream"));
+			res.setHeader("X-Stored-Sha256", record.storedSha256Hex || computedStored);
+			if (record.originalSha256Hex) res.setHeader("X-Original-Sha256", record.originalSha256Hex);
 			res.setHeader("Content-Type", "application/octet-stream");
 			return res.send(ciphertext);
 		}
@@ -263,11 +283,25 @@ export function filesRouter() {
 		});
 
 		const ciphertext = fs.readFileSync(record.storagePath);
+		const computedStored = sha256Hex(ciphertext);
+		if (record.storedSha256Hex && computedStored !== record.storedSha256Hex) {
+			return res.status(500).json({ error: "Integrity check failed" });
+		}
 		const iv = Buffer.from(record.fileIvHex, "hex");
 		const tag = Buffer.from(record.fileTagHex, "hex");
 		const decipher = crypto.createDecipheriv("aes-256-gcm", dataKey, iv);
 		decipher.setAuthTag(tag);
 		const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+
+		// If we have the original plaintext hash, verify it matches what we are about to send.
+		if (record.originalSha256Hex) {
+			const computedOriginal = sha256Hex(plaintext);
+			if (computedOriginal !== record.originalSha256Hex) {
+				return res.status(500).json({ error: "Integrity check failed" });
+			}
+			res.setHeader("X-Original-Sha256", record.originalSha256Hex);
+		}
+		res.setHeader("X-Stored-Sha256", record.storedSha256Hex || computedStored);
 
 		res.setHeader("Content-Type", record.mimeType || "application/octet-stream");
 		res.setHeader(
