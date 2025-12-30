@@ -952,6 +952,9 @@
 
 						<div id="uploadMessage" class="upload__message" role="status" aria-live="polite"></div>
 						<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
+						<div style="height: 12px;"></div>
+						<div class="upload__meta" style="margin-bottom: 10px;">Shared with you</div>
+						<div id="sharedWithMeList" class="upload__list" aria-label="Shared with you list"></div>
 					</div>
 				</div>
 			</section>
@@ -1023,6 +1026,7 @@
 				const shareableUploadEl = document.getElementById("shareableUpload");
 				const dropZone = document.getElementById("dropZone");
 				const listEl = document.getElementById("uploadedList");
+				const sharedListEl = document.getElementById("sharedWithMeList");
 				const messageEl = document.getElementById("uploadMessage");
 
 				/** @type {File[]} */
@@ -1143,6 +1147,118 @@
 					const headers = new Headers(options.headers || {});
 					headers.set("Authorization", `Bearer ${token}`);
 					return await fetch(`${API_BASE}${path}`, { ...options, headers });
+				}
+
+				async function loadSharedWithMe() {
+					if (!sharedListEl) return;
+					sharedListEl.innerHTML = "";
+					try {
+						const res = await apiFetch("/api/files/shared/with-me");
+						if (!res.ok) throw new Error("Failed to load shared files");
+						const items = await res.json();
+						if (!Array.isArray(items) || items.length === 0) {
+							const empty = document.createElement("div");
+							empty.className = "upload__meta";
+							empty.textContent = "No files shared with you yet.";
+							sharedListEl.appendChild(empty);
+							return;
+						}
+
+						for (const item of items) {
+							const row = document.createElement("div");
+							row.className = "upload__item";
+
+							const left = document.createElement("div");
+							const name = document.createElement("div");
+							name.className = "upload__name";
+							name.textContent = item.originalName || "(unnamed)";
+
+							const meta = document.createElement("div");
+							meta.className = "upload__meta upload__metaRow";
+							function statusPill(label, ok) {
+								const el = document.createElement("span");
+								el.className = `status ${ok ? "status--ok" : "status--bad"}`;
+								const dot = document.createElement("span");
+								dot.className = "status__dot";
+								dot.setAttribute("aria-hidden", "true");
+								const t = document.createElement("span");
+								t.className = "status__label";
+								t.textContent = label;
+								el.appendChild(dot);
+								el.appendChild(t);
+								return el;
+							}
+							meta.appendChild(statusPill("Integrity", item.integrityOk === true));
+							meta.appendChild(statusPill("Confidentiality", item.confidentialityOk === true));
+
+							left.appendChild(name);
+							left.appendChild(meta);
+
+							const actions = document.createElement("div");
+							actions.style.display = "flex";
+							actions.style.alignItems = "center";
+							actions.style.gap = "10px";
+
+							const downloadBtn = document.createElement("button");
+							downloadBtn.type = "button";
+							downloadBtn.className = "iconbtn";
+							downloadBtn.title = "Download";
+							downloadBtn.setAttribute("aria-label", `Download ${item.originalName || "file"}`);
+							downloadBtn.innerHTML = `
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+									<path d="M7 10l5 5 5-5"></path>
+									<path d="M12 15V3"></path>
+								</svg>
+							`;
+							downloadBtn.addEventListener("click", async () => {
+								try {
+									const itemId = item.id || item.fileId || item._id;
+									if (!itemId) throw new Error("Missing file id");
+									setMessage("Downloading…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
+									if (!r.ok) {
+										const j = await r.json().catch(() => null);
+										throw new Error(j?.error || "Download failed");
+									}
+
+									const encMode = String(r.headers.get("x-enc-mode") || "").toLowerCase();
+									if (encMode === "client") {
+										throw new Error("This shared file is client-encrypted and cannot be downloaded yet");
+									}
+
+									const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+									const bytes = await r.arrayBuffer();
+									if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+										const computedOriginal = await sha256HexFromArrayBuffer(bytes);
+										if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+									}
+									const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
+									const url = URL.createObjectURL(blob);
+									const a = document.createElement("a");
+									a.href = url;
+									a.download = item.originalName || "file";
+									document.body.appendChild(a);
+									a.click();
+									a.remove();
+									URL.revokeObjectURL(url);
+									setMessage("Download started.");
+								} catch (e) {
+									setMessage(e?.message || "Failed to download.");
+								}
+							});
+
+							actions.appendChild(downloadBtn);
+							row.appendChild(left);
+							row.appendChild(actions);
+							sharedListEl.appendChild(row);
+						}
+					} catch {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Backend not available.";
+						sharedListEl.appendChild(empty);
+					}
 				}
 
 				async function loadList() {
@@ -1453,6 +1569,7 @@
 				// Wait a tick so auth state has time to populate.
 				setTimeout(() => {
 					void loadList();
+					void loadSharedWithMe();
 				}, 700);
 			})();
 		</script>
