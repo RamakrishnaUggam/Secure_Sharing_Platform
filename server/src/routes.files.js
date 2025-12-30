@@ -35,6 +35,34 @@ function sha256Hex(buf) {
 	return crypto.createHash("sha256").update(buf).digest("hex");
 }
 
+function safeReadFileBuffer(filePath) {
+	try {
+		return fs.readFileSync(filePath);
+	} catch {
+		return null;
+	}
+}
+
+function computeIntegrityOk(record) {
+	if (!record?.storagePath) return false;
+	if (!record?.storedSha256Hex || !/^[a-f0-9]{64}$/i.test(String(record.storedSha256Hex))) return false;
+	const buf = safeReadFileBuffer(record.storagePath);
+	if (!buf) return false;
+	const computed = sha256Hex(buf);
+	return computed === String(record.storedSha256Hex).toLowerCase();
+}
+
+function computeConfidentialityOk(record) {
+	const mode = String(record?.encryptionMode || "server").toLowerCase();
+	if (mode === "client") {
+		return Boolean(record?.clientIvB64);
+	}
+	if (mode === "server") {
+		return Boolean(record?.wrappedKeyHex && record?.wrappedIvHex && record?.fileIvHex && record?.fileTagHex);
+	}
+	return false;
+}
+
 function normalizeEmail(value) {
 	return String(value || "")
 		.trim()
@@ -78,6 +106,8 @@ export function filesRouter() {
 				id: String(f._id),
 				encryptionMode: f.encryptionMode || "server",
 				clientIvB64: f.clientIvB64 || null,
+				integrityOk: computeIntegrityOk(f),
+				confidentialityOk: computeConfidentialityOk(f),
 				originalName: f.originalName,
 				mimeType: f.mimeType,
 				size: f.size,
@@ -108,6 +138,8 @@ export function filesRouter() {
 				id: String(f._id),
 				ownerUid: f.ownerUid,
 				encryptionMode: f.encryptionMode || "server",
+				integrityOk: computeIntegrityOk(f),
+				confidentialityOk: computeConfidentialityOk(f),
 				originalName: f.originalName,
 				mimeType: f.mimeType,
 				size: f.size,

@@ -12,10 +12,17 @@ function required(name) {
 
 export const config = {
 	port: Number(process.env.PORT || 3001),
-	corsOrigins: String(process.env.CORS_ORIGIN || "http://localhost:8000")
+	corsOrigins: String(
+		process.env.CORS_ORIGIN ||
+			"http://localhost:8000,http://127.0.0.1:8000,https://securefilesharingplatform.netlify.app"
+	)
 		.split(",")
 		.map((s) => s.trim())
 		.filter(Boolean),
+	corsAllowAll: String(process.env.CORS_ORIGIN || "")
+		.split(",")
+		.map((s) => s.trim())
+		.includes("*"),
 	mongoUri: required("MONGODB_URI"),
 	masterKeyHex: required("MASTER_KEY_HEX"),
 	firebaseServiceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON

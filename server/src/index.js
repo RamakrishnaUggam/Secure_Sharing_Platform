@@ -17,6 +17,7 @@ app.use(
 		origin(origin, callback) {
 			// Allow non-browser tools (curl, Postman) which may not send an Origin header.
 			if (!origin) return callback(null, true);
+			if (config.corsAllowAll) return callback(null, true);
 			if (config.corsOrigins.includes(origin)) return callback(null, true);
 			return callback(new Error(`CORS blocked for origin: ${origin}`));
 		},
