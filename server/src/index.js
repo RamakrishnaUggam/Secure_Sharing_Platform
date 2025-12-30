@@ -22,6 +22,16 @@ app.use(
 	})
 );
 
+app.get("/", (_req, res) => {
+	res.json({
+		ok: true,
+		service: "secure-sharing-backend",
+		health: "/health",
+		me: "/api/me",
+		files: "/api/files"
+	});
+});
+
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 initFirebaseAdmin(config.firebaseServiceAccountJson);
