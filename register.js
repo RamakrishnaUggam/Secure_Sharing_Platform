@@ -63,6 +63,29 @@ function setupPasswordToggle(inputId, buttonId) {
   });
 }
 
+async function sendVerificationEmailBestEffort(user) {
+  if (!user) throw new Error("Missing user");
+
+  const continueUrl = getContinueUrl();
+  try {
+    const actionCodeSettings = continueUrl ? { url: continueUrl } : undefined;
+    await sendEmailVerification(user, actionCodeSettings);
+    return;
+  } catch (e) {
+    const code = String(e?.code || "");
+
+    // If the continue URL is not in Firebase "Authorized domains",
+    // Firebase throws auth/invalid-continue-uri or auth/unauthorized-continue-uri.
+    // Retry without actionCodeSettings so Firebase uses its default handler.
+    if (code === "auth/invalid-continue-uri" || code === "auth/unauthorized-continue-uri") {
+      await sendEmailVerification(user);
+      return;
+    }
+
+    throw e;
+  }
+}
+
 function friendlyAuthError(error) {
   const code = error?.code || "";
   switch (code) {
@@ -115,13 +138,13 @@ createUserWithEmailAndPassword(auth, email, password)
     }
 
     try {
-      const continueUrl = getContinueUrl();
-      const actionCodeSettings = continueUrl ? { url: continueUrl } : undefined;
-      await sendEmailVerification(user, actionCodeSettings);
+      await sendVerificationEmailBestEffort(user);
       markVerificationEmailSent(user.uid);
     } catch (e) {
       console.warn(e);
-      showMessage("Account created, but we couldn't send a verification email. Please try logging in and resend verification.");
+      const code = String(e?.code || "");
+      const hint = code ? ` (Firebase: ${code})` : "";
+      showMessage(`Account created, but we couldn't send a verification email.${hint} Please check your Firebase Auth settings and try again.`);
       return;
     }
 
@@ -132,7 +155,7 @@ createUserWithEmailAndPassword(auth, email, password)
       // ignore
     }
 
-    showMessage("Verification email sent. Please verify your email, then log in.");
+    showMessage("Verification email sent. Please check Inbox/Spam, verify your email, then log in.");
     window.location.href = "index.html?registered=1&verify=1";
   })
   .catch((error) => {

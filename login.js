@@ -120,6 +120,24 @@ function markVerificationEmailSent(uid) {
   }
 }
 
+async function sendVerificationEmailBestEffort(user) {
+  if (!user) throw new Error("Missing user");
+
+  const continueUrl = getContinueUrl();
+  try {
+    const actionCodeSettings = continueUrl ? { url: continueUrl } : undefined;
+    await sendEmailVerification(user, actionCodeSettings);
+    return;
+  } catch (e) {
+    const code = String(e?.code || "");
+    if (code === "auth/invalid-continue-uri" || code === "auth/unauthorized-continue-uri") {
+      await sendEmailVerification(user);
+      return;
+    }
+    throw e;
+  }
+}
+
 // Show a one-time success message after registration.
 (() => {
   const params = new URLSearchParams(window.location.search);
@@ -187,13 +205,14 @@ form.addEventListener("submit", (event) => {
         // Optionally send verification email again (throttled).
         try {
           if (!shouldThrottleVerificationSend(user.uid)) {
-            const continueUrl = getContinueUrl();
-            const actionCodeSettings = continueUrl ? { url: continueUrl } : undefined;
-            await sendEmailVerification(user, actionCodeSettings);
+            await sendVerificationEmailBestEffort(user);
             markVerificationEmailSent(user.uid);
           }
-        } catch {
-          // ignore (we'll still block access)
+        } catch (e) {
+          // ignore (we'll still block access), but show a helpful hint.
+          const code = String(e?.code || "");
+          const hint = code ? ` (Firebase: ${code})` : "";
+          showMessage(`Email not verified.${hint} Please verify and then log in.`, 9000);
         }
 
         try {
@@ -202,7 +221,7 @@ form.addEventListener("submit", (event) => {
           // ignore
         }
 
-        showMessage("Email not verified. We sent a verification link (if not recently sent). Please verify and then log in.");
+        showMessage("Email not verified. We sent a verification link (if not recently sent). Check Inbox/Spam, verify, then log in.");
         return;
       }
 
