@@ -938,6 +938,10 @@
 						<div class="upload__actions" aria-label="Upload actions">
 							<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
 							<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
+							<label class="upload__meta" style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+								<input id="shareableUpload" type="checkbox" />
+								<span>Shareable upload (server-encrypted)</span>
+							</label>
 							<input id="uploadInput" type="file" multiple hidden />
 						</div>
 
@@ -1016,6 +1020,7 @@
 				const chooseBtn = document.getElementById("chooseFilesBtn");
 				const uploadBtn = document.getElementById("uploadBtn");
 				const input = document.getElementById("uploadInput");
+				const shareableUploadEl = document.getElementById("shareableUpload");
 				const dropZone = document.getElementById("dropZone");
 				const listEl = document.getElementById("uploadedList");
 				const messageEl = document.getElementById("uploadMessage");
@@ -1118,7 +1123,12 @@
 						existing.add(key);
 					}
 					updateUploadButton();
-					setMessage(`${pending.length} file(s) selected. Click Upload to encrypt in your browser (AES-GCM) then upload ciphertext to server.`);
+					const shareable = Boolean(shareableUploadEl?.checked);
+					setMessage(
+						shareable
+							? `${pending.length} file(s) selected. Upload will be server-encrypted (shareable inside platform).`
+							: `${pending.length} file(s) selected. Upload will be client-encrypted (private; cannot be shared).`
+					);
 				}
 
 				async function getIdToken() {
@@ -1283,6 +1293,12 @@
 							`;
 							shareBtn.addEventListener("click", async () => {
 								try {
+									if (String(item.encryptionMode || "").toLowerCase() === "client") {
+										setMessage(
+											"This file is client-encrypted and cannot be shared. Re-upload using 'Shareable upload (server-encrypted)'."
+										);
+										return;
+									}
 									const recipientEmail = prompt("Enter recipient Gmail/Email (must be verified):");
 									if (!recipientEmail) return;
 									setMessage("Sharing…");
@@ -1349,28 +1365,40 @@
 					if (pending.length === 0) return;
 					if (uploadBtn) uploadBtn.disabled = true;
 					try {
-						setMessage("Encrypting in browser…");
-						const key = await importAesKey();
-						setMessage("Uploading encrypted files…");
-						for (const file of pending) {
-							const iv = new Uint8Array(12);
-							crypto.getRandomValues(iv);
-							const plaintext = await file.arrayBuffer();
-							const originalSha256Hex = await sha256HexFromArrayBuffer(plaintext);
-							const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
-							const cipherBlob = new Blob([ciphertext], { type: "application/octet-stream" });
-							const ivB64 = bytesToB64(iv);
+						const shareable = Boolean(shareableUploadEl?.checked);
+						if (shareable) {
+							setMessage("Uploading (server-encrypted)…");
+							for (const file of pending) {
+								const form = new FormData();
+								form.append("file", file, file.name);
+								form.append("encMode", "server");
+								const res = await apiFetch("/api/files", { method: "POST", body: form });
+								if (!res.ok) throw new Error("Upload failed");
+							}
+						} else {
+							setMessage("Encrypting in browser…");
+							const key = await importAesKey();
+							setMessage("Uploading encrypted files…");
+							for (const file of pending) {
+								const iv = new Uint8Array(12);
+								crypto.getRandomValues(iv);
+								const plaintext = await file.arrayBuffer();
+								const originalSha256Hex = await sha256HexFromArrayBuffer(plaintext);
+								const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+								const cipherBlob = new Blob([ciphertext], { type: "application/octet-stream" });
+								const ivB64 = bytesToB64(iv);
 
-							const form = new FormData();
-							form.append("file", cipherBlob, `${file.name}.cipher`);
-							form.append("encMode", "client");
-							form.append("clientIvB64", ivB64);
-							form.append("originalName", file.name);
-							form.append("mimeType", file.type || "application/octet-stream");
-							form.append("originalSize", String(file.size));
-							form.append("originalSha256Hex", originalSha256Hex);
-							const res = await apiFetch("/api/files", { method: "POST", body: form });
-							if (!res.ok) throw new Error("Upload failed");
+								const form = new FormData();
+								form.append("file", cipherBlob, `${file.name}.cipher`);
+								form.append("encMode", "client");
+								form.append("clientIvB64", ivB64);
+								form.append("originalName", file.name);
+								form.append("mimeType", file.type || "application/octet-stream");
+								form.append("originalSize", String(file.size));
+								form.append("originalSha256Hex", originalSha256Hex);
+								const res = await apiFetch("/api/files", { method: "POST", body: form });
+								if (!res.ok) throw new Error("Upload failed");
+							}
 						}
 						pending = [];
 						setMessage("Uploaded. Refreshing list…");

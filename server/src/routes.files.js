@@ -58,7 +58,7 @@ function computeConfidentialityOk(record) {
 		return Boolean(record?.clientIvB64);
 	}
 	if (mode === "server") {
-		return Boolean(record?.wrappedKeyHex && record?.wrappedIvHex && record?.fileIvHex && record?.fileTagHex);
+		return Boolean(record?.wrappedKeyHex && record?.wrapIvHex && record?.wrapTagHex && record?.fileIvHex && record?.fileTagHex);
 	}
 	return false;
 }
