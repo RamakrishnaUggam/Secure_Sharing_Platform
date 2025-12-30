@@ -1094,7 +1094,37 @@
 		</script>
 		<script>
 			(function () {
-				const API_BASE = "http://localhost:3001";
+				function normalizeBaseUrl(value) {
+					const v = String(value || "").trim();
+					if (!v) return "";
+					return v.replace(/\/+$/, "");
+				}
+
+				function resolveApiBase() {
+					try {
+						const url = new URL(window.location.href);
+						const fromQuery = url.searchParams.get("apiBase") || url.searchParams.get("api");
+						if (fromQuery) {
+							const normalized = normalizeBaseUrl(fromQuery);
+							localStorage.setItem("apiBase", normalized);
+							return normalized;
+						}
+
+						const fromStorage = normalizeBaseUrl(localStorage.getItem("apiBase"));
+						if (fromStorage) return fromStorage;
+					} catch {
+						// ignore
+					}
+
+					// Local dev defaults
+					if (location.hostname === "127.0.0.1") return "http://127.0.0.1:3001";
+					if (location.hostname === "localhost") return "http://localhost:3001";
+
+					// Hosted: use same-origin (works if you configure Netlify redirects like /api/* -> your backend)
+					return "";
+				}
+
+				const API_BASE = resolveApiBase();
 
 				const chooseBtn = document.getElementById("chooseFilesBtn");
 				const uploadBtn = document.getElementById("uploadBtn");
