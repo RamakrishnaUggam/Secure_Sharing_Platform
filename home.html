@@ -4,22 +4,90 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Secure File Sharing Platform</title>
+		<script>
+			(function () {
+				try {
+					const stored = localStorage.getItem("theme");
+					const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+					const theme = stored || (prefersLight ? "light" : "dark");
+					document.documentElement.setAttribute("data-theme", theme);
+				} catch {
+					// ignore
+				}
+			})();
+		</script>
 		<link
 			href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap"
 			rel="stylesheet"
 		/>
 		<style>
 			:root {
-				--bg-1: #0b1020;
-				--bg-2: #0a0f1a;
-				--card: rgba(255, 255, 255, 0.08);
-				--card-border: rgba(255, 255, 255, 0.16);
+				--bg-1: #05060b;
+				--bg-2: #0a1222;
+				--card: rgba(255, 255, 255, 0.075);
+				--card-2: rgba(255, 255, 255, 0.045);
+				--card-border: rgba(255, 255, 255, 0.14);
 				--text: rgba(255, 255, 255, 0.92);
-				--muted: rgba(255, 255, 255, 0.72);
-				--primary-1: #7c3aed;
-				--primary-2: #06b6d4;
-				--focus: rgba(6, 182, 212, 0.28);
-				--shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+				--muted: rgba(255, 255, 255, 0.70);
+				--primary-1: #a78bfa;
+				--primary-2: #22d3ee;
+				--focus: rgba(34, 211, 238, 0.26);
+				--shadow: 0 38px 110px rgba(0, 0, 0, 0.62);
+			}
+
+			html[data-theme="light"] {
+				--bg-1: #f6f7fb;
+				--bg-2: #e9effa;
+				--card: rgba(255, 255, 255, 0.78);
+				--card-2: rgba(255, 255, 255, 0.62);
+				--card-border: rgba(15, 23, 42, 0.10);
+				--text: rgba(15, 23, 42, 0.92);
+				--muted: rgba(15, 23, 42, 0.68);
+				--shadow: 0 24px 70px rgba(2, 6, 23, 0.14);
+			}
+
+			html[data-theme="light"] .nav {
+				background: rgba(255, 255, 255, 0.72);
+				border-bottom-color: rgba(15, 23, 42, 0.10);
+			}
+
+			html[data-theme="light"] .nav__link {
+				color: rgba(15, 23, 42, 0.72);
+			}
+
+			html[data-theme="light"] .nav__link:hover {
+				color: rgba(15, 23, 42, 0.92);
+				background: rgba(15, 23, 42, 0.06);
+			}
+
+			html[data-theme="light"] .nav__cta {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(255, 255, 255, 0.70);
+			}
+
+			html[data-theme="light"] .nav__cta:hover {
+				background: rgba(255, 255, 255, 0.86);
+				border-color: rgba(15, 23, 42, 0.16);
+			}
+
+			html[data-theme="light"] .profile__dropdown {
+				background: rgba(255, 255, 255, 0.92);
+				border-color: rgba(15, 23, 42, 0.12);
+			}
+
+			html[data-theme="light"] .profile__divider {
+				background: rgba(15, 23, 42, 0.12);
+			}
+
+			html[data-theme="light"] .profile__item {
+				color: rgba(15, 23, 42, 0.92);
+				border-color: rgba(15, 23, 42, 0.10);
+				background: rgba(15, 23, 42, 0.04);
+			}
+
+			html[data-theme="light"] .profile__item:hover {
+				background: rgba(15, 23, 42, 0.06);
+				border-color: rgba(15, 23, 42, 0.14);
 			}
 
 			* {
@@ -35,10 +103,12 @@
 			body {
 				font-family: "Poppins", sans-serif;
 				color: var(--text);
-				background: radial-gradient(900px circle at 15% 20%, rgba(124, 58, 237, 0.30), transparent 45%),
-					radial-gradient(800px circle at 85% 10%, rgba(6, 182, 212, 0.26), transparent 40%),
+				background: radial-gradient(900px circle at 15% 20%, rgba(167, 139, 250, 0.22), transparent 48%),
+					radial-gradient(900px circle at 80% 12%, rgba(34, 211, 238, 0.18), transparent 42%),
 					linear-gradient(180deg, var(--bg-1), var(--bg-2));
 				min-height: 100vh;
+				-webkit-font-smoothing: antialiased;
+				-moz-osx-font-smoothing: grayscale;
 			}
 
 			a {
@@ -55,7 +125,7 @@
 				position: sticky;
 				top: 0;
 				z-index: 20;
-				background: rgba(10, 15, 26, 0.72);
+				background: rgba(10, 18, 34, 0.72);
 				backdrop-filter: blur(12px);
 				border-bottom: 1px solid rgba(255, 255, 255, 0.10);
 			}
@@ -115,6 +185,127 @@
 				background: rgba(255, 255, 255, 0.06);
 			}
 
+			.nav__cta:hover {
+				background: rgba(255, 255, 255, 0.08);
+				border-color: rgba(255, 255, 255, 0.18);
+			}
+
+			.profile {
+				position: relative;
+			}
+
+			.profile__btn {
+				gap: 10px;
+				cursor: pointer;
+			}
+
+			.profile__btn:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.profile__avatar {
+				width: 28px;
+				height: 28px;
+				border-radius: 10px;
+				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+				box-shadow: 0 14px 40px rgba(124, 58, 237, 0.20);
+			}
+
+			.profile__meta {
+				display: flex;
+				flex-direction: column;
+				gap: 2px;
+				min-width: 0;
+			}
+
+			.profile__label {
+				max-width: 180px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.profile__label-email {
+				font-size: 11px;
+				line-height: 1.2;
+				color: var(--muted);
+				max-width: 180px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.profile__dropdown {
+				position: absolute;
+				right: 0;
+				top: calc(100% + 10px);
+				width: min(340px, 90vw);
+				background: rgba(10, 18, 34, 0.92);
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				border-radius: 14px;
+				box-shadow: var(--shadow);
+				backdrop-filter: blur(12px);
+				padding: 12px;
+				display: none;
+				z-index: 50;
+			}
+
+			.profile__dropdown::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 14px;
+				pointer-events: none;
+				box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+			}
+
+			.profile__dropdown.is-open {
+				display: block;
+			}
+
+			.profile__name {
+				font-weight: 600;
+				font-size: 13px;
+				letter-spacing: 0.2px;
+			}
+
+			.profile__email {
+				margin-top: 2px;
+				font-size: 12px;
+				color: var(--muted);
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.profile__divider {
+				height: 1px;
+				background: rgba(255, 255, 255, 0.10);
+				margin: 10px 0;
+			}
+
+			.profile__item {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 10px 10px;
+				border-radius: 12px;
+				font-size: 13px;
+				color: rgba(255, 255, 255, 0.92);
+				border: 1px solid rgba(255, 255, 255, 0.10);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			.profile__item:hover {
+				background: rgba(255, 255, 255, 0.07);
+				border-color: rgba(255, 255, 255, 0.14);
+			}
+
+			.profile__item + .profile__item {
+				margin-top: 10px;
+			}
+
 			/* Logout is a link (logout.html) for reliability */
 
 			.nav__cta--primary {
@@ -134,10 +325,20 @@
 			}
 
 			.panel {
-				background: var(--card);
+				background: linear-gradient(180deg, var(--card), var(--card-2));
 				border: 1px solid var(--card-border);
 				border-radius: 16px;
 				box-shadow: var(--shadow);
+				position: relative;
+			}
+
+			.panel::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 16px;
+				pointer-events: none;
+				box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 			}
 
 			.hero__main {
@@ -237,10 +438,20 @@
 			}
 
 			.card {
-				background: var(--card);
+				background: linear-gradient(180deg, var(--card), var(--card-2));
 				border: 1px solid var(--card-border);
 				border-radius: 16px;
 				padding: 16px;
+				position: relative;
+			}
+
+			.card::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 16px;
+				pointer-events: none;
+				box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 			}
 
 			.card__title {
@@ -278,7 +489,7 @@
 				border-radius: 14px;
 				display: grid;
 				place-items: center;
-				background: linear-gradient(135deg, rgba(124, 58, 237, 0.75), rgba(6, 182, 212, 0.65));
+				background: linear-gradient(135deg, rgba(167, 139, 250, 0.78), rgba(34, 211, 238, 0.62));
 				font-weight: 600;
 			}
 
@@ -338,6 +549,41 @@
 					grid-template-columns: 1fr;
 				}
 			}
+
+			.theme-toggle {
+				position: fixed;
+				top: 16px;
+				right: 16px;
+				width: 42px;
+				height: 42px;
+				border-radius: 14px;
+				display: grid;
+				place-items: center;
+				cursor: pointer;
+				border: 1px solid var(--card-border);
+				background: linear-gradient(180deg, var(--card), var(--card-2));
+				box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+				color: var(--text);
+				z-index: 100;
+			}
+
+			.theme-toggle:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus), 0 18px 60px rgba(0, 0, 0, 0.22);
+			}
+
+			.theme-toggle svg {
+				width: 18px;
+				height: 18px;
+			}
+
+			html[data-theme="dark"] .theme-toggle .icon-moon {
+				display: none;
+			}
+
+			html[data-theme="light"] .theme-toggle .icon-sun {
+				display: none;
+			}
 		</style>
 		<script type="module">
 			import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -364,15 +610,64 @@
 				}
 			}
 
-			function setNavForAuth(isLoggedIn) {
-				whenReady(() => {
-					const loginLink = document.getElementById("loginLink");
-					const registerLink = document.getElementById("registerLink");
-					const logoutLink = document.getElementById("logoutLink");
+			function closeProfileDropdown() {
+				const profileButton = document.getElementById("profileButton");
+				const profileDropdown = document.getElementById("profileDropdown");
+				if (profileDropdown) profileDropdown.classList.remove("is-open");
+				if (profileButton) profileButton.setAttribute("aria-expanded", "false");
+			}
 
-					if (loginLink) loginLink.hidden = isLoggedIn;
-					if (registerLink) registerLink.hidden = isLoggedIn;
-					if (logoutLink) logoutLink.hidden = !isLoggedIn;
+			function setupProfileDropdown() {
+				const profileMenu = document.getElementById("profileMenu");
+				const profileButton = document.getElementById("profileButton");
+				const profileDropdown = document.getElementById("profileDropdown");
+				if (!profileMenu || !profileButton || !profileDropdown) return;
+
+				profileButton.addEventListener("click", () => {
+					const willOpen = !profileDropdown.classList.contains("is-open");
+					if (willOpen) {
+						profileDropdown.classList.add("is-open");
+						profileButton.setAttribute("aria-expanded", "true");
+					} else {
+						closeProfileDropdown();
+					}
+				});
+
+				document.addEventListener("click", (event) => {
+					if (profileMenu.hidden) return;
+					const target = event.target;
+					if (!(target instanceof Node)) return;
+					if (!profileMenu.contains(target)) closeProfileDropdown();
+				});
+
+				document.addEventListener("keydown", (event) => {
+					if (event.key === "Escape") closeProfileDropdown();
+				});
+			}
+
+			function setNavForAuth(user) {
+				whenReady(() => {
+					const profileMenu = document.getElementById("profileMenu");
+					const profileName = document.getElementById("profileName");
+					const profileEmail = document.getElementById("profileEmail");
+					const profileLabel = document.getElementById("profileLabel");
+					const profileLabelEmail = document.getElementById("profileLabelEmail");
+
+					const isLoggedIn = !!user;
+					if (profileMenu) profileMenu.hidden = !isLoggedIn;
+
+					if (isLoggedIn) {
+						const displayName = (user?.displayName || "").trim();
+						const email = (user?.email || "").trim();
+						const fallbackName = email ? email.split("@")[0] : "User";
+
+						if (profileName) profileName.textContent = displayName || fallbackName;
+						if (profileEmail) profileEmail.textContent = email;
+						if (profileLabel) profileLabel.textContent = displayName || fallbackName;
+						if (profileLabelEmail) profileLabelEmail.textContent = email;
+					}
+
+					closeProfileDropdown();
 				});
 			}
 
@@ -382,13 +677,30 @@
 					window.location.replace("index.html");
 					return;
 				}
-				setNavForAuth(true);
+				setNavForAuth(user);
 			});
 			// Initial state while auth loads
-			setNavForAuth(false);
+			setNavForAuth(null);
+			whenReady(() => setupProfileDropdown());
 		</script>
 	</head>
 	<body>
+		<button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+			<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<circle cx="12" cy="12" r="4"></circle>
+				<path d="M12 2v2"></path>
+				<path d="M12 20v2"></path>
+				<path d="M4.93 4.93l1.41 1.41"></path>
+				<path d="M17.66 17.66l1.41 1.41"></path>
+				<path d="M2 12h2"></path>
+				<path d="M20 12h2"></path>
+				<path d="M4.93 19.07l1.41-1.41"></path>
+				<path d="M17.66 6.34l1.41-1.41"></path>
+			</svg>
+			<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
+			</svg>
+		</button>
 		<header class="nav" aria-label="Primary">
 			<div class="container nav__inner">
 				<a class="brand" href="#top" aria-label="Secure File Sharing Platform">
@@ -400,9 +712,22 @@
 					<a class="nav__link" href="home.html">Home</a>
 					<a class="nav__link" href="#features">Features</a>
 					<a class="nav__link" href="#security">Security</a>
-					<a class="nav__cta" id="loginLink" href="index.html">Login</a>
-					<a class="nav__cta nav__cta--primary" id="registerLink" href="register.html">Registration</a>
-					<a class="nav__cta nav__cta--primary" id="logoutLink" href="logout.html" hidden>Logout</a>
+					<div class="profile" id="profileMenu" hidden>
+						<button class="nav__cta profile__btn" id="profileButton" type="button" aria-haspopup="menu" aria-expanded="false">
+							<span class="profile__avatar" aria-hidden="true"></span>
+							<span class="profile__meta">
+								<span class="profile__label" id="profileLabel">Profile</span>
+								<span class="profile__label-email" id="profileLabelEmail"></span>
+							</span>
+						</button>
+						<div class="profile__dropdown" id="profileDropdown" role="menu" aria-label="Profile">
+							<div class="profile__name" id="profileName">User</div>
+							<div class="profile__email" id="profileEmail"></div>
+							<div class="profile__divider" role="separator"></div>
+							<a class="profile__item" href="forgot-password.html" role="menuitem">Reset password</a>
+							<a class="profile__item" href="logout.html" role="menuitem">Logout</a>
+						</div>
+					</div>
 				</nav>
 			</div>
 		</header>
@@ -581,5 +906,32 @@
 				</div>
 			</div>
 		</footer>
+		<script>
+			(function () {
+				const button = document.getElementById("themeToggle");
+				if (!button) return;
+
+				function getTheme() {
+					return document.documentElement.getAttribute("data-theme") || "dark";
+				}
+
+				function setTheme(theme) {
+					document.documentElement.setAttribute("data-theme", theme);
+					try {
+						localStorage.setItem("theme", theme);
+					} catch {
+						// ignore
+					}
+					const label = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+					button.setAttribute("aria-label", label);
+					button.title = label;
+				}
+
+				setTheme(getTheme());
+				button.addEventListener("click", () => {
+					setTheme(getTheme() === "dark" ? "light" : "dark");
+				});
+			})();
+		</script>
 	</body>
 </html>

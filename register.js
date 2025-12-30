@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -64,6 +64,7 @@ setupPasswordToggle("password", "togglePassword");
 
 register.addEventListener("click", function(event) {
     event.preventDefault()
+  const name = document.getElementById("name")?.value?.trim();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const confirm = document.getElementById("confirm")?.value;
@@ -81,9 +82,19 @@ register.addEventListener("click", function(event) {
 showMessage("Creating account…");
 
 createUserWithEmailAndPassword(auth, email, password)
-  .then((userCredential) => {
+  .then(async (userCredential) => {
     // Signed up 
     const user = userCredential.user;
+
+    if (name) {
+      try {
+        await updateProfile(user, { displayName: name });
+      } catch (e) {
+        // Non-blocking: account is created even if profile update fails.
+        console.warn(e);
+      }
+    }
+
     showMessage("Account registered successfully. Redirecting…");
     window.location.href = "index.html?registered=1";
   })

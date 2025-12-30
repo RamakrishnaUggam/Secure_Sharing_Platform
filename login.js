@@ -21,8 +21,14 @@ const auth = getAuth();
 
 const form = document.getElementById("loginForm") || document.querySelector("form");
 const messageEl = document.getElementById("formMessage");
+const forgotRowEl = document.getElementById("forgotPasswordRow");
 
 let messageTimer;
+
+function setForgotVisible(visible) {
+  if (!forgotRowEl) return;
+  forgotRowEl.style.display = visible ? "flex" : "none";
+}
 
 function clearMessage() {
   if (!messageEl) return;
@@ -97,6 +103,12 @@ function friendlyAuthError(error) {
 
 setupPasswordToggle("password", "togglePassword");
 
+// Only show "Forgot password" after an invalid-credentials attempt.
+setForgotVisible(false);
+
+document.getElementById("email")?.addEventListener("input", () => setForgotVisible(false));
+document.getElementById("password")?.addEventListener("input", () => setForgotVisible(false));
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
 
@@ -109,6 +121,7 @@ form.addEventListener("submit", (event) => {
   }
 
   showMessage("Signing in…");
+  setForgotVisible(false);
 
   signInWithEmailAndPassword(auth, email, password)
     .then(() => {
@@ -118,6 +131,12 @@ form.addEventListener("submit", (event) => {
       }, 900);
     })
     .catch((error) => {
+      const code = error?.code || "";
+      // Firebase commonly returns auth/invalid-login-credentials for wrong password.
+      // Show "Forgot password" only when the failure indicates wrong/invalid credentials.
+      const shouldShowForgot =
+        code === "auth/wrong-password" || code === "auth/invalid-login-credentials";
+      setForgotVisible(shouldShowForgot);
       showMessage(friendlyAuthError(error));
     });
 });

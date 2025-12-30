@@ -4,40 +4,176 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Logging out…</title>
+    <script>
+      (function () {
+        try {
+          const stored = localStorage.getItem("theme");
+          const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+          const theme = stored || (prefersLight ? "light" : "dark");
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch {
+          // ignore
+        }
+      })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet" />
     <style>
+      :root {
+        --bg-1: #05060b;
+        --bg-2: #0a1222;
+        --card: rgba(255, 255, 255, 0.075);
+        --card-2: rgba(255, 255, 255, 0.045);
+        --card-border: rgba(255, 255, 255, 0.14);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.70);
+        --primary-1: #a78bfa;
+        --primary-2: #22d3ee;
+        --shadow: 0 38px 110px rgba(0, 0, 0, 0.62);
+      }
+
+      html[data-theme="light"] {
+        --bg-1: #f6f7fb;
+        --bg-2: #e9effa;
+        --card: rgba(255, 255, 255, 0.78);
+        --card-2: rgba(255, 255, 255, 0.62);
+        --card-border: rgba(15, 23, 42, 0.10);
+        --text: rgba(15, 23, 42, 0.92);
+        --muted: rgba(15, 23, 42, 0.68);
+        --shadow: 0 24px 70px rgba(2, 6, 23, 0.14);
+      }
+
       body {
         font-family: "Poppins", sans-serif;
         min-height: 100vh;
         display: grid;
         place-items: center;
         margin: 0;
-        background: #0a0f1a;
-        color: rgba(255, 255, 255, 0.9);
+        background: radial-gradient(900px circle at 15% 20%, rgba(167, 139, 250, 0.22), transparent 48%),
+          radial-gradient(900px circle at 80% 12%, rgba(34, 211, 238, 0.18), transparent 42%),
+          linear-gradient(180deg, var(--bg-1), var(--bg-2));
+        color: var(--text);
+        padding: 24px;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
       .box {
         width: min(520px, 92vw);
-        padding: 18px;
-        border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.06);
+        padding: 18px 18px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--card-border);
+        background: linear-gradient(180deg, var(--card), var(--card-2));
+        box-shadow: var(--shadow);
+        position: relative;
+      }
+
+      .box::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        pointer-events: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
       }
       .muted {
-        color: rgba(255, 255, 255, 0.75);
+        color: var(--muted);
         font-size: 13px;
         margin-top: 6px;
       }
       a {
-        color: rgba(165, 243, 252, 0.95);
+        color: rgba(34, 211, 238, 0.95);
+        text-decoration: none;
+        border-bottom: 1px solid rgba(34, 211, 238, 0.35);
+      }
+
+      a:hover {
+        border-bottom-color: rgba(34, 211, 238, 0.75);
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        border: 1px solid var(--card-border);
+        background: linear-gradient(180deg, var(--card), var(--card-2));
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+        color: var(--text);
+        z-index: 100;
+      }
+
+      .theme-toggle:focus {
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.26), 0 18px 60px rgba(0, 0, 0, 0.22);
+      }
+
+      .theme-toggle svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      html[data-theme="dark"] .theme-toggle .icon-moon {
+        display: none;
+      }
+
+      html[data-theme="light"] .theme-toggle .icon-sun {
+        display: none;
       }
     </style>
   </head>
   <body>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2"></path>
+        <path d="M12 20v2"></path>
+        <path d="M4.93 4.93l1.41 1.41"></path>
+        <path d="M17.66 17.66l1.41 1.41"></path>
+        <path d="M2 12h2"></path>
+        <path d="M20 12h2"></path>
+        <path d="M4.93 19.07l1.41-1.41"></path>
+        <path d="M17.66 6.34l1.41-1.41"></path>
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
+      </svg>
+    </button>
     <div class="box">
       <div>Logging you out…</div>
       <div class="muted">If you are not redirected, <a href="index.html">go to Login</a>.</div>
     </div>
 
+    <script>
+      (function () {
+        const button = document.getElementById("themeToggle");
+        if (!button) return;
+
+        function getTheme() {
+          return document.documentElement.getAttribute("data-theme") || "dark";
+        }
+
+        function setTheme(theme) {
+          document.documentElement.setAttribute("data-theme", theme);
+          try {
+            localStorage.setItem("theme", theme);
+          } catch {
+            // ignore
+          }
+          const label = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+          button.setAttribute("aria-label", label);
+          button.title = label;
+        }
+
+        setTheme(getTheme());
+        button.addEventListener("click", () => {
+          setTheme(getTheme() === "dark" ? "light" : "dark");
+        });
+      })();
+    </script>
     <script type="module" src="logout.js"></script>
   </body>
 </html>
