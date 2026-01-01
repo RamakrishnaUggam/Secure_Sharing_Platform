@@ -150,7 +150,7 @@ export function filesRouter() {
 		res.json(out);
 	});
 
-	// Share a file with another user via email (Gmail etc). File stays in-platform.
+	// Share a file with another user via email. File stays in-platform.
 	router.post("/:id/share", auth, async (req, res) => {
 		const recipientEmail = normalizeEmail(req.body?.recipientEmail);
 		if (!recipientEmail) return res.status(400).json({ error: "Missing recipientEmail" });

@@ -1014,6 +1014,11 @@
 					if (location.hostname === "127.0.0.1") return "http://127.0.0.1:3001";
 					if (location.hostname === "localhost") return "http://localhost:3001";
 
+					// GitHub Pages cannot proxy /api to your backend, so default to your hosted API.
+					if (String(location.hostname || "").toLowerCase().endsWith(".github.io")) {
+						return "https://secure-sharing-platform.onrender.com";
+					}
+
 					// Hosted: use same-origin (works if you configure Netlify redirects like /api/* -> your backend)
 					return "";
 				}
@@ -1415,7 +1420,7 @@
 										);
 										return;
 									}
-									const recipientEmail = prompt("Enter recipient Gmail/Email (must be verified):");
+									const recipientEmail = prompt("Enter recipient email (must be verified):");
 									if (!recipientEmail) return;
 									setMessage("Sharing…");
 									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/share`, {

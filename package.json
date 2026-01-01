@@ -4,7 +4,13 @@
   "private": true,
   "description": "Static frontend for Secure Sharing Platform",
   "scripts": {
+    "dev": "concurrently -k -n api,web -c cyan,magenta \"npm --prefix server run dev\" \"npx http-server . -p 8000 -c-1\"",
+    "dev:api": "npm --prefix server run dev",
+    "dev:web": "npx http-server . -p 8000 -c-1",
     "build": "node -e \"console.log('No build step: static site')\"",
     "vercel-build": "node -e \"console.log('No build step: static site')\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
   }
 }
