@@ -143,6 +143,7 @@ export function filesRouter() {
 				originalName: f.originalName,
 				mimeType: f.mimeType,
 				size: f.size,
+				createdAt: f.createdAt,
 				sharedAt: share.createdAt
 			});
 		}

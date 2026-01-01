@@ -954,7 +954,11 @@
 						</div>
 
 						<div id="uploadMessage" class="upload__message" role="status" aria-live="polite"></div>
-						<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
+						<div class="upload__meta" style="margin-bottom: 10px;">Your files — server-side encrypted</div>
+						<div id="uploadedListServer" class="upload__list" aria-label="Uploaded list (server encrypted)"></div>
+						<div style="height: 12px;"></div>
+						<div class="upload__meta" style="margin-bottom: 10px;">Your files — client-side encrypted</div>
+						<div id="uploadedListClient" class="upload__list" aria-label="Uploaded list (client encrypted)"></div>
 						<div style="height: 12px;"></div>
 						<div class="upload__meta" style="margin-bottom: 10px;">Shared with you</div>
 						<div id="sharedWithMeList" class="upload__list" aria-label="Shared with you list"></div>
@@ -1033,7 +1037,8 @@
 				const input = document.getElementById("uploadInput");
 					const encryptionModeEl = document.getElementById("encryptionMode");
 				const dropZone = document.getElementById("dropZone");
-				const listEl = document.getElementById("uploadedList");
+					const listServerEl = document.getElementById("uploadedListServer");
+					const listClientEl = document.getElementById("uploadedListClient");
 				const sharedListEl = document.getElementById("sharedWithMeList");
 				const messageEl = document.getElementById("uploadMessage");
 
@@ -1089,6 +1094,17 @@
 				async function sha256HexFromArrayBuffer(buf) {
 					const digest = await crypto.subtle.digest("SHA-256", buf);
 					return bytesToHex(new Uint8Array(digest));
+				}
+
+				function formatDateTime(value) {
+					if (!value) return "—";
+					try {
+						const d = new Date(value);
+						if (Number.isNaN(d.getTime())) return "—";
+						return d.toLocaleString();
+					} catch {
+						return "—";
+					}
 				}
 
 				function generateRandomKeyB64() {
@@ -1285,6 +1301,12 @@
 							name.className = "upload__name";
 							name.textContent = item.originalName || "(unnamed)";
 
+							const when = document.createElement("div");
+							when.className = "upload__meta";
+							const uploaded = formatDateTime(item.createdAt);
+							const shared = formatDateTime(item.sharedAt);
+							when.textContent = `Uploaded: ${uploaded} · Shared: ${shared}`;
+
 							const meta = document.createElement("div");
 							meta.className = "upload__meta upload__metaRow";
 							function statusPill(label, ok) {
@@ -1300,10 +1322,13 @@
 								el.appendChild(t);
 								return el;
 							}
+							const encMode = String(item.encryptionMode || "server").toLowerCase();
+							meta.appendChild(statusPill(encMode === "client" ? "Client-encrypted" : "Server-encrypted", true));
 							meta.appendChild(statusPill("Integrity", item.integrityOk === true));
 							meta.appendChild(statusPill("Confidentiality", item.confidentialityOk === true));
 
 							left.appendChild(name);
+							left.appendChild(when);
 							left.appendChild(meta);
 
 							const actions = document.createElement("div");
@@ -1408,18 +1433,40 @@
 				}
 
 				async function loadList() {
-					if (!listEl) return;
-					listEl.innerHTML = "";
+					if (!listServerEl || !listClientEl) return;
+					listServerEl.innerHTML = "";
+					listClientEl.innerHTML = "";
 					try {
 						const res = await apiFetch("/api/files");
 						if (!res.ok) throw new Error("Failed to load files");
 						const items = await res.json();
 						if (!Array.isArray(items) || items.length === 0) {
+							const empty1 = document.createElement("div");
+							empty1.className = "upload__meta";
+							empty1.textContent = "No server-encrypted files yet.";
+							listServerEl.appendChild(empty1);
+
+							const empty2 = document.createElement("div");
+							empty2.className = "upload__meta";
+							empty2.textContent = "No client-encrypted files yet.";
+							listClientEl.appendChild(empty2);
+							return;
+						}
+
+						const serverItems = items.filter((it) => String(it.encryptionMode || "server").toLowerCase() !== "client");
+						const clientItems = items.filter((it) => String(it.encryptionMode || "server").toLowerCase() === "client");
+
+						if (serverItems.length === 0) {
 							const empty = document.createElement("div");
 							empty.className = "upload__meta";
-							empty.textContent = "No uploaded files yet.";
-							listEl.appendChild(empty);
-							return;
+							empty.textContent = "No server-encrypted files yet.";
+							listServerEl.appendChild(empty);
+						}
+						if (clientItems.length === 0) {
+							const empty = document.createElement("div");
+							empty.className = "upload__meta";
+							empty.textContent = "No client-encrypted files yet.";
+							listClientEl.appendChild(empty);
 						}
 
 						for (const item of items) {
@@ -1430,6 +1477,10 @@
 							const name = document.createElement("div");
 							name.className = "upload__name";
 							name.textContent = item.originalName || "(unnamed)";
+
+							const when = document.createElement("div");
+							when.className = "upload__meta";
+							when.textContent = `Uploaded: ${formatDateTime(item.createdAt)}`;
 
 							const meta = document.createElement("div");
 							meta.className = "upload__meta upload__metaRow";
@@ -1450,20 +1501,23 @@
 
 							const integrityOk = item.integrityOk === true;
 							const confidentialityOk = item.confidentialityOk === true;
+							const encMode = String(item.encryptionMode || "server").toLowerCase();
+							meta.appendChild(statusPill(encMode === "client" ? "Client-encrypted" : "Server-encrypted", true));
 							meta.appendChild(statusPill("Integrity", integrityOk));
 							meta.appendChild(statusPill("Confidentiality", confidentialityOk));
 
 							left.appendChild(name);
+							left.appendChild(when);
 							left.appendChild(meta);
 
-							async function downloadItem() {
+							async function downloadItemDecryptedOrPlain() {
 								try {
 									setMessage("Downloading…");
 									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/download`);
 									if (!r.ok) throw new Error("Download failed");
 
-									const encMode = String(r.headers.get("x-enc-mode") || "").toLowerCase();
-									if (encMode === "client") {
+									const encModeHeader = String(r.headers.get("x-enc-mode") || "").toLowerCase();
+									if (encModeHeader === "client") {
 										const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
 										const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
 										const ivB64 = r.headers.get("x-client-iv-b64") || "";
@@ -1528,10 +1582,11 @@
 									a.remove();
 									URL.revokeObjectURL(url);
 									setMessage("Download started.");
-								} catch {
-									setMessage("Failed to download.");
+								} catch (e) {
+									setMessage(e?.message || "Failed to download.");
 								}
 							}
+
 
 							const actions = document.createElement("div");
 							actions.style.display = "flex";
@@ -1541,8 +1596,11 @@
 							const downloadBtn = document.createElement("button");
 							downloadBtn.type = "button";
 							downloadBtn.className = "iconbtn";
-							downloadBtn.title = "Download";
-							downloadBtn.setAttribute("aria-label", `Download ${item.originalName || "file"}`);
+							downloadBtn.title = encMode === "client" ? "Decrypt & download" : "Download";
+							downloadBtn.setAttribute(
+							"aria-label",
+							`${encMode === "client" ? "Decrypt and download" : "Download"} ${item.originalName || "file"}`
+						);
 							downloadBtn.innerHTML = `
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1550,7 +1608,8 @@
 									<path d="M12 15V3"></path>
 								</svg>
 							`;
-							downloadBtn.addEventListener("click", downloadItem);
+							downloadBtn.addEventListener("click", downloadItemDecryptedOrPlain);
+
 
 							const shareBtn = document.createElement("button");
 							shareBtn.type = "button";
@@ -1623,15 +1682,20 @@
 							actions.appendChild(delBtn);
 							row.appendChild(left);
 							row.appendChild(actions);
-							listEl.appendChild(row);
+							if (encMode === "client") listClientEl.appendChild(row);
+							else listServerEl.appendChild(row);
 						}
 					} catch (e) {
 						const msg = e?.message || "Failed to load list";
 						setMessage(`${msg}. Is the backend running on ${API_BASE}?`);
-						const empty = document.createElement("div");
-						empty.className = "upload__meta";
-						empty.textContent = "Backend not available.";
-						listEl.appendChild(empty);
+						const empty1 = document.createElement("div");
+						empty1.className = "upload__meta";
+						empty1.textContent = "Backend not available.";
+						listServerEl.appendChild(empty1);
+						const empty2 = document.createElement("div");
+						empty2.className = "upload__meta";
+						empty2.textContent = "Backend not available.";
+						listClientEl.appendChild(empty2);
 					}
 				}
 
