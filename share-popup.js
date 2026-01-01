@@ -6,6 +6,40 @@
 		const style = document.createElement("style");
 		style.id = "sharePopupStyles";
 		style.textContent = `
+			.share-toast__wrap {
+				position: fixed;
+				left: 50%;
+				bottom: 18px;
+				transform: translateX(-50%);
+				z-index: 10000;
+				pointer-events: none;
+				padding: 0 18px;
+				width: min(680px, 96vw);
+			}
+
+			.share-toast__card {
+				pointer-events: none;
+				width: 100%;
+				background: var(--card, rgba(255,255,255,0.08));
+				border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+				border-radius: 14px;
+				box-shadow: var(--shadow, 0 38px 110px rgba(0, 0, 0, 0.62));
+				padding: 12px 14px;
+				opacity: 0;
+				transform: translateY(8px);
+				transition: opacity 140ms ease, transform 140ms ease;
+			}
+
+			.share-toast__card.is-visible {
+				opacity: 1;
+				transform: translateY(0);
+			}
+
+			.share-toast__text {
+				font-size: 13px;
+				opacity: 0.95;
+			}
+
 			.share-popup__backdrop {
 				position: fixed;
 				inset: 0;
@@ -94,6 +128,48 @@
 		`;
 		document.head.appendChild(style);
 	}
+
+	let toastTimer = null;
+	let toastWrap = null;
+	let toastCard = null;
+	let toastText = null;
+
+	/**
+	 * Show a lightweight 3s toast (dynamic popup).
+	 * @param {string} message
+	 * @param {{ durationMs?: number }} [opts]
+	 */
+	window.showToastPopup = function showToastPopup(message, opts = {}) {
+		injectStylesOnce();
+		const durationMs = Number.isFinite(opts.durationMs) ? Number(opts.durationMs) : 3000;
+		const text = String(message || "").trim();
+		if (!text) return;
+
+		if (!toastWrap) {
+			toastWrap = document.createElement("div");
+			toastWrap.className = "share-toast__wrap";
+			toastWrap.setAttribute("aria-live", "polite");
+			toastWrap.setAttribute("role", "status");
+			toastCard = document.createElement("div");
+			toastCard.className = "share-toast__card";
+			toastText = document.createElement("div");
+			toastText.className = "share-toast__text";
+			toastCard.appendChild(toastText);
+			toastWrap.appendChild(toastCard);
+			document.body.appendChild(toastWrap);
+		}
+
+		toastText.textContent = text;
+		clearTimeout(toastTimer);
+		requestAnimationFrame(() => toastCard.classList.add("is-visible"));
+		toastTimer = setTimeout(() => {
+			try {
+				toastCard.classList.remove("is-visible");
+			} catch {
+				// ignore
+			}
+		}, durationMs);
+	};
 
 	function normalizeEmail(value) {
 		return String(value || "").trim().toLowerCase();
@@ -196,181 +272,112 @@
 	}
 
 	/**
-	 * Shows a custom email popup.
-	 * @param {{ title?: string, description?: string, defaultEmail?: string }} opts
-	 * @returns {Promise<string|null>} resolved email, or null if cancelled
-	 */
-	window.showShareEmailPopup = function showShareEmailPopup(opts = {}) {
-		const title = String(opts.title || "Share file");
-		const description = String(opts.description || "Enter the recipient email.");
-		const defaultEmail = String(opts.defaultEmail || "");
-
-		const stack = document.createElement("div");
-		stack.className = "share-popup__stack";
-		const input = createInput({
-			type: "email",
-			placeholder: "recipient@email.com",
-			value: defaultEmail,
-			ariaLabel: "Recipient email"
-		});
-		input.autocomplete = "email";
-		input.inputMode = "email";
-		input.spellcheck = false;
-		stack.appendChild(input);
-
-		return showPopup({
-			title,
-			description,
-			primaryText: "Send",
-			bodyEl: stack,
-			initialFocusEl: input,
-			onSubmit() {
-				const email = normalizeEmail(input.value);
-				if (!email || !email.includes("@")) {
-					input.focus();
-					input.select();
-					return null;
-				}
-				return email;
-			}
-		});
-	};
-
-	/**
-	 * Shows a popup to ask for passphrase (used for encrypting uploads or decrypting downloads).
-	 * @param {{ title?: string, description?: string }} opts
+	 * Generic key popup used for encryption/decryption keys.
+	 * @param {{ title?: string, description?: string, primaryText?: string, placeholder?: string }} opts
 	 * @returns {Promise<string|null>}
 	 */
-	window.showPassphrasePopup = function showPassphrasePopup(opts = {}) {
-		const title = String(opts.title || "Passphrase");
-		const description = String(opts.description || "Enter passphrase.");
+	window.showKeyPopup = function showKeyPopup(opts = {}) {
+		const title = String(opts.title || "Key");
+		const description = String(opts.description || "Enter key.");
+		const primaryText = String(opts.primaryText || "Continue");
+		const placeholder = String(opts.placeholder || "Enter key");
 
 		const stack = document.createElement("div");
 		stack.className = "share-popup__stack";
 		const input = createInput({
 			type: "password",
-			placeholder: "Enter passphrase",
+			placeholder,
 			value: "",
-			ariaLabel: "Passphrase"
+			ariaLabel: "Key"
 		});
 		stack.appendChild(input);
 
 		return showPopup({
 			title,
 			description,
-			primaryText: "Continue",
+			primaryText,
 			bodyEl: stack,
 			initialFocusEl: input,
 			onSubmit() {
-				const pass = String(input.value || "").trim();
-				if (!pass) {
+				const key = String(input.value || "").trim();
+				if (!key) {
 					input.focus();
 					return null;
 				}
-				return pass;
+				return key;
 			}
 		});
 	};
 
+	// Backwards-compatible alias (older code may still call this).
+	window.showPassphrasePopup = function showPassphrasePopup(opts = {}) {
+		return window.showKeyPopup({
+			title: opts.title || "Key",
+			description: opts.description || "Enter key.",
+			primaryText: opts.primaryText || "Continue",
+			placeholder: opts.placeholder || "Enter key"
+		});
+	};
+
 	/**
-	 * Popup to send: email + (attach a new file with passphrase OR select an existing uploaded file).
-	 * @param {{ uploaded?: Array<{id: string, originalName?: string}> }} opts
-	 * @returns {Promise<null | { recipientEmail: string, mode: 'attach'|'existing', file?: File, fileId?: string, passphrase?: string }>} 
+	 * Share popup: recipient email + select file + send.
+	 * @param {{ uploaded?: Array<{id: string, originalName?: string}>, defaultFileId?: string }} opts
+	 * @returns {Promise<null | { recipientEmail: string, fileId: string }>} 
 	 */
-	window.showSendFilePopup = function showSendFilePopup(opts = {}) {
+	window.showSharePopup = function showSharePopup(opts = {}) {
 		const uploaded = Array.isArray(opts.uploaded) ? opts.uploaded : [];
+		const defaultFileId = String(opts.defaultFileId || "").trim();
+
 		const stack = document.createElement("div");
-			stack.className = "share-popup__stack";
+		stack.className = "share-popup__stack";
 
-			const emailField = document.createElement("div");
-			emailField.className = "share-popup__field";
-			const emailLabel = document.createElement("div");
-			emailLabel.className = "share-popup__label";
-			emailLabel.textContent = "Recipient email";
-			const emailInput = createInput({
-				type: "email",
-				placeholder: "recipient@email.com",
-				value: "",
-				ariaLabel: "Recipient email"
-			});
-			emailInput.autocomplete = "email";
-			emailInput.inputMode = "email";
-			emailInput.spellcheck = false;
-			emailField.appendChild(emailLabel);
-			emailField.appendChild(emailInput);
+		const emailField = document.createElement("div");
+		emailField.className = "share-popup__field";
+		const emailLabel = document.createElement("div");
+		emailLabel.className = "share-popup__label";
+		emailLabel.textContent = "Recipient email";
+		const emailInput = createInput({
+			type: "email",
+			placeholder: "recipient@email.com",
+			value: "",
+			ariaLabel: "Recipient email"
+		});
+		emailInput.autocomplete = "email";
+		emailInput.inputMode = "email";
+		emailInput.spellcheck = false;
+		emailField.appendChild(emailLabel);
+		emailField.appendChild(emailInput);
 
-			const modeRow = document.createElement("div");
-			modeRow.className = "share-popup__radioRow";
-			const attachId = `sharePopupAttach_${Math.random().toString(16).slice(2)}`;
-			const existingId = `sharePopupExisting_${Math.random().toString(16).slice(2)}`;
-			modeRow.innerHTML = `
-				<label><input type="radio" name="sendMode" value="attach" id="${attachId}" checked /> Attach new file</label>
-				<label><input type="radio" name="sendMode" value="existing" id="${existingId}" /> Use uploaded file</label>
-			`;
+		const fileField = document.createElement("div");
+		fileField.className = "share-popup__field";
+		const fileLabel = document.createElement("div");
+		fileLabel.className = "share-popup__label";
+		fileLabel.textContent = "Select file";
+		const select = document.createElement("select");
+		select.className = "share-popup__input";
+		select.setAttribute("aria-label", "Select uploaded file");
+		const opt0 = document.createElement("option");
+		opt0.value = "";
+		opt0.textContent = uploaded.length ? "Select a file" : "No uploaded files";
+		select.appendChild(opt0);
+		for (const it of uploaded) {
+			const opt = document.createElement("option");
+			opt.value = String(it.id);
+			opt.textContent = String(it.originalName || it.id);
+			select.appendChild(opt);
+		}
+		if (defaultFileId) {
+			select.value = defaultFileId;
+		}
+		fileField.appendChild(fileLabel);
+		fileField.appendChild(select);
 
-			const attachField = document.createElement("div");
-			attachField.className = "share-popup__field";
-			const attachLabel = document.createElement("div");
-			attachLabel.className = "share-popup__label";
-			attachLabel.textContent = "Attach file";
-			const fileInput = document.createElement("input");
-			fileInput.className = "share-popup__input";
-			fileInput.type = "file";
-			fileInput.setAttribute("aria-label", "Attach a file");
-			const passLabel = document.createElement("div");
-			passLabel.className = "share-popup__label";
-			passLabel.textContent = "Passphrase";
-			const passInput = createInput({
-				type: "password",
-				placeholder: "Passphrase to encrypt",
-				value: "",
-				ariaLabel: "Passphrase"
-			});
-			attachField.appendChild(attachLabel);
-			attachField.appendChild(fileInput);
-			attachField.appendChild(passLabel);
-			attachField.appendChild(passInput);
-
-			const existingField = document.createElement("div");
-			existingField.className = "share-popup__field";
-			const existingLabel = document.createElement("div");
-			existingLabel.className = "share-popup__label";
-			existingLabel.textContent = "Uploaded file";
-			const select = document.createElement("select");
-			select.className = "share-popup__input";
-			select.setAttribute("aria-label", "Select uploaded file");
-			const opt0 = document.createElement("option");
-			opt0.value = "";
-			opt0.textContent = uploaded.length ? "Select a file" : "No uploaded files";
-			select.appendChild(opt0);
-			for (const it of uploaded) {
-				const opt = document.createElement("option");
-				opt.value = String(it.id);
-				opt.textContent = String(it.originalName || it.id);
-				select.appendChild(opt);
-			}
-			existingField.appendChild(existingLabel);
-			existingField.appendChild(select);
-
-			function syncMode() {
-				const mode = stack.querySelector('input[name="sendMode"]:checked')?.value || "attach";
-				attachField.style.display = mode === "attach" ? "grid" : "none";
-				existingField.style.display = mode === "existing" ? "grid" : "none";
-			}
-			stack.addEventListener("change", (e) => {
-				const t = e.target;
-				if (t && t.name === "sendMode") syncMode();
-			});
-			syncMode();
-
-			stack.appendChild(emailField);
-			stack.appendChild(modeRow);
-			stack.appendChild(attachField);
-			stack.appendChild(existingField);
+		stack.appendChild(emailField);
+		stack.appendChild(fileField);
 
 		return showPopup({
-			title: "Send file",
-			description: "Share encrypted files by email.",
+			title: "Share file",
+			description: "Enter recipient mail, select file and send.",
 			primaryText: "Send",
 			bodyEl: stack,
 			initialFocusEl: emailInput,
@@ -381,28 +388,12 @@
 					emailInput.select();
 					return null;
 				}
-
-				const mode = stack.querySelector('input[name="sendMode"]:checked')?.value || "attach";
-				if (mode === "existing") {
-					const fileId = String(select.value || "").trim();
-					if (!fileId) {
-						select.focus();
-						return null;
-					}
-					return { recipientEmail, mode: "existing", fileId };
-				}
-
-				const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-				if (!file) {
-					fileInput.focus();
+				const fileId = String(select.value || "").trim();
+				if (!fileId) {
+					select.focus();
 					return null;
 				}
-				const passphrase = String(passInput.value || "").trim();
-				if (!passphrase) {
-					passInput.focus();
-					return null;
-				}
-				return { recipientEmail, mode: "attach", file, passphrase };
+				return { recipientEmail, fileId };
 			}
 		});
 	};

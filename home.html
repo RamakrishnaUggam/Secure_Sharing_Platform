@@ -1057,7 +1057,6 @@
 						<div class="upload__actions" aria-label="Upload actions">
 							<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
 							<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
-							<div class="upload__meta" style="margin-left:auto;">Uploads are client-encrypted.</div>
 							<input id="uploadInput" type="file" aria-label="Choose files to upload" multiple hidden />
 						</div>
 
@@ -1080,12 +1079,6 @@
 									<div class="upload__meta" style="margin-bottom: 6px;">Received</div>
 								<div class="messenger__scroll">
 									<div id="sharedWithMeList" class="upload__list chat" aria-label="Messages list"></div>
-								</div>
-								<div class="chat__composer" aria-label="Message composer">
-										<div class="chat__row">
-											<button id="shareSendBtn" class="btn btn--primary btn--sm" type="button">Send</button>
-										</div>
-										<div class="upload__meta">Sending uses a popup (email + file + passphrase).</div>
 								</div>
 							</div>
 						</div>
@@ -1167,7 +1160,7 @@
 				const dropZone = document.getElementById("dropZone");
 					const listEl = document.getElementById("uploadedList");
 				const sharedListEl = document.getElementById("sharedWithMeList");
-				const shareSendBtnEl = document.getElementById("shareSendBtn");
+				const shareSendBtnEl = null;
 				const chatFileInputEl = null;
 				const shareFileSelectEl = null;
 				const chatPassphraseEl = null;
@@ -1177,10 +1170,30 @@
 				let pending = [];
 				let sessionClientKeyB64 = null;
 
+				let messageTimer = null;
 				function setMessage(text) {
+					const msg = String(text || "").trim();
+					try {
+						if (typeof window.showToastPopup === "function" && msg) {
+							window.showToastPopup(msg, { durationMs: 3000 });
+						}
+					} catch {
+						// ignore
+					}
 					if (!messageEl) return;
-					messageEl.textContent = String(text || "");
-					messageEl.classList.toggle("is-visible", messageEl.textContent.trim().length > 0);
+					messageEl.textContent = msg;
+					messageEl.classList.toggle("is-visible", msg.length > 0);
+					clearTimeout(messageTimer);
+					if (msg.length > 0) {
+						messageTimer = setTimeout(() => {
+							try {
+								messageEl.textContent = "";
+								messageEl.classList.remove("is-visible");
+							} catch {
+								// ignore
+							}
+						}, 3000);
+					}
 				}
 
 				async function responseErrorMessage(res) {
@@ -1438,7 +1451,7 @@
 					}
 
 					updateUploadButton();
-					setMessage(`${pending.length} file(s) selected. Click Upload to encrypt + upload.`);
+					setMessage(`${pending.length} file(s) selected. Click Upload to enter encryption key and upload.`);
 				}
 
 				async function getIdToken() {
@@ -1535,25 +1548,6 @@
 							when.className = "upload__meta";
 							when.textContent = `Shared ${formatRelativeTime(item.sharedAt)}`;
 
-							const meta = document.createElement("div");
-							meta.className = "upload__meta upload__metaRow";
-							function statusPill(label, ok) {
-								const el = document.createElement("span");
-								el.className = `status ${ok ? "status--ok" : "status--bad"}`;
-								const dot = document.createElement("span");
-								dot.className = "status__dot";
-								dot.setAttribute("aria-hidden", "true");
-								const t = document.createElement("span");
-								t.className = "status__label";
-								t.textContent = label;
-								el.appendChild(dot);
-								el.appendChild(t);
-								return el;
-							}
-							meta.appendChild(statusPill("Client-encrypted", true));
-							meta.appendChild(statusPill("Integrity", item.integrityOk === true));
-							meta.appendChild(statusPill("Confidentiality", item.confidentialityOk === true));
-
 							const actions = document.createElement("div");
 							actions.style.display = "flex";
 							actions.style.alignItems = "center";
@@ -1568,6 +1562,18 @@
 								try {
 									const itemId = item.id || item.fileId || item._id;
 									if (!itemId) throw new Error("Missing file id");
+										const auth = window.__auth;
+										const user = auth?.currentUser;
+										if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+										const keyText = await window.showKeyPopup({
+											title: "Decryption key",
+											description: "Enter decryption key",
+											primaryText: "Continue",
+											placeholder: "Decryption key"
+										});
+										if (!keyText) throw new Error("Cancelled");
+										const derivedB64 = await keyB64FromUserInput(keyText);
+										if (user?.uid) setStoredFileEncKeyB64(user.uid, itemId, derivedB64);
 									setMessage("Downloading encrypted…");
 									const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
 									if (!r.ok) {
@@ -1599,22 +1605,17 @@
 											throw new Error(j?.error || "Download failed");
 										}
 
-									let key;
-									if (user?.uid) {
-										const stored = getStoredFileEncKeyB64(user.uid, itemId);
-										if (stored) key = await importAesKeyFromB64(stored);
-									}
-									if (!key) {
-										if (typeof window.showPassphrasePopup !== "function") throw new Error("Passphrase popup not available");
-										const passphrase = await window.showPassphrasePopup({
-											title: "Decrypt",
-											description: "Enter passphrase to decrypt"
-										});
-										if (!passphrase) throw new Error("Decrypt cancelled");
-										const derivedB64 = await keyB64FromUserInput(passphrase);
-										if (user?.uid) setStoredFileEncKeyB64(user.uid, itemId, derivedB64);
-										key = await importAesKeyFromB64(derivedB64);
-									}
+											if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+											const keyText = await window.showKeyPopup({
+												title: "Decryption key",
+												description: "Enter decryption key",
+												primaryText: "Decrypt & Download",
+												placeholder: "Decryption key"
+											});
+											if (!keyText) throw new Error("Decrypt cancelled");
+											const derivedB64 = await keyB64FromUserInput(keyText);
+											if (user?.uid) setStoredFileEncKeyB64(user.uid, itemId, derivedB64);
+											const key = await importAesKeyFromB64(derivedB64);
 
 									const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
 									const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
@@ -1661,7 +1662,6 @@
 							row.appendChild(header);
 							row.appendChild(name);
 							row.appendChild(when);
-							row.appendChild(meta);
 							row.appendChild(actions);
 							sharedListEl.appendChild(row);
 						}
@@ -1709,33 +1709,9 @@
 							when.className = "upload__meta";
 							when.textContent = `Uploaded ${formatRelativeTime(item.createdAt)}`;
 
-							const meta = document.createElement("div");
-							meta.className = "upload__meta upload__metaRow";
-
-							function statusPill(label, ok) {
-								const el = document.createElement("span");
-								el.className = `status ${ok ? "status--ok" : "status--bad"}`;
-								const dot = document.createElement("span");
-								dot.className = "status__dot";
-								dot.setAttribute("aria-hidden", "true");
-								const t = document.createElement("span");
-								t.className = "status__label";
-								t.textContent = label;
-								el.appendChild(dot);
-								el.appendChild(t);
-								return el;
-							}
-
-							const integrityOk = item.integrityOk === true;
-							const confidentialityOk = item.confidentialityOk === true;
 							const encMode = String(item.encryptionMode || "server").toLowerCase();
-							meta.appendChild(statusPill(encMode === "client" ? "Client-encrypted" : "Server-encrypted", true));
-							meta.appendChild(statusPill("Integrity", integrityOk));
-							meta.appendChild(statusPill("Confidentiality", confidentialityOk));
-
 							left.appendChild(name);
 							left.appendChild(when);
-							left.appendChild(meta);
 
 							async function downloadItemDecryptedOrPlain() {
 								try {
@@ -1775,10 +1751,12 @@
 										if (perFileKeyB64) {
 											key = await importAesKeyFromB64(perFileKeyB64);
 										} else {
-											if (typeof window.showPassphrasePopup !== "function") throw new Error("Passphrase popup not available");
-											const passphrase = await window.showPassphrasePopup({
-												title: "Decrypt",
-												description: "Enter passphrase to decrypt"
+											if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+											const passphrase = await window.showKeyPopup({
+												title: "Decryption key",
+												description: "Enter decryption key",
+												primaryText: "Decrypt",
+												placeholder: "Decryption key"
 											});
 											if (!passphrase) throw new Error("Decrypt cancelled");
 											const derivedB64 = await keyB64FromUserInput(passphrase);
@@ -1856,21 +1834,21 @@
 							`;
 							shareBtn.addEventListener("click", async () => {
 								try {
-									if (typeof window.showShareEmailPopup !== "function") throw new Error("Share popup not available");
-									const recipientEmail = await window.showShareEmailPopup({ title: "Share file", description: "Enter recipient email" });
-									if (!recipientEmail) return;
-									setMessage("Sharing…");
-									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/share`, {
+									if (typeof window.showSharePopup !== "function") throw new Error("Share popup not available");
+									const result = await window.showSharePopup({ uploaded: uploadedItemsCache, defaultFileId: item.id });
+									if (!result) return;
+									setMessage("Sending…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(result.fileId)}/share`, {
 										method: "POST",
 										headers: { "Content-Type": "application/json" },
-										body: JSON.stringify({ recipientEmail })
+										body: JSON.stringify({ recipientEmail: result.recipientEmail })
 									});
 									const j = await r.json().catch(() => null);
-									if (!r.ok) throw new Error(j?.error || "Share failed");
-									setMessage("Shared.");
+									if (!r.ok) throw new Error(j?.error || "Send failed");
+									setMessage("Sent.");
 									await loadChat();
 								} catch (e) {
-									setMessage(e?.message || "Share failed.");
+									setMessage(e?.message || "Send failed.");
 								}
 							});
 							const delBtn = document.createElement("button");
@@ -1919,77 +1897,14 @@
 					}
 				}
 
-				shareSendBtnEl?.addEventListener("click", async () => {
-					try {
-						if (typeof window.showSendFilePopup !== "function") throw new Error("Send popup not available");
-						const result = await window.showSendFilePopup({ uploaded: uploadedItemsCache });
-						if (!result) {
-							setMessage("Send cancelled.");
-							return;
-						}
-						const recipientEmail = result.recipientEmail;
-						let fileId = "";
-
-						if (result.mode === "existing") {
-							fileId = String(result.fileId || "");
-							if (!fileId) throw new Error("Missing file");
-						} else {
-							const attached = result.file;
-							if (!attached) throw new Error("Missing file");
-							setMessage("Encrypting/Uploading…");
-							const derivedKeyB64 = await ensureSessionClientKeyB64(result.passphrase);
-							const key = await importAesKeyFromB64(derivedKeyB64);
-							const auth = window.__auth;
-							const user = auth?.currentUser;
-							if (!user) throw new Error("Not logged in");
-
-							const iv = new Uint8Array(12);
-							crypto.getRandomValues(iv);
-							const plaintext = await attached.arrayBuffer();
-							const originalSha256Hex = await sha256HexFromArrayBuffer(plaintext);
-							const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
-							const cipherBlob = new Blob([ciphertext], { type: "application/octet-stream" });
-							const ivB64 = bytesToB64(iv);
-
-							const form = new FormData();
-							form.append("file", cipherBlob, `${attached.name}.cipher`);
-							form.append("encMode", "client");
-							form.append("clientIvB64", ivB64);
-							form.append("originalName", attached.name);
-							form.append("mimeType", attached.type || "application/octet-stream");
-							form.append("originalSize", String(attached.size));
-							form.append("originalSha256Hex", originalSha256Hex);
-							const res = await apiFetch("/api/files", { method: "POST", body: form });
-							const j = await res.json().catch(() => null);
-							if (!res.ok) throw new Error(j?.error || (await responseErrorMessage(res)) || "Upload failed");
-							fileId = String(j?.id || "");
-							if (!fileId) throw new Error("Upload failed (missing id)");
-							setStoredFileEncKeyB64(user.uid, fileId, derivedKeyB64);
-						}
-
-						setMessage("Sending…");
-						const r = await apiFetch(`/api/files/${encodeURIComponent(fileId)}/share`, {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({ recipientEmail })
-						});
-						const j = await r.json().catch(() => null);
-						if (!r.ok) throw new Error(j?.error || "Send failed");
-						setMessage("Sent.");
-						await loadList();
-						await loadChat();
-					} catch (e) {
-						setMessage(e?.message || "Failed to send.");
-					}
-				});
-
-				async function uploadEncryptedToServer() {
+				async function uploadEncryptedToServer(encryptionKeyText) {
 					if (pending.length === 0) return;
 					if (uploadBtn) uploadBtn.disabled = true;
 					try {
-						setMessage("Encrypting in browser…");
-						setMessage("Uploading encrypted files…");
-						const derivedKeyB64 = await ensureSessionClientKeyB64();
+						const keyText = String(encryptionKeyText || "").trim();
+						if (!keyText) throw new Error("Encryption key is required");
+						setMessage("Encrypting & uploading…");
+						const derivedKeyB64 = await ensureSessionClientKeyB64(keyText);
 						const key = await importAesKeyFromB64(derivedKeyB64);
 						for (const file of pending) {
 							const auth = window.__auth;
@@ -2021,7 +1936,7 @@
 						}
 						pending = [];
 						sessionClientKeyB64 = derivedKeyB64;
-						setMessage("Uploaded. Refreshing list…");
+						setMessage("Uploaded.");
 						await loadList();
 						setMessage("Done.");
 					} catch (e) {
@@ -2037,7 +1952,25 @@
 					input.value = "";
 				});
 
-				uploadBtn?.addEventListener("click", uploadEncryptedToServer);
+				uploadBtn?.addEventListener("click", async () => {
+					try {
+						if (pending.length === 0) return;
+						if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+						const keyText = await window.showKeyPopup({
+							title: "Upload",
+							description: "Enter encryption key",
+							primaryText: "Upload",
+							placeholder: "Encryption key"
+						});
+						if (!keyText) {
+							setMessage("Upload cancelled.");
+							return;
+						}
+						await uploadEncryptedToServer(keyText);
+					} catch (e) {
+						setMessage(e?.message || "Upload failed.");
+					}
+				});
 
 				if (dropZone) {
 					dropZone.addEventListener("click", () => input?.click());
