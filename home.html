@@ -556,7 +556,7 @@
 			.messenger {
 				display: grid;
 				grid-template-columns: 1.15fr 1fr;
-				gap: 14px;
+				gap: 0;
 				align-items: stretch;
 				margin-top: 12px;
 			}
@@ -572,6 +572,26 @@
 				flex-direction: column;
 				gap: 10px;
 				min-height: 420px;
+				padding: 12px;
+			}
+
+			.messenger__pane + .messenger__pane {
+				border-left: 1px solid rgba(255, 255, 255, 0.10);
+			}
+
+			html[data-theme="light"] .messenger__pane + .messenger__pane {
+				border-left-color: rgba(15, 23, 42, 0.10);
+			}
+
+			@media (max-width: 980px) {
+				.messenger__pane + .messenger__pane {
+					border-left: none;
+					border-top: 1px solid rgba(255, 255, 255, 0.10);
+					padding-top: 16px;
+				}
+				html[data-theme="light"] .messenger__pane + .messenger__pane {
+					border-top-color: rgba(15, 23, 42, 0.10);
+				}
 			}
 
 			.messenger__scroll {
@@ -1037,10 +1057,7 @@
 						<div class="upload__actions" aria-label="Upload actions">
 							<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
 							<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
-								<label for="uploadPassphrase" class="upload__meta" style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-									<span>Passphrase</span>
-									<input id="uploadPassphrase" class="input" type="password" placeholder="Passphrase (encrypt uploads)" aria-label="Passphrase for client-side encryption" />
-								</label>
+							<div class="upload__meta" style="margin-left:auto;">Uploads are client-encrypted.</div>
 							<input id="uploadInput" type="file" aria-label="Choose files to upload" multiple hidden />
 						</div>
 
@@ -1053,27 +1070,22 @@
 
 						<div class="messenger" aria-label="Messenger">
 							<div class="messenger__pane" aria-label="Files pane">
-								<div class="upload__meta" style="margin-bottom: 6px;">Your files</div>
+									<div class="upload__meta" style="margin-bottom: 6px;">Uploaded files</div>
 								<div class="messenger__scroll">
 									<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
 								</div>
 							</div>
 
 							<div class="messenger__pane" aria-label="Messages pane">
-								<div class="upload__meta" style="margin-bottom: 6px;">Messages</div>
+									<div class="upload__meta" style="margin-bottom: 6px;">Received</div>
 								<div class="messenger__scroll">
 									<div id="sharedWithMeList" class="upload__list chat" aria-label="Messages list"></div>
 								</div>
 								<div class="chat__composer" aria-label="Message composer">
-									<div class="chat__row">
-										<input id="chatFileInput" class="input" type="file" aria-label="Attach a file" />
-										<select id="shareFileSelect" class="input" aria-label="Or select an already uploaded file"></select>
-										<button id="shareSendBtn" class="btn btn--primary btn--sm" type="button">Send</button>
-									</div>
-									<div class="chat__row">
-										<input id="chatPassphrase" class="input" type="password" placeholder="Passphrase (decrypt received)" aria-label="Passphrase for decrypting received files" />
-									</div>
-									<div class="upload__meta">Client-encrypted files require the passphrase you shared.</div>
+										<div class="chat__row">
+											<button id="shareSendBtn" class="btn btn--primary btn--sm" type="button">Send</button>
+										</div>
+										<div class="upload__meta">Sending uses a popup (email + file + passphrase).</div>
 								</div>
 							</div>
 						</div>
@@ -1151,19 +1163,19 @@
 				const chooseBtn = document.getElementById("chooseFilesBtn");
 				const uploadBtn = document.getElementById("uploadBtn");
 				const input = document.getElementById("uploadInput");
-				const uploadPassphraseEl = document.getElementById("uploadPassphrase");
+				const uploadPassphraseEl = null;
 				const dropZone = document.getElementById("dropZone");
 					const listEl = document.getElementById("uploadedList");
 				const sharedListEl = document.getElementById("sharedWithMeList");
-				const chatFileInputEl = document.getElementById("chatFileInput");
-				const shareFileSelectEl = document.getElementById("shareFileSelect");
 				const shareSendBtnEl = document.getElementById("shareSendBtn");
-				const chatPassphraseEl = document.getElementById("chatPassphrase");
+				const chatFileInputEl = null;
+				const shareFileSelectEl = null;
+				const chatPassphraseEl = null;
 				const messageEl = document.getElementById("uploadMessage");
 
 				/** @type {File[]} */
 				let pending = [];
-				let pendingClientKeyB64 = null;
+				let sessionClientKeyB64 = null;
 
 				function setMessage(text) {
 					if (!messageEl) return;
@@ -1395,16 +1407,23 @@
 
 				function updateUploadButton() {
 					if (!uploadBtn) return;
-					const passphraseOk = String(uploadPassphraseEl?.value || "").trim().length > 0;
-					uploadBtn.disabled = pending.length === 0 || !passphraseOk;
+					uploadBtn.disabled = pending.length === 0;
 				}
 
-				async function ensurePendingClientKey() {
-					if (pendingClientKeyB64) return pendingClientKeyB64;
-					const userKeyInput = String(uploadPassphraseEl?.value || "").trim();
-					if (!userKeyInput) throw new Error("Enter passphrase for client-side encryption");
-					pendingClientKeyB64 = await keyB64FromUserInput(userKeyInput);
-					return pendingClientKeyB64;
+				async function ensureSessionClientKeyB64(optionalPassphrase) {
+					if (sessionClientKeyB64) return sessionClientKeyB64;
+					let passphrase = String(optionalPassphrase || "").trim();
+					if (!passphrase) {
+						if (typeof window.showPassphrasePopup !== "function") throw new Error("Passphrase popup not available");
+						passphrase = (await window.showPassphrasePopup({
+							title: "Passphrase",
+							description: "Enter passphrase to encrypt files"
+						})) || "";
+					}
+					passphrase = String(passphrase || "").trim();
+					if (!passphrase) throw new Error("Passphrase is required");
+					sessionClientKeyB64 = await keyB64FromUserInput(passphrase);
+					return sessionClientKeyB64;
 				}
 
 				function addPending(files) {
@@ -1419,13 +1438,8 @@
 					}
 
 					updateUploadButton();
-					setMessage(`${pending.length} file(s) selected. Upload will be client-encrypted (share by sending the passphrase).`);
+					setMessage(`${pending.length} file(s) selected. Click Upload to encrypt + upload.`);
 				}
-
-				uploadPassphraseEl?.addEventListener("input", () => {
-					pendingClientKeyB64 = null;
-					updateUploadButton();
-				});
 
 				async function getIdToken() {
 					const auth = window.__auth;
@@ -1481,21 +1495,13 @@
 					if (!sharedListEl) return;
 					sharedListEl.innerHTML = "";
 					try {
-						const [incomingRes, outgoingRes] = await Promise.all([
-							apiFetch("/api/files/shared/with-me"),
-							apiFetch("/api/files/shared/by-me")
-						]);
+						const incomingRes = await apiFetch("/api/files/shared/with-me");
 						if (!incomingRes.ok) throw new Error("Failed to load shared files");
-						if (!outgoingRes.ok) throw new Error("Failed to load sent files");
 						const incoming = await incomingRes.json();
-						const outgoing = await outgoingRes.json();
 
 						const messages = [];
 						if (Array.isArray(incoming)) {
 							for (const item of incoming) messages.push({ ...item, direction: "in" });
-						}
-						if (Array.isArray(outgoing)) {
-							for (const item of outgoing) messages.push({ ...item, direction: "out" });
 						}
 
 						messages.sort((a, b) => new Date(a.sharedAt).getTime() - new Date(b.sharedAt).getTime());
@@ -1514,18 +1520,12 @@
 
 						for (const item of messages) {
 							const row = document.createElement("div");
-							const direction = item.direction === "out" ? "out" : "in";
-							row.className = `chat__bubble chat__bubble--${direction}`;
+							row.className = "chat__bubble chat__bubble--in";
 
 							const header = document.createElement("div");
 							header.className = "upload__meta";
-							if (direction === "in") {
-								const sender = usernameFromEmail(item.senderEmail);
-								header.textContent = `${sender} → You`;
-							} else {
-								const recipient = usernameFromEmail(item.recipientEmail);
-								header.textContent = `You → ${recipient}`;
-							}
+							const sender = usernameFromEmail(item.senderEmail);
+							header.textContent = `${sender} → You`;
 
 							const name = document.createElement("div");
 							name.className = "upload__name";
@@ -1605,8 +1605,12 @@
 										if (stored) key = await importAesKeyFromB64(stored);
 									}
 									if (!key) {
-										const passphrase = String(chatPassphraseEl?.value || "").trim();
-										if (!passphrase) throw new Error("Enter passphrase in the Passphrase box");
+										if (typeof window.showPassphrasePopup !== "function") throw new Error("Passphrase popup not available");
+										const passphrase = await window.showPassphrasePopup({
+											title: "Decrypt",
+											description: "Enter passphrase to decrypt"
+										});
+										if (!passphrase) throw new Error("Decrypt cancelled");
 										const derivedB64 = await keyB64FromUserInput(passphrase);
 										if (user?.uid) setStoredFileEncKeyB64(user.uid, itemId, derivedB64);
 										key = await importAesKeyFromB64(derivedB64);
@@ -1672,18 +1676,7 @@
 				let uploadedItemsCache = [];
 
 				function refreshShareFileSelect() {
-					if (!shareFileSelectEl) return;
-					shareFileSelectEl.innerHTML = "";
-					const opt0 = document.createElement("option");
-					opt0.value = "";
-					opt0.textContent = "Select a file";
-					shareFileSelectEl.appendChild(opt0);
-					for (const it of uploadedItemsCache) {
-						const opt = document.createElement("option");
-						opt.value = it.id;
-						opt.textContent = it.originalName || it.id;
-						shareFileSelectEl.appendChild(opt);
-					}
+					// Removed from page; sending is handled by popup.
 				}
 
 				async function loadList() {
@@ -1782,8 +1775,12 @@
 										if (perFileKeyB64) {
 											key = await importAesKeyFromB64(perFileKeyB64);
 										} else {
-											const passphrase = String(chatPassphraseEl?.value || "").trim();
-											if (!passphrase) throw new Error("Enter passphrase in the Passphrase box");
+											if (typeof window.showPassphrasePopup !== "function") throw new Error("Passphrase popup not available");
+											const passphrase = await window.showPassphrasePopup({
+												title: "Decrypt",
+												description: "Enter passphrase to decrypt"
+											});
+											if (!passphrase) throw new Error("Decrypt cancelled");
 											const derivedB64 = await keyB64FromUserInput(passphrase);
 											setStoredFileEncKeyB64(user.uid, item.id, derivedB64);
 											key = await importAesKeyFromB64(derivedB64);
@@ -1857,10 +1854,24 @@
 									<path d="M8.7 13.3l6.6 3.4"></path>
 								</svg>
 							`;
-							shareBtn.addEventListener("click", () => {
-								if (shareFileSelectEl) shareFileSelectEl.value = item.id;
-								shareRecipientEl?.focus();
-								setMessage("Choose a recipient email and click Send.");
+							shareBtn.addEventListener("click", async () => {
+								try {
+									if (typeof window.showShareEmailPopup !== "function") throw new Error("Share popup not available");
+									const recipientEmail = await window.showShareEmailPopup({ title: "Share file", description: "Enter recipient email" });
+									if (!recipientEmail) return;
+									setMessage("Sharing…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/share`, {
+										method: "POST",
+										headers: { "Content-Type": "application/json" },
+										body: JSON.stringify({ recipientEmail })
+									});
+									const j = await r.json().catch(() => null);
+									if (!r.ok) throw new Error(j?.error || "Share failed");
+									setMessage("Shared.");
+									await loadChat();
+								} catch (e) {
+									setMessage(e?.message || "Share failed.");
+								}
 							});
 							const delBtn = document.createElement("button");
 							delBtn.type = "button";
@@ -1910,13 +1921,23 @@
 
 				shareSendBtnEl?.addEventListener("click", async () => {
 					try {
-						// If a local file is attached, upload it first, then share.
-						const attached = chatFileInputEl?.files?.[0] || null;
+						if (typeof window.showSendFilePopup !== "function") throw new Error("Send popup not available");
+						const result = await window.showSendFilePopup({ uploaded: uploadedItemsCache });
+						if (!result) {
+							setMessage("Send cancelled.");
+							return;
+						}
+						const recipientEmail = result.recipientEmail;
 						let fileId = "";
-						if (attached) {
+
+						if (result.mode === "existing") {
+							fileId = String(result.fileId || "");
+							if (!fileId) throw new Error("Missing file");
+						} else {
+							const attached = result.file;
+							if (!attached) throw new Error("Missing file");
 							setMessage("Encrypting/Uploading…");
-							const derivedKeyB64 = (await ensurePendingClientKey()) || pendingClientKeyB64;
-							if (!derivedKeyB64) throw new Error("Missing encryption key");
+							const derivedKeyB64 = await ensureSessionClientKeyB64(result.passphrase);
 							const key = await importAesKeyFromB64(derivedKeyB64);
 							const auth = window.__auth;
 							const user = auth?.currentUser;
@@ -1944,17 +1965,6 @@
 							fileId = String(j?.id || "");
 							if (!fileId) throw new Error("Upload failed (missing id)");
 							setStoredFileEncKeyB64(user.uid, fileId, derivedKeyB64);
-						} else {
-							fileId = String(shareFileSelectEl?.value || "").trim();
-							if (!fileId) throw new Error("Attach a file or select one");
-						}
-
-						const popup = window.showShareEmailPopup || window.showShareEmailPopup;
-						if (typeof popup !== "function") throw new Error("Share popup is not available");
-						const recipientEmail = await popup({ title: "Share file", description: "Enter recipient email" });
-						if (!recipientEmail) {
-							setMessage("Share cancelled.");
-							return;
 						}
 
 						setMessage("Sending…");
@@ -1965,7 +1975,6 @@
 						});
 						const j = await r.json().catch(() => null);
 						if (!r.ok) throw new Error(j?.error || "Send failed");
-						if (chatFileInputEl) chatFileInputEl.value = "";
 						setMessage("Sent.");
 						await loadList();
 						await loadChat();
@@ -1980,8 +1989,7 @@
 					try {
 						setMessage("Encrypting in browser…");
 						setMessage("Uploading encrypted files…");
-						const derivedKeyB64 = (await ensurePendingClientKey()) || pendingClientKeyB64;
-						if (!derivedKeyB64) throw new Error("Missing encryption key");
+						const derivedKeyB64 = await ensureSessionClientKeyB64();
 						const key = await importAesKeyFromB64(derivedKeyB64);
 						for (const file of pending) {
 							const auth = window.__auth;
@@ -2012,7 +2020,7 @@
 							}
 						}
 						pending = [];
-						pendingClientKeyB64 = null;
+						sessionClientKeyB64 = derivedKeyB64;
 						setMessage("Uploaded. Refreshing list…");
 						await loadList();
 						setMessage("Done.");
