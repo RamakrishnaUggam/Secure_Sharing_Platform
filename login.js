@@ -1,6 +1,14 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, sendEmailVerification, signOut, reload } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+  reload,
+  setPersistence,
+  browserSessionPersistence
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -18,6 +26,11 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
+
+// Require login again after the tab/browser is closed.
+setPersistence(auth, browserSessionPersistence).catch(() => {
+  // ignore
+});
 
 const form = document.getElementById("loginForm") || document.querySelector("form");
 const messageEl = document.getElementById("formMessage");
@@ -189,7 +202,11 @@ form.addEventListener("submit", (event) => {
   showMessage("Signing in…");
   setForgotVisible(false);
 
-  signInWithEmailAndPassword(auth, email, password)
+  setPersistence(auth, browserSessionPersistence)
+    .catch(() => {
+      // ignore
+    })
+    .then(() => signInWithEmailAndPassword(auth, email, password))
     .then(async () => {
       const user = auth.currentUser;
       if (!user) throw new Error("No authenticated user");

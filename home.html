@@ -90,6 +90,10 @@
 				border-color: rgba(15, 23, 42, 0.14);
 			}
 
+			html[data-theme="light"] .btn--primary {
+				color: rgba(15, 23, 42, 0.92);
+			}
+
 			* {
 				margin: 0;
 				padding: 0;
@@ -211,6 +215,12 @@
 				border-radius: 10px;
 				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
 				box-shadow: 0 14px 40px rgba(124, 58, 237, 0.20);
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 12px;
+				font-weight: 700;
+				color: rgba(255, 255, 255, 0.92);
 			}
 
 			.profile__meta {
@@ -510,13 +520,17 @@
 
 			.upload__item {
 				display: grid;
-				grid-template-columns: 1fr auto;
+				grid-template-columns: auto 1fr auto;
 				gap: 12px;
 				align-items: center;
 				padding: 12px;
 				border-radius: 14px;
 				border: 1px solid rgba(255, 255, 255, 0.12);
 				background: rgba(255, 255, 255, 0.04);
+			}
+
+			.upload__item.is-selected {
+				box-shadow: 0 0 0 4px var(--focus);
 			}
 
 			html[data-theme="light"] .upload__item {
@@ -645,6 +659,108 @@
 				border-radius: 18px;
 				border: 1px solid rgba(255, 255, 255, 0.12);
 				background: rgba(255, 255, 255, 0.04);
+				position: relative;
+			}
+
+			.chat__bubble.is-selected {
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.bulkbar {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 10px;
+				padding: 10px 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			html[data-theme="light"] .bulkbar {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.bulkbar[hidden] {
+				display: none;
+			}
+
+			.bulkbar__left {
+				display: inline-flex;
+				gap: 10px;
+				align-items: center;
+			}
+
+			.bulkbar__actions {
+				display: inline-flex;
+				gap: 10px;
+				align-items: center;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+			}
+
+			.bulkbar__label {
+				font-size: 12px;
+				color: var(--muted);
+			}
+
+			.itemselect {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 36px;
+				height: 36px;
+				border-radius: 12px;
+				opacity: 0;
+				transform: translateY(2px);
+				transition: opacity 120ms ease, transform 120ms ease;
+				user-select: none;
+			}
+
+			.upload__item:hover .itemselect,
+			.upload__item.is-selected .itemselect,
+			.chat__bubble:hover .itemselect,
+			.chat__bubble.is-selected .itemselect {
+				opacity: 1;
+				transform: translateY(0);
+			}
+
+			.itemselect input {
+				appearance: none;
+				width: 18px;
+				height: 18px;
+				border-radius: 6px;
+				border: 1px solid rgba(255, 255, 255, 0.18);
+				background: rgba(255, 255, 255, 0.04);
+				cursor: pointer;
+				position: relative;
+			}
+
+			html[data-theme="light"] .itemselect input {
+				border-color: rgba(15, 23, 42, 0.18);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.itemselect input:checked {
+				border-color: rgba(34, 211, 238, 0.65);
+				background: rgba(34, 211, 238, 0.22);
+			}
+
+			.itemselect input:checked::after {
+				content: "";
+				position: absolute;
+				left: 5px;
+				top: 2px;
+				width: 5px;
+				height: 9px;
+				border: solid rgba(255, 255, 255, 0.92);
+				border-width: 0 2px 2px 0;
+				transform: rotate(45deg);
+			}
+
+			html[data-theme="light"] .itemselect input:checked::after {
+				border-color: rgba(15, 23, 42, 0.92);
 			}
 
 			.chat__bubble--in {
@@ -885,7 +1001,16 @@
 		</style>
 		<script type="module">
 			import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-			import { getAuth, onAuthStateChanged, signOut, reload } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+			import {
+				getAuth,
+				onAuthStateChanged,
+				signOut,
+				reload,
+				setPersistence,
+				browserSessionPersistence,
+				EmailAuthProvider,
+				reauthenticateWithCredential
+			} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 			const firebaseConfig = {
 				apiKey: "AIzaSyD7f6dVud8ScJtsfu9K_RZh4gJqgkIbvqk",
@@ -900,6 +1025,11 @@
 			initializeApp(firebaseConfig);
 			const auth = getAuth();
 			window.__auth = auth;
+			try {
+				await setPersistence(auth, browserSessionPersistence);
+			} catch {
+				// ignore
+			}
 
 			function whenReady(fn) {
 				if (document.readyState === "loading") {
@@ -951,6 +1081,7 @@
 					const profileEmail = document.getElementById("profileEmail");
 					const profileLabel = document.getElementById("profileLabel");
 					const profileLabelEmail = document.getElementById("profileLabelEmail");
+					const profileAvatar = document.querySelector(".profile__avatar");
 
 					const isLoggedIn = !!user;
 					if (profileMenu) profileMenu.hidden = !isLoggedIn;
@@ -959,11 +1090,15 @@
 						const displayName = (user?.displayName || "").trim();
 						const email = (user?.email || "").trim();
 						const fallbackName = email ? email.split("@")[0] : "User";
+						const label = displayName || fallbackName;
 
-						if (profileName) profileName.textContent = displayName || fallbackName;
+						if (profileName) profileName.textContent = label;
 						if (profileEmail) profileEmail.textContent = email;
-						if (profileLabel) profileLabel.textContent = displayName || fallbackName;
+						if (profileLabel) profileLabel.textContent = label;
 						if (profileLabelEmail) profileLabelEmail.textContent = email;
+						if (profileAvatar) {
+							profileAvatar.textContent = String(label || "U").trim().slice(0, 1).toUpperCase() || "U";
+						}
 					}
 
 					closeProfileDropdown();
@@ -997,6 +1132,23 @@
 					setNavForAuth(user);
 				})();
 			});
+			window.__doSignOut = async () => {
+				await signOut(auth);
+			};
+			window.__reauthWithPassword = async (password) => {
+				const user = auth.currentUser;
+				const email = String(user?.email || "").trim();
+				if (!user || !email) throw new Error("No email/password user is signed in");
+				const pw = String(password || "");
+				if (!pw) throw new Error("Missing password");
+				const cred = EmailAuthProvider.credential(email, pw);
+				await reauthenticateWithCredential(user, cred);
+				try {
+					await user.getIdToken(true);
+				} catch {
+					// ignore
+				}
+			};
 			// Initial state while auth loads
 			setNavForAuth(null);
 			whenReady(() => setupProfileDropdown());
@@ -1040,6 +1192,7 @@
 							<div class="profile__email" id="profileEmail"></div>
 							<div class="profile__divider" role="separator"></div>
 							<a class="profile__item" href="forgot-password.html" role="menuitem">Reset password</a>
+							<button class="profile__item" id="deleteAccountBtn" type="button" role="menuitem">Delete account</button>
 							<a class="profile__item" href="logout.html" role="menuitem">Logout</a>
 						</div>
 					</div>
@@ -1075,6 +1228,7 @@
 						<div class="messenger" aria-label="Messenger">
 							<div class="messenger__pane" aria-label="Files pane">
 									<div class="upload__meta" style="margin-bottom: 6px;">Uploaded files</div>
+									<div class="bulkbar" id="uploadedBulkbar" hidden aria-label="Uploaded bulk actions"></div>
 								<div class="messenger__scroll">
 									<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
 								</div>
@@ -1082,6 +1236,7 @@
 
 							<div class="messenger__pane" aria-label="Messages pane">
 									<div class="upload__meta" style="margin-bottom: 6px;">Received</div>
+									<div class="bulkbar" id="receivedBulkbar" hidden aria-label="Received bulk actions"></div>
 								<div class="messenger__scroll">
 									<div id="sharedWithMeList" class="upload__list chat" aria-label="Messages list"></div>
 								</div>
@@ -1163,14 +1318,20 @@
 				const input = document.getElementById("uploadInput");
 				const uploadPassphraseEl = null;
 				const dropZone = document.getElementById("dropZone");
-					const listEl = document.getElementById("uploadedList");
+				const listEl = document.getElementById("uploadedList");
 				const sharedListEl = document.getElementById("sharedWithMeList");
+				const uploadedBulkbarEl = document.getElementById("uploadedBulkbar");
+				const receivedBulkbarEl = document.getElementById("receivedBulkbar");
 				const shareSendBtnEl = null;
 				const chatFileInputEl = null;
 				const shareFileSelectEl = null;
 				const chatPassphraseEl = null;
 				const messageEl = null;
 				const selectedFilesEl = document.getElementById("selectedFiles");
+
+				const selectedUploadedIds = new Set();
+				const selectedReceivedShareIds = new Set();
+				let receivedItemsCache = [];
 
 				/** @type {File[]} */
 				let pending = [];
@@ -1187,6 +1348,29 @@
 						// ignore
 					}
 					clearTimeout(messageTimer);
+				}
+
+				function setBulkbarHidden(el, hidden) {
+					if (!el) return;
+					el.hidden = !!hidden;
+				}
+
+				function clearSelectionForMissing(currentIdsSet, selectedSet) {
+					for (const id of Array.from(selectedSet)) {
+						if (!currentIdsSet.has(id)) selectedSet.delete(id);
+					}
+				}
+
+				function createItemSelectControl({ ariaLabel, checked, onChange }) {
+					const wrap = document.createElement("label");
+					wrap.className = "itemselect";
+					const cb = document.createElement("input");
+					cb.type = "checkbox";
+					cb.checked = !!checked;
+					cb.setAttribute("aria-label", ariaLabel);
+					cb.addEventListener("change", () => onChange?.(cb.checked));
+					wrap.appendChild(cb);
+					return { wrap, cb };
 				}
 
 				function renderSelectedFiles() {
@@ -1514,6 +1698,441 @@
 					}
 				}
 
+				async function shareUploadedFile({ fileId, recipientEmail }) {
+					setMessage("Sending…");
+					const r = await apiFetch(`/api/files/${encodeURIComponent(fileId)}/share`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ recipientEmail })
+					});
+					const j = await r.json().catch(() => null);
+					if (!r.ok) throw new Error(j?.error || "Send failed");
+				}
+
+				async function deleteUploadedFile(item) {
+					setMessage("Deleting…");
+					const r = await apiFetch(`/api/files/${encodeURIComponent(String(item.id))}`, { method: "DELETE" });
+					const j = await r.json().catch(() => null);
+					if (!r.ok) throw new Error(j?.error || "Delete failed");
+				}
+
+				async function deleteReceivedShare(item) {
+					const shareId = String(item.shareId || "").trim();
+					if (!shareId) throw new Error("Missing share id");
+					setMessage("Deleting…");
+					const r = await apiFetch(`/api/files/shares/${encodeURIComponent(shareId)}`, { method: "DELETE" });
+					const j = await r.json().catch(() => null);
+					if (!r.ok) throw new Error(j?.error || "Delete failed");
+				}
+
+				async function downloadUploadedEncryptedCipher(item) {
+					try {
+						setMessage("Preparing encrypted download…");
+						const r = await apiFetch(`/api/files/${encodeURIComponent(String(item.id))}/download`);
+						if (!r.ok) throw new Error("Download failed");
+						const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
+						const bytes = await r.arrayBuffer();
+						if (encModeHeader === "client") {
+							const blob = new Blob([bytes], { type: "application/octet-stream" });
+							await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
+							setMessage("Encrypted file saved.");
+							return;
+						}
+						const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
+						await saveBlobAs(blob, item.originalName || "file");
+						setMessage("Saved.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to download.");
+					}
+				}
+
+				async function downloadUploadedDecryptedOrPlain(item) {
+					try {
+						setMessage("Downloading…");
+						const r = await apiFetch(`/api/files/${encodeURIComponent(String(item.id))}/download`);
+						if (!r.ok) throw new Error("Download failed");
+						const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
+						if (encModeHeader === "client") {
+							const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
+							const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+							const ivB64 = r.headers.get("x-client-iv-b64") || item.clientIvB64 || "";
+							const nameHeader = r.headers.get("x-original-name") || "";
+							const mimeHeader = r.headers.get("x-original-mime") || "";
+							let originalName = item.originalName || "file";
+							try {
+								const fromHeader = decodeURIComponent(nameHeader || "");
+								if (fromHeader) originalName = fromHeader;
+							} catch {
+								// ignore
+							}
+							let originalMime = item.mimeType || "application/octet-stream";
+							try {
+								const fromHeader = decodeURIComponent(mimeHeader || "");
+								if (fromHeader) originalMime = fromHeader;
+							} catch {
+								// ignore
+							}
+							if (!ivB64) throw new Error("Missing IV");
+
+							const iv = b64ToBytes(ivB64);
+							const auth = window.__auth;
+							const user = auth?.currentUser;
+							if (!user) throw new Error("Not logged in");
+							const perFileKeyB64 = getStoredFileEncKeyB64(user.uid, String(item.id));
+							let key;
+							if (perFileKeyB64) {
+								key = await importAesKeyFromB64(perFileKeyB64);
+							} else {
+								if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+								const passphrase = await window.showKeyPopup({
+									title: "Decryption key",
+									description: "Enter decryption key",
+									primaryText: "Decrypt & Download",
+									placeholder: "Decryption key"
+								});
+								if (!passphrase) throw new Error("Decrypt cancelled");
+								const derivedB64 = await keyB64FromUserInput(passphrase);
+								setStoredFileEncKeyB64(user.uid, String(item.id), derivedB64);
+								key = await importAesKeyFromB64(derivedB64);
+							}
+							const ciphertext = await r.arrayBuffer();
+							if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
+								const computedStored = await sha256HexFromArrayBuffer(ciphertext);
+								if (computedStored !== storedShaExpected) throw new Error("Integrity check failed");
+							}
+							const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+							if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+								const computedOriginal = await sha256HexFromArrayBuffer(plaintext);
+								if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+							}
+							const outBlob = new Blob([plaintext], { type: originalMime });
+							await saveBlobAs(outBlob, originalName);
+							setMessage("Decrypted and saved.");
+							return;
+						}
+
+						const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+						const bytes = await r.arrayBuffer();
+						if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+							const computedOriginal = await sha256HexFromArrayBuffer(bytes);
+							if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+						}
+						const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
+						await saveBlobAs(blob, item.originalName || "file");
+						setMessage("Saved.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to download.");
+					}
+				}
+
+				async function downloadReceivedEncrypted(item) {
+					try {
+						const itemId = item.id || item.fileId || item._id;
+						if (!itemId) throw new Error("Missing file id");
+						setMessage("Downloading encrypted…");
+						const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
+						if (!r.ok) {
+							const j = await r.json().catch(() => null);
+							throw new Error(j?.error || "Download failed");
+						}
+						const bytes = await r.arrayBuffer();
+						const blob = new Blob([bytes], { type: "application/octet-stream" });
+						await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
+						setMessage("Encrypted file saved.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to download.");
+					}
+				}
+
+				async function downloadReceivedDecrypted(item) {
+					try {
+						const auth = window.__auth;
+						const user = auth?.currentUser;
+						const itemId = item.id || item.fileId || item._id;
+						if (!itemId) throw new Error("Missing file id");
+						setMessage("Downloading…");
+						const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
+						if (!r.ok) {
+							const j = await r.json().catch(() => null);
+							throw new Error(j?.error || "Download failed");
+						}
+						if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+						const keyText = await window.showKeyPopup({
+							title: "Decryption key",
+							description: "Enter decryption key",
+							primaryText: "Decrypt & Download",
+							placeholder: "Decryption key"
+						});
+						if (!keyText) throw new Error("Decrypt cancelled");
+						const derivedB64 = await keyB64FromUserInput(keyText);
+						if (user?.uid) setStoredFileEncKeyB64(user.uid, String(itemId), derivedB64);
+						const key = await importAesKeyFromB64(derivedB64);
+
+						const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
+						const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+						const ivB64 = r.headers.get("x-client-iv-b64") || item.clientIvB64 || "";
+						const nameHeader = r.headers.get("x-original-name") || "";
+						const mimeHeader = r.headers.get("x-original-mime") || "";
+						let originalName = item.originalName || "file";
+						try {
+							const fromHeader = decodeURIComponent(nameHeader || "");
+							if (fromHeader) originalName = fromHeader;
+						} catch {
+							// ignore
+						}
+						let originalMime = item.mimeType || "application/octet-stream";
+						try {
+							const fromHeader = decodeURIComponent(mimeHeader || "");
+							if (fromHeader) originalMime = fromHeader;
+						} catch {
+							// ignore
+						}
+						if (!ivB64) throw new Error("Missing IV");
+
+						const iv = b64ToBytes(ivB64);
+						const ciphertext = await r.arrayBuffer();
+						if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
+							const computedStored = await sha256HexFromArrayBuffer(ciphertext);
+							if (computedStored !== storedShaExpected) throw new Error("Integrity check failed");
+						}
+						const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+						if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+							const computedOriginal = await sha256HexFromArrayBuffer(plaintext);
+							if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+						}
+						const outBlob = new Blob([plaintext], { type: originalMime });
+						await saveBlobAs(outBlob, originalName);
+						setMessage("Decrypted and saved.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to download.");
+					}
+				}
+
+				function renderUploadedBulkbar(items) {
+					if (!uploadedBulkbarEl) return;
+					if (!Array.isArray(items) || items.length === 0) {
+						setBulkbarHidden(uploadedBulkbarEl, true);
+						return;
+					}
+					setBulkbarHidden(uploadedBulkbarEl, false);
+					uploadedBulkbarEl.innerHTML = "";
+
+					const allIds = items.map((it) => String(it.id));
+					const allSelected = allIds.length > 0 && allIds.every((id) => selectedUploadedIds.has(id));
+					const someSelected = allIds.some((id) => selectedUploadedIds.has(id));
+
+					const left = document.createElement("div");
+					left.className = "bulkbar__left";
+					const selectAll = document.createElement("input");
+					selectAll.type = "checkbox";
+					selectAll.checked = allSelected;
+					selectAll.indeterminate = !allSelected && someSelected;
+					selectAll.setAttribute("aria-label", "Select all uploaded files");
+					selectAll.addEventListener("change", () => {
+						if (selectAll.checked) {
+							for (const id of allIds) selectedUploadedIds.add(id);
+						} else {
+							for (const id of allIds) selectedUploadedIds.delete(id);
+						}
+						void loadList();
+					});
+					const label = document.createElement("div");
+					label.className = "bulkbar__label";
+					label.textContent = `${selectedUploadedIds.size} selected`;
+					left.appendChild(selectAll);
+					left.appendChild(label);
+
+					const actions = document.createElement("div");
+					actions.className = "bulkbar__actions";
+
+					const btnDownload = document.createElement("button");
+					btnDownload.type = "button";
+					btnDownload.className = "btn btn--sm";
+					btnDownload.textContent = "Download";
+					btnDownload.disabled = selectedUploadedIds.size === 0;
+					btnDownload.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+						for (const it of selected) await downloadUploadedEncryptedCipher(it);
+					});
+
+					const btnDecrypt = document.createElement("button");
+					btnDecrypt.type = "button";
+					btnDecrypt.className = "btn btn--primary btn--sm";
+					btnDecrypt.textContent = "Decrypt & Download";
+					btnDecrypt.disabled = selectedUploadedIds.size === 0;
+					btnDecrypt.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+						for (const it of selected) await downloadUploadedDecryptedOrPlain(it);
+					});
+
+					const btnShare = document.createElement("button");
+					btnShare.type = "button";
+					btnShare.className = "btn btn--sm";
+					btnShare.textContent = "Share";
+					btnShare.disabled = selectedUploadedIds.size === 0;
+					btnShare.addEventListener("click", async () => {
+						try {
+							if (typeof window.showKeyPopup !== "function") throw new Error("Popup not available");
+							const recipientEmail = await window.showKeyPopup({
+								title: "Share",
+								description: "Enter recipient email",
+								primaryText: "Share",
+								placeholder: "recipient@email.com"
+							});
+							const email = String(recipientEmail || "").trim().toLowerCase();
+							if (!email || !email.includes("@")) throw new Error("Invalid email");
+							const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+							for (const it of selected) await shareUploadedFile({ fileId: String(it.id), recipientEmail: email });
+							setMessage("Sent.");
+							await loadChat();
+						} catch (e) {
+							setMessage(e?.message || "Share failed.");
+						}
+					});
+
+					const btnDelete = document.createElement("button");
+					btnDelete.type = "button";
+					btnDelete.className = "btn btn--sm";
+					btnDelete.textContent = "Delete";
+					btnDelete.disabled = selectedUploadedIds.size === 0;
+					btnDelete.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+						const ok = confirm(`Delete ${selected.length} file(s)?`);
+						if (!ok) return;
+						for (const it of selected) {
+							await deleteUploadedFile(it);
+							selectedUploadedIds.delete(String(it.id));
+						}
+						setMessage("Deleted.");
+						await loadList();
+					});
+
+					actions.appendChild(btnDownload);
+					actions.appendChild(btnDecrypt);
+					actions.appendChild(btnShare);
+					actions.appendChild(btnDelete);
+
+					uploadedBulkbarEl.appendChild(left);
+					uploadedBulkbarEl.appendChild(actions);
+				}
+
+				function renderReceivedBulkbar(items) {
+					if (!receivedBulkbarEl) return;
+					if (!Array.isArray(items) || items.length === 0) {
+						setBulkbarHidden(receivedBulkbarEl, true);
+						return;
+					}
+					setBulkbarHidden(receivedBulkbarEl, false);
+					receivedBulkbarEl.innerHTML = "";
+
+					const allShareIds = items.map((it) => String(it.shareId || "")).filter(Boolean);
+					const allSelected = allShareIds.length > 0 && allShareIds.every((id) => selectedReceivedShareIds.has(id));
+					const someSelected = allShareIds.some((id) => selectedReceivedShareIds.has(id));
+
+					const left = document.createElement("div");
+					left.className = "bulkbar__left";
+					const selectAll = document.createElement("input");
+					selectAll.type = "checkbox";
+					selectAll.checked = allSelected;
+					selectAll.indeterminate = !allSelected && someSelected;
+					selectAll.setAttribute("aria-label", "Select all received files");
+					selectAll.addEventListener("change", () => {
+						if (selectAll.checked) {
+							for (const id of allShareIds) selectedReceivedShareIds.add(id);
+						} else {
+							for (const id of allShareIds) selectedReceivedShareIds.delete(id);
+						}
+						void loadChat();
+					});
+					const label = document.createElement("div");
+					label.className = "bulkbar__label";
+					label.textContent = `${selectedReceivedShareIds.size} selected`;
+					left.appendChild(selectAll);
+					left.appendChild(label);
+
+					const actions = document.createElement("div");
+					actions.className = "bulkbar__actions";
+
+					const btnDownload = document.createElement("button");
+					btnDownload.type = "button";
+					btnDownload.className = "btn btn--sm";
+					btnDownload.textContent = "Download";
+					btnDownload.disabled = selectedReceivedShareIds.size === 0;
+					btnDownload.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
+						for (const it of selected) await downloadReceivedEncrypted(it);
+					});
+
+					const btnDecrypt = document.createElement("button");
+					btnDecrypt.type = "button";
+					btnDecrypt.className = "btn btn--primary btn--sm";
+					btnDecrypt.textContent = "Decrypt & Download";
+					btnDecrypt.disabled = selectedReceivedShareIds.size === 0;
+					btnDecrypt.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
+						for (const it of selected) await downloadReceivedDecrypted(it);
+					});
+
+					const btnShare = document.createElement("button");
+					btnShare.type = "button";
+					btnShare.className = "btn btn--sm";
+					btnShare.textContent = "Share";
+					btnShare.disabled = selectedReceivedShareIds.size === 0;
+					btnShare.addEventListener("click", async () => {
+						try {
+							const auth = window.__auth;
+							const user = auth?.currentUser;
+							if (!user) throw new Error("Not logged in");
+							if (typeof window.showKeyPopup !== "function") throw new Error("Popup not available");
+							const recipientEmail = await window.showKeyPopup({
+								title: "Share",
+								description: "Enter recipient email",
+								primaryText: "Share",
+								placeholder: "recipient@email.com"
+							});
+							const email = String(recipientEmail || "").trim().toLowerCase();
+							if (!email || !email.includes("@")) throw new Error("Invalid email");
+							const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
+							let sharedCount = 0;
+							for (const it of selected) {
+								if (String(it.ownerUid || "") !== String(user.uid || "")) continue;
+								await shareUploadedFile({ fileId: String(it.id), recipientEmail: email });
+								sharedCount++;
+							}
+							if (sharedCount === 0) throw new Error("You can only share files you own");
+							setMessage("Sent.");
+							await loadChat();
+						} catch (e) {
+							setMessage(e?.message || "Share failed.");
+						}
+					});
+
+					const btnDelete = document.createElement("button");
+					btnDelete.type = "button";
+					btnDelete.className = "btn btn--sm";
+					btnDelete.textContent = "Delete";
+					btnDelete.disabled = selectedReceivedShareIds.size === 0;
+					btnDelete.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
+						const ok = confirm(`Delete ${selected.length} received item(s)?`);
+						if (!ok) return;
+						for (const it of selected) {
+							await deleteReceivedShare(it);
+							selectedReceivedShareIds.delete(String(it.shareId));
+						}
+						setMessage("Deleted.");
+						await loadChat();
+					});
+
+					actions.appendChild(btnDownload);
+					actions.appendChild(btnDecrypt);
+					actions.appendChild(btnShare);
+					actions.appendChild(btnDelete);
+
+					receivedBulkbarEl.appendChild(left);
+					receivedBulkbarEl.appendChild(actions);
+				}
+
 				async function loadChat() {
 					if (!sharedListEl) return;
 					sharedListEl.innerHTML = "";
@@ -1528,14 +2147,20 @@
 						}
 
 						messages.sort((a, b) => new Date(a.sharedAt).getTime() - new Date(b.sharedAt).getTime());
+						receivedItemsCache = messages;
 
 						if (messages.length === 0) {
+							receivedItemsCache = [];
+							renderReceivedBulkbar([]);
 							const empty = document.createElement("div");
 							empty.className = "upload__meta";
 							empty.textContent = "No shared files yet.";
 							sharedListEl.appendChild(empty);
 							return;
 						}
+
+						clearSelectionForMissing(new Set(messages.map((m) => String(m.shareId || "")).filter(Boolean)), selectedReceivedShareIds);
+						renderReceivedBulkbar(messages);
 
 						const auth = window.__auth;
 						const user = auth?.currentUser;
@@ -1544,6 +2169,25 @@
 						for (const item of messages) {
 							const row = document.createElement("div");
 							row.className = "chat__bubble chat__bubble--in";
+							const shareIdForSel = String(item.shareId || "").trim();
+							const isSelected = shareIdForSel && selectedReceivedShareIds.has(shareIdForSel);
+							if (isSelected) row.classList.add("is-selected");
+							if (shareIdForSel) {
+								const { wrap, cb } = createItemSelectControl({
+									ariaLabel: `Select received ${item.originalName || "file"}`,
+									checked: isSelected,
+									onChange(checked) {
+										if (checked) selectedReceivedShareIds.add(shareIdForSel);
+										else selectedReceivedShareIds.delete(shareIdForSel);
+										void loadChat();
+									}
+								});
+								wrap.style.position = "absolute";
+								wrap.style.left = "10px";
+								wrap.style.top = "10px";
+								row.appendChild(wrap);
+								cb.addEventListener("click", (e) => e.stopPropagation());
+							}
 
 							const header = document.createElement("div");
 							header.className = "upload__meta";
@@ -1568,24 +2212,7 @@
 							downloadEncryptedBtn.className = "btn btn--sm";
 							downloadEncryptedBtn.textContent = "Download";
 							downloadEncryptedBtn.setAttribute("aria-label", `Download encrypted ${item.originalName || "file"}`);
-							downloadEncryptedBtn.addEventListener("click", async () => {
-								try {
-									const itemId = item.id || item.fileId || item._id;
-									if (!itemId) throw new Error("Missing file id");
-									setMessage("Downloading encrypted…");
-									const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
-									if (!r.ok) {
-										const j = await r.json().catch(() => null);
-										throw new Error(j?.error || "Download failed");
-									}
-									const bytes = await r.arrayBuffer();
-									const blob = new Blob([bytes], { type: "application/octet-stream" });
-									await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
-									setMessage("Encrypted file saved.");
-								} catch (e) {
-									setMessage(e?.message || "Failed to download.");
-								}
-							});
+							downloadEncryptedBtn.addEventListener("click", () => void downloadReceivedEncrypted(item));
 
 							const deleteBtn = document.createElement("button");
 							deleteBtn.type = "button";
@@ -1594,13 +2221,9 @@
 							deleteBtn.setAttribute("aria-label", `Delete received ${item.originalName || "file"}`);
 							deleteBtn.addEventListener("click", async () => {
 								try {
-									const shareId = String(item.shareId || "").trim();
-									if (!shareId) throw new Error("Missing share id");
-									setMessage("Deleting…");
-									const r = await apiFetch(`/api/files/shares/${encodeURIComponent(shareId)}`, { method: "DELETE" });
-									const j = await r.json().catch(() => null);
-									if (!r.ok) throw new Error(j?.error || "Delete failed");
+									await deleteReceivedShare(item);
 									setMessage("Deleted.");
+									selectedReceivedShareIds.delete(String(item.shareId || ""));
 									await loadChat();
 								} catch (e) {
 									setMessage(e?.message || "Delete failed.");
@@ -1612,68 +2235,7 @@
 							decryptBtn.className = "btn btn--primary btn--sm";
 							decryptBtn.textContent = "Decrypt & Download";
 							decryptBtn.setAttribute("aria-label", `Decrypt and download ${item.originalName || "file"}`);
-							decryptBtn.addEventListener("click", async () => {
-									try {
-										const itemId = item.id || item.fileId || item._id;
-										if (!itemId) throw new Error("Missing file id");
-									setMessage("Downloading…");
-										const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
-										if (!r.ok) {
-											const j = await r.json().catch(() => null);
-											throw new Error(j?.error || "Download failed");
-										}
-
-											if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
-											const keyText = await window.showKeyPopup({
-												title: "Decryption key",
-												description: "Enter decryption key",
-												primaryText: "Decrypt & Download",
-												placeholder: "Decryption key"
-											});
-											if (!keyText) throw new Error("Decrypt cancelled");
-											const derivedB64 = await keyB64FromUserInput(keyText);
-											if (user?.uid) setStoredFileEncKeyB64(user.uid, itemId, derivedB64);
-											const key = await importAesKeyFromB64(derivedB64);
-
-									const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
-									const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
-									const ivB64 = r.headers.get("x-client-iv-b64") || item.clientIvB64 || "";
-									const nameHeader = r.headers.get("x-original-name") || "";
-									const mimeHeader = r.headers.get("x-original-mime") || "";
-									let originalName = item.originalName || "file";
-									try {
-										const fromHeader = decodeURIComponent(nameHeader || "");
-										if (fromHeader) originalName = fromHeader;
-									} catch {
-										// ignore
-									}
-									let originalMime = item.mimeType || "application/octet-stream";
-									try {
-										const fromHeader = decodeURIComponent(mimeHeader || "");
-										if (fromHeader) originalMime = fromHeader;
-									} catch {
-										// ignore
-									}
-									if (!ivB64) throw new Error("Missing IV");
-
-									const iv = b64ToBytes(ivB64);
-									const ciphertext = await r.arrayBuffer();
-									if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
-										const computedStored = await sha256HexFromArrayBuffer(ciphertext);
-										if (computedStored !== storedShaExpected) throw new Error("Integrity check failed");
-									}
-									const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-									if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
-										const computedOriginal = await sha256HexFromArrayBuffer(plaintext);
-										if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
-									}
-									const outBlob = new Blob([plaintext], { type: originalMime });
-									await saveBlobAs(outBlob, originalName);
-									setMessage("Decrypted and saved.");
-									} catch (e) {
-										setMessage(e?.message || "Failed to download.");
-									}
-								});
+							decryptBtn.addEventListener("click", () => void downloadReceivedDecrypted(item));
 
 							actions.appendChild(downloadEncryptedBtn);
 							actions.appendChild(decryptBtn);
@@ -1685,6 +2247,8 @@
 							sharedListEl.appendChild(row);
 						}
 					} catch {
+						receivedItemsCache = [];
+						renderReceivedBulkbar([]);
 						const empty = document.createElement("div");
 						empty.className = "upload__meta";
 						empty.textContent = "Backend not available.";
@@ -1706,8 +2270,11 @@
 						if (!res.ok) throw new Error("Failed to load files");
 						const items = await res.json();
 						uploadedItemsCache = Array.isArray(items) ? items : [];
+						clearSelectionForMissing(new Set(uploadedItemsCache.map((it) => String(it.id))), selectedUploadedIds);
+						renderUploadedBulkbar(uploadedItemsCache);
 						refreshShareFileSelect();
 						if (!Array.isArray(items) || items.length === 0) {
+							renderUploadedBulkbar([]);
 							const empty = document.createElement("div");
 							empty.className = "upload__meta";
 							empty.textContent = "No uploaded files yet.";
@@ -1718,6 +2285,19 @@
 						for (const item of items) {
 							const row = document.createElement("div");
 							row.className = "upload__item";
+							const itemId = String(item.id);
+							const isSelected = selectedUploadedIds.has(itemId);
+							if (isSelected) row.classList.add("is-selected");
+							const { wrap: selWrap, cb: selCb } = createItemSelectControl({
+								ariaLabel: `Select ${item.originalName || "file"}`,
+								checked: isSelected,
+								onChange(checked) {
+									if (checked) selectedUploadedIds.add(itemId);
+									else selectedUploadedIds.delete(itemId);
+									void loadList();
+								}
+							});
+							selCb.addEventListener("click", (e) => e.stopPropagation());
 
 							const left = document.createElement("div");
 							const name = document.createElement("div");
@@ -1848,14 +2428,14 @@
 							downloadEncryptedBtn.className = "btn btn--sm";
 							downloadEncryptedBtn.textContent = "Download";
 							downloadEncryptedBtn.setAttribute("aria-label", `Download encrypted ${item.originalName || "file"}`);
-							downloadEncryptedBtn.addEventListener("click", downloadItemEncryptedCipher);
+							downloadEncryptedBtn.addEventListener("click", () => void downloadUploadedEncryptedCipher(item));
 
 							const decryptBtn = document.createElement("button");
 							decryptBtn.type = "button";
 							decryptBtn.className = "btn btn--primary btn--sm";
 							decryptBtn.textContent = "Decrypt & Download";
 							decryptBtn.setAttribute("aria-label", `Decrypt and download ${item.originalName || "file"}`);
-							decryptBtn.addEventListener("click", downloadItemDecryptedOrPlain);
+							decryptBtn.addEventListener("click", () => void downloadUploadedDecryptedOrPlain(item));
 
 
 							const shareBtn = document.createElement("button");
@@ -1877,14 +2457,7 @@
 									if (typeof window.showSharePopup !== "function") throw new Error("Share popup not available");
 									const result = await window.showSharePopup({ uploaded: uploadedItemsCache, defaultFileId: item.id });
 									if (!result) return;
-									setMessage("Sending…");
-									const r = await apiFetch(`/api/files/${encodeURIComponent(result.fileId)}/share`, {
-										method: "POST",
-										headers: { "Content-Type": "application/json" },
-										body: JSON.stringify({ recipientEmail: result.recipientEmail })
-									});
-									const j = await r.json().catch(() => null);
-									if (!r.ok) throw new Error(j?.error || "Send failed");
+									await shareUploadedFile({ fileId: result.fileId, recipientEmail: result.recipientEmail });
 									setMessage("Sent.");
 									await loadChat();
 								} catch (e) {
@@ -1909,17 +2482,16 @@
 								try {
 									const ok = confirm(`Delete ${item.originalName || "this file"}?`);
 									if (!ok) return;
-									setMessage("Deleting…");
-									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}`, { method: "DELETE" });
-									const j = await r.json().catch(() => null);
-									if (!r.ok) throw new Error(j?.error || "Delete failed");
+									await deleteUploadedFile(item);
 									setMessage("Deleted.");
+									selectedUploadedIds.delete(itemId);
 									await loadList();
 								} catch (e) {
 									setMessage(e?.message || "Failed to delete.");
 								}
 							});
 
+							row.appendChild(selWrap);
 							actions.appendChild(downloadEncryptedBtn);
 							actions.appendChild(decryptBtn);
 							actions.appendChild(shareBtn);
@@ -1931,12 +2503,46 @@
 					} catch (e) {
 						const msg = e?.message || "Failed to load list";
 						setMessage(`${msg}. Is the backend running on ${API_BASE}?`);
+						renderUploadedBulkbar([]);
 						const empty = document.createElement("div");
 						empty.className = "upload__meta";
 						empty.textContent = "Backend not available.";
 						listEl.appendChild(empty);
 					}
 				}
+
+					const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+					if (deleteAccountBtn) {
+						deleteAccountBtn.addEventListener("click", async () => {
+							try {
+								if (typeof window.showKeyPopup !== "function") throw new Error("Popup not available");
+								const password = await window.showKeyPopup({
+									title: "Delete account",
+									description: "Enter your password to confirm account deletion.",
+									primaryText: "Delete",
+									placeholder: "Password"
+								});
+								if (!password) return;
+
+								setMessage("Confirming password…");
+								await window.__reauthWithPassword?.(password);
+
+								setMessage("Deleting account…");
+								const r = await apiFetch("/api/account", { method: "DELETE" });
+								const j = await r.json().catch(() => null);
+								if (!r.ok) throw new Error(j?.error || "Delete account failed");
+
+								try {
+									await window.__doSignOut?.();
+								} catch {
+									// ignore
+								}
+								window.location.replace("index.html?deleted=1");
+							} catch (e) {
+								setMessage(e?.message || "Failed to delete account.");
+							}
+						});
+					}
 
 				async function uploadEncryptedToServer(encryptionKeyText) {
 					if (pending.length === 0) return;

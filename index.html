@@ -218,6 +218,59 @@
             align-items: center;
         }
 
+        .meta-row {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .meta-row a {
+            color: rgba(255, 255, 255, 0.92);
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        html[data-theme="light"] .meta-row a {
+            color: rgba(15, 23, 42, 0.92);
+            border-bottom-color: rgba(15, 23, 42, 0.28);
+        }
+
+        .meta-row a:hover {
+            border-bottom-color: rgba(6, 182, 212, 0.65);
+            color: #a5f3fc;
+        }
+
+        html[data-theme="light"] .meta-row a:hover {
+            color: rgba(2, 132, 199, 0.92);
+        }
+
+        .howitworks {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text);
+            font-size: 12px;
+            line-height: 1.55;
+            display: none;
+        }
+
+        html[data-theme="light"] .howitworks {
+            background: rgba(15, 23, 42, 0.03);
+            border-color: rgba(15, 23, 42, 0.12);
+        }
+
+        .howitworks.is-open {
+            display: block;
+        }
+
         .social a {
             color: rgba(255, 255, 255, 0.92);
             text-decoration: none;
@@ -292,6 +345,14 @@
             <div class="app-title">Secure File Sharing Platform</div>
             <h3>Login Here</h3>
             <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
+
+			<div class="meta-row">
+				<a href="#" id="howItWorksLink">How it works</a>
+			</div>
+			<div id="howItWorksBox" class="howitworks" aria-live="polite">
+				Files are encrypted locally in your browser before upload. You can share files to another registered email inside the platform, then the receiver downloads and decrypts using the key you provide.
+			</div>
+
             <label for="">Username</label>
             <input id="email" type="email" placeholder="Email" required />
             <label for="">Password</label>
@@ -334,6 +395,18 @@
                 button.addEventListener("click", () => {
                     setTheme(getTheme() === "dark" ? "light" : "dark");
                 });
+            })();
+        </script>
+        <script>
+            (function () {
+                const howLink = document.getElementById("howItWorksLink");
+                const box = document.getElementById("howItWorksBox");
+                if (howLink && box) {
+                    howLink.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        box.classList.toggle("is-open");
+                    });
+                }
             })();
         </script>
     </body>
