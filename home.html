@@ -553,13 +553,40 @@
 				gap: 10px;
 			}
 
+			.messenger {
+				display: grid;
+				grid-template-columns: 1.15fr 1fr;
+				gap: 14px;
+				align-items: stretch;
+				margin-top: 12px;
+			}
+
+			@media (max-width: 980px) {
+				.messenger {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			.messenger__pane {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+				min-height: 420px;
+			}
+
+			.messenger__scroll {
+				flex: 1;
+				overflow: auto;
+				padding-right: 4px;
+			}
+
 			.chat__composer {
 				display: grid;
 				grid-template-columns: 1fr;
 				gap: 10px;
 				padding-top: 10px;
 				border-top: 1px solid rgba(255, 255, 255, 0.10);
-				margin-top: 10px;
+				margin-top: 0;
 			}
 
 			html[data-theme="light"] .chat__composer {
@@ -1027,23 +1054,33 @@
 						</div>
 
 						<div id="uploadMessage" class="upload__message" role="status" aria-live="polite"></div>
-						<div class="upload__meta" style="margin-bottom: 10px;">Your files</div>
-						<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
-						<div style="height: 12px;"></div>
-						<div class="upload__meta" style="margin-bottom: 10px;">Shared with you</div>
-						<div id="sharedWithMeList" class="upload__list chat" aria-label="Shared with you list"></div>
-						<div class="chat__composer" aria-label="Send file">
-							<div class="upload__meta">Send a file (no popups)</div>
-							<div class="chat__row">
-								<input id="shareRecipient" class="input" type="email" placeholder="recipient@email.com" aria-label="Recipient email" />
-								<input id="chatFileInput" class="input" type="file" aria-label="Attach a file" />
-								<select id="shareFileSelect" class="input" aria-label="Or select an already uploaded file"></select>
-								<button id="shareSendBtn" class="btn btn--primary btn--sm" type="button">Send</button>
+
+						<div class="messenger" aria-label="Messenger">
+							<div class="messenger__pane" aria-label="Files pane">
+								<div class="upload__meta" style="margin-bottom: 6px;">Your files</div>
+								<div class="messenger__scroll">
+									<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
+								</div>
 							</div>
-							<div class="chat__row">
-								<input id="chatPassphrase" class="input" type="password" placeholder="Passphrase (for decrypt)" aria-label="Passphrase for decrypting received files" />
+
+							<div class="messenger__pane" aria-label="Messages pane">
+								<div class="upload__meta" style="margin-bottom: 6px;">Messages</div>
+								<div class="messenger__scroll">
+									<div id="sharedWithMeList" class="upload__list chat" aria-label="Messages list"></div>
+								</div>
+								<div class="chat__composer" aria-label="Message composer">
+									<div class="chat__row">
+										<input id="shareRecipient" class="input" type="email" placeholder="To: recipient@email.com" aria-label="Recipient email" />
+										<input id="chatFileInput" class="input" type="file" aria-label="Attach a file" />
+										<select id="shareFileSelect" class="input" aria-label="Or select an already uploaded file"></select>
+										<button id="shareSendBtn" class="btn btn--primary btn--sm" type="button">Send</button>
+									</div>
+									<div class="chat__row">
+										<input id="chatPassphrase" class="input" type="password" placeholder="Passphrase (decrypt received)" aria-label="Passphrase for decrypting received files" />
+									</div>
+									<div class="upload__meta">Client-encrypted files require the passphrase you shared.</div>
+								</div>
 							</div>
-							<div class="upload__meta">For client-encrypted files, recipients must use the passphrase you shared.</div>
 						</div>
 					</div>
 				</div>
