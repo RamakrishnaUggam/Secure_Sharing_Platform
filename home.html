@@ -1147,6 +1147,30 @@
 					return e.split("@")[0] || "Unknown";
 				}
 
+				async function saveBlobAs(blob, filename) {
+					const suggestedName = String(filename || "file");
+					if (typeof window.showSaveFilePicker === "function") {
+						try {
+							const handle = await window.showSaveFilePicker({ suggestedName });
+							const writable = await handle.createWritable();
+							await writable.write(blob);
+							await writable.close();
+							return;
+						} catch (e) {
+							// User cancelled or not allowed -> fallback to browser download.
+						}
+					}
+
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement("a");
+					a.href = url;
+					a.download = suggestedName;
+					document.body.appendChild(a);
+					a.click();
+					a.remove();
+					setTimeout(() => URL.revokeObjectURL(url), 30_000);
+				}
+
 				function generateRandomKeyB64() {
 					const raw = new Uint8Array(32);
 					crypto.getRandomValues(raw);
@@ -1422,15 +1446,8 @@
 											if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
 										}
 										const outBlob = new Blob([plaintext], { type: originalMime });
-										const url = URL.createObjectURL(outBlob);
-										const a = document.createElement("a");
-										a.href = url;
-										a.download = originalName;
-										document.body.appendChild(a);
-										a.click();
-										a.remove();
-										URL.revokeObjectURL(url);
-										setMessage("Decrypted and downloaded.");
+										await saveBlobAs(outBlob, originalName);
+										setMessage("Decrypted and saved.");
 										return;
 									}
 
@@ -1441,15 +1458,8 @@
 										if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
 									}
 									const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
-									const url = URL.createObjectURL(blob);
-									const a = document.createElement("a");
-									a.href = url;
-									a.download = item.originalName || "file";
-									document.body.appendChild(a);
-									a.click();
-									a.remove();
-									URL.revokeObjectURL(url);
-									setMessage("Download started.");
+									await saveBlobAs(blob, item.originalName || "file");
+									setMessage("Saved.");
 								} catch (e) {
 									setMessage(e?.message || "Failed to download.");
 								}
@@ -1474,15 +1484,8 @@
 										}
 										const bytes = await r.arrayBuffer();
 										const blob = new Blob([bytes], { type: "application/octet-stream" });
-										const url = URL.createObjectURL(blob);
-										const a = document.createElement("a");
-										a.href = url;
-										a.download = `${item.originalName || "file"}.cipher`;
-										document.body.appendChild(a);
-										a.click();
-										a.remove();
-										URL.revokeObjectURL(url);
-										setMessage("Encrypted download started.");
+										await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
+										setMessage("Encrypted file saved.");
 									} catch (e) {
 										setMessage(e?.message || "Failed to download.");
 									}
@@ -1605,15 +1608,8 @@
 											if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
 										}
 										const outBlob = new Blob([plaintext], { type: originalMime });
-										const url = URL.createObjectURL(outBlob);
-										const a = document.createElement("a");
-										a.href = url;
-										a.download = originalName;
-										document.body.appendChild(a);
-										a.click();
-										a.remove();
-										URL.revokeObjectURL(url);
-										setMessage("Decrypted and downloaded.");
+										await saveBlobAs(outBlob, originalName);
+										setMessage("Decrypted and saved.");
 										return;
 									}
 
@@ -1625,15 +1621,8 @@
 										if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
 									}
 									const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
-									const url = URL.createObjectURL(blob);
-									const a = document.createElement("a");
-									a.href = url;
-									a.download = item.originalName || "file";
-									document.body.appendChild(a);
-									a.click();
-									a.remove();
-									URL.revokeObjectURL(url);
-									setMessage("Download started.");
+									await saveBlobAs(blob, item.originalName || "file");
+									setMessage("Saved.");
 								} catch (e) {
 									setMessage(e?.message || "Failed to download.");
 								}
