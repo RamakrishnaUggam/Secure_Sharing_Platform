@@ -8,6 +8,7 @@ const fileRecordSchema = new mongoose.Schema(
 		mimeType: { type: String, default: "" },
 		size: { type: Number, required: true },
 		storagePath: { type: String, required: true },
+		storageKey: { type: String, required: false },
 
 		// File encryption (AES-256-GCM)
 		fileIvHex: { type: String, required: false },

@@ -18,6 +18,7 @@ const upload = multer({
 });
 
 function storageDir() {
+	if (config.storageDir) return path.resolve(String(config.storageDir));
 	const __filename = fileURLToPath(import.meta.url);
 	const __dirname = path.dirname(__filename);
 	return path.resolve(__dirname, "..", "storage");
@@ -43,10 +44,22 @@ function safeReadFileBuffer(filePath) {
 	}
 }
 
+function resolveStoragePath(record) {
+	if (!record) return null;
+	if (record.storageKey) {
+		return path.join(storageDir(), String(record.storageKey));
+	}
+	const direct = String(record.storagePath || "");
+	if (direct && fs.existsSync(direct)) return direct;
+	if (direct) return path.join(storageDir(), path.basename(direct));
+	return null;
+}
+
 function computeIntegrityOk(record) {
-	if (!record?.storagePath) return false;
+	const p = resolveStoragePath(record);
+	if (!p) return false;
 	if (!record?.storedSha256Hex || !/^[a-f0-9]{64}$/i.test(String(record.storedSha256Hex))) return false;
-	const buf = safeReadFileBuffer(record.storagePath);
+	const buf = safeReadFileBuffer(p);
 	if (!buf) return false;
 	const computed = sha256Hex(buf);
 	return computed === String(record.storedSha256Hex).toLowerCase();
@@ -251,7 +264,8 @@ export function filesRouter() {
 		}
 
 		const id = randomId();
-		const outPath = path.join(storageDir(), `${id}.bin`);
+		const storageKey = `${id}.bin`;
+		const outPath = path.join(storageDir(), storageKey);
 
 
 		const clientIvB64 = String(req.body?.clientIvB64 || "").trim();
@@ -276,6 +290,7 @@ export function filesRouter() {
 			mimeType,
 			size,
 			storagePath: outPath,
+			storageKey,
 			storedSha256Hex,
 			originalSha256Hex: originalSha256Hex || undefined
 		});
@@ -295,7 +310,8 @@ export function filesRouter() {
 		if (!record) return res.status(404).json({ error: "Not found" });
 
 		try {
-			fs.unlinkSync(record.storagePath);
+			const p = resolveStoragePath(record);
+			if (p) fs.unlinkSync(p);
 		} catch {
 			// ignore
 		}
@@ -309,11 +325,13 @@ export function filesRouter() {
 		if (!access.record) return res.status(404).json({ error: "Not found" });
 		if (!access.ok) return res.status(403).json({ error: "Forbidden" });
 		const record = access.record;
+		const p = resolveStoragePath(record);
+		if (!p || !fs.existsSync(p)) return res.status(404).json({ error: "Stored file missing" });
 
 		if (record.encryptionMode === "client") {
 			// Client-encrypted: backend returns ciphertext. Recipients must decrypt client-side
 			// using a key shared out-of-band by the uploader.
-			const ciphertext = fs.readFileSync(record.storagePath);
+			const ciphertext = fs.readFileSync(p);
 			const computedStored = sha256Hex(ciphertext);
 			if (record.storedSha256Hex && computedStored !== record.storedSha256Hex) {
 				return res.status(500).json({ error: "Integrity check failed" });
@@ -335,7 +353,7 @@ export function filesRouter() {
 			wrapTagHex: record.wrapTagHex
 		});
 
-		const ciphertext = fs.readFileSync(record.storagePath);
+		const ciphertext = fs.readFileSync(p);
 		const computedStored = sha256Hex(ciphertext);
 		if (record.storedSha256Hex && computedStored !== record.storedSha256Hex) {
 			return res.status(500).json({ error: "Integrity check failed" });
