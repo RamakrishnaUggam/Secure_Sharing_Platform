@@ -976,14 +976,14 @@
 						<div class="upload__actions" aria-label="Upload actions">
 							<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
 							<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
-							<label class="upload__meta" style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+							<label for="encryptionMode" class="upload__meta" style="display:flex;align-items:center;gap:8px;margin-left:auto;">
 								<span>Encryption</span>
-								<select id="encryptionMode" style="padding:8px 10px;border-radius:10px;">
+								<select id="encryptionMode" aria-label="Encryption mode" style="padding:8px 10px;border-radius:10px;">
 									<option value="client">Client-side (private; share by key)</option>
 									<option value="server">Server-side (shareable in platform)</option>
 								</select>
 							</label>
-							<input id="uploadInput" type="file" multiple hidden />
+							<input id="uploadInput" type="file" aria-label="Choose files to upload" multiple hidden />
 						</div>
 
 						<div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="Drop files here">
