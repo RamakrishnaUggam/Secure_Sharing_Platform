@@ -232,57 +232,40 @@ export function filesRouter() {
 		if (!req.file) return res.status(400).json({ error: "Missing file" });
 		ensureStorageDir();
 
-		const encMode = String(req.body?.encMode || "server").toLowerCase();
+		const encMode = String(req.body?.encMode || "client").toLowerCase();
+		if (encMode !== "client") {
+			return res.status(400).json({ error: "Only client-side encrypted uploads are supported" });
+		}
 
 		const id = randomId();
 		const outPath = path.join(storageDir(), `${id}.bin`);
 
-		let doc;
-		if (encMode === "client") {
-			const clientIvB64 = String(req.body?.clientIvB64 || "").trim();
-			const originalName = String(req.body?.originalName || "").trim() || req.file.originalname;
-			const mimeType = String(req.body?.mimeType || "").trim() || "application/octet-stream";
-			const size = Number(req.body?.originalSize || req.file.size);
-			const originalSha256Hex = String(req.body?.originalSha256Hex || "").trim().toLowerCase();
-			if (!clientIvB64) return res.status(400).json({ error: "Missing clientIvB64" });
-			if (originalSha256Hex && !/^[a-f0-9]{64}$/.test(originalSha256Hex)) {
-				return res.status(400).json({ error: "Invalid originalSha256Hex" });
-			}
 
-			// Store ciphertext as-is (client already encrypted).
-			fs.writeFileSync(outPath, req.file.buffer);
-			const storedSha256Hex = sha256Hex(req.file.buffer);
-
-			doc = await FileRecord.create({
-				ownerUid: req.user.uid,
-				encryptionMode: "client",
-				clientIvB64,
-				originalName,
-				mimeType,
-				size,
-				storagePath: outPath,
-				storedSha256Hex,
-				originalSha256Hex: originalSha256Hex || undefined
-			});
-		} else {
-			const originalSha256Hex = sha256Hex(req.file.buffer);
-			const { dataKey, fileIvHex, fileTagHex, storedSha256Hex } = encryptFileBufferToDisk({ buffer: req.file.buffer, outPath });
-			const wrapped = wrapDataKey({ masterKey, dataKey });
-
-			doc = await FileRecord.create({
-				ownerUid: req.user.uid,
-				encryptionMode: "server",
-				originalName: req.file.originalname,
-				mimeType: req.file.mimetype,
-				size: req.file.size,
-				storagePath: outPath,
-				fileIvHex,
-				fileTagHex,
-				storedSha256Hex,
-				originalSha256Hex,
-				...wrapped
-			});
+		const clientIvB64 = String(req.body?.clientIvB64 || "").trim();
+		const originalName = String(req.body?.originalName || "").trim() || req.file.originalname;
+		const mimeType = String(req.body?.mimeType || "").trim() || "application/octet-stream";
+		const size = Number(req.body?.originalSize || req.file.size);
+		const originalSha256Hex = String(req.body?.originalSha256Hex || "").trim().toLowerCase();
+		if (!clientIvB64) return res.status(400).json({ error: "Missing clientIvB64" });
+		if (originalSha256Hex && !/^[a-f0-9]{64}$/.test(originalSha256Hex)) {
+			return res.status(400).json({ error: "Invalid originalSha256Hex" });
 		}
+
+		// Store ciphertext as-is (client already encrypted).
+		fs.writeFileSync(outPath, req.file.buffer);
+		const storedSha256Hex = sha256Hex(req.file.buffer);
+
+		const doc = await FileRecord.create({
+			ownerUid: req.user.uid,
+			encryptionMode: "client",
+			clientIvB64,
+			originalName,
+			mimeType,
+			size,
+			storagePath: outPath,
+			storedSha256Hex,
+			originalSha256Hex: originalSha256Hex || undefined
+		});
 
 		res.status(201).json({
 			id: String(doc._id),
