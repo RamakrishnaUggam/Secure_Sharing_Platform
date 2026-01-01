@@ -137,6 +137,7 @@ export function filesRouter() {
 				shareId: String(share._id),
 				id: String(f._id),
 				ownerUid: f.ownerUid,
+				senderEmail: share.senderEmail || null,
 				encryptionMode: f.encryptionMode || "server",
 				integrityOk: computeIntegrityOk(f),
 				confidentialityOk: computeConfidentialityOk(f),
@@ -156,6 +157,7 @@ export function filesRouter() {
 		const recipientEmail = normalizeEmail(req.body?.recipientEmail);
 		if (!recipientEmail) return res.status(400).json({ error: "Missing recipientEmail" });
 		if (!recipientEmail.includes("@")) return res.status(400).json({ error: "Invalid recipientEmail" });
+		const senderEmail = normalizeEmail(req.user.email);
 
 		// Only allow sharing to a real Firebase Auth user with a verified email.
 		try {
@@ -178,6 +180,7 @@ export function filesRouter() {
 			const share = await ShareRecord.create({
 				fileId: record._id,
 				ownerUid: record.ownerUid,
+				senderEmail: senderEmail || undefined,
 				recipientEmail,
 				createdByUid: req.user.uid
 			});

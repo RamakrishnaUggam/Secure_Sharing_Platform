@@ -4,6 +4,7 @@ const shareRecordSchema = new mongoose.Schema(
 	{
 		fileId: { type: mongoose.Schema.Types.ObjectId, ref: "FileRecord", required: true, index: true },
 		ownerUid: { type: String, required: true, index: true },
+		senderEmail: { type: String, required: false, index: true },
 		recipientEmail: { type: String, required: true, index: true },
 		createdByUid: { type: String, required: true }
 	},

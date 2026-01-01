@@ -541,6 +541,44 @@
 				flex-wrap: wrap;
 			}
 
+			.btn--sm {
+				padding: 8px 10px;
+				border-radius: 12px;
+				font-size: 12px;
+			}
+
+			.chat {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+			}
+
+			.chat__bubble {
+				max-width: 78%;
+				display: grid;
+				gap: 8px;
+				padding: 12px;
+				border-radius: 18px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			.chat__bubble--in {
+				align-self: flex-start;
+				border-top-left-radius: 8px;
+			}
+
+			.chat__bubble--out {
+				align-self: flex-end;
+				border-top-right-radius: 8px;
+				background: rgba(255, 255, 255, 0.06);
+			}
+
+			html[data-theme="light"] .chat__bubble {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
 			.status {
 				display: inline-flex;
 				gap: 6px;
@@ -954,14 +992,11 @@
 						</div>
 
 						<div id="uploadMessage" class="upload__message" role="status" aria-live="polite"></div>
-						<div class="upload__meta" style="margin-bottom: 10px;">Your files — server-side encrypted</div>
-						<div id="uploadedListServer" class="upload__list" aria-label="Uploaded list (server encrypted)"></div>
-						<div style="height: 12px;"></div>
-						<div class="upload__meta" style="margin-bottom: 10px;">Your files — client-side encrypted</div>
-						<div id="uploadedListClient" class="upload__list" aria-label="Uploaded list (client encrypted)"></div>
+						<div class="upload__meta" style="margin-bottom: 10px;">Your files</div>
+						<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
 						<div style="height: 12px;"></div>
 						<div class="upload__meta" style="margin-bottom: 10px;">Shared with you</div>
-						<div id="sharedWithMeList" class="upload__list" aria-label="Shared with you list"></div>
+						<div id="sharedWithMeList" class="upload__list chat" aria-label="Shared with you list"></div>
 					</div>
 				</div>
 			</section>
@@ -1037,8 +1072,7 @@
 				const input = document.getElementById("uploadInput");
 					const encryptionModeEl = document.getElementById("encryptionMode");
 				const dropZone = document.getElementById("dropZone");
-					const listServerEl = document.getElementById("uploadedListServer");
-					const listClientEl = document.getElementById("uploadedListClient");
+					const listEl = document.getElementById("uploadedList");
 				const sharedListEl = document.getElementById("sharedWithMeList");
 				const messageEl = document.getElementById("uploadMessage");
 
@@ -1105,6 +1139,12 @@
 					} catch {
 						return "—";
 					}
+				}
+
+				function usernameFromEmail(email) {
+					const e = String(email || "").trim().toLowerCase();
+					if (!e || !e.includes("@")) return "Unknown";
+					return e.split("@")[0] || "Unknown";
 				}
 
 				function generateRandomKeyB64() {
@@ -1294,9 +1334,13 @@
 
 						for (const item of items) {
 							const row = document.createElement("div");
-							row.className = "upload__item";
+							row.className = "chat__bubble chat__bubble--in";
 
-							const left = document.createElement("div");
+							const header = document.createElement("div");
+							header.className = "upload__meta";
+							const sender = usernameFromEmail(item.senderEmail);
+							header.textContent = `${sender} → You`;
+
 							const name = document.createElement("div");
 							name.className = "upload__name";
 							name.textContent = item.originalName || "(unnamed)";
@@ -1327,10 +1371,6 @@
 							meta.appendChild(statusPill("Integrity", item.integrityOk === true));
 							meta.appendChild(statusPill("Confidentiality", item.confidentialityOk === true));
 
-							left.appendChild(name);
-							left.appendChild(when);
-							left.appendChild(meta);
-
 							const actions = document.createElement("div");
 							actions.style.display = "flex";
 							actions.style.alignItems = "center";
@@ -1338,16 +1378,12 @@
 
 							const downloadBtn = document.createElement("button");
 							downloadBtn.type = "button";
-							downloadBtn.className = "iconbtn";
-							downloadBtn.title = "Download";
-							downloadBtn.setAttribute("aria-label", `Download ${item.originalName || "file"}`);
-							downloadBtn.innerHTML = `
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-									<path d="M7 10l5 5 5-5"></path>
-									<path d="M12 15V3"></path>
-								</svg>
-							`;
+							downloadBtn.className = `btn btn--sm ${encMode === "client" ? "btn--primary" : ""}`;
+							downloadBtn.textContent = encMode === "client" ? "Decrypt & Download" : "Download";
+							downloadBtn.setAttribute(
+							"aria-label",
+							`${encMode === "client" ? "Decrypt and download" : "Download"} ${item.originalName || "file"}`
+						);
 							downloadBtn.addEventListener("click", async () => {
 								try {
 									const itemId = item.id || item.fileId || item._id;
@@ -1420,7 +1456,10 @@
 							});
 
 							actions.appendChild(downloadBtn);
-							row.appendChild(left);
+							row.appendChild(header);
+							row.appendChild(name);
+							row.appendChild(when);
+							row.appendChild(meta);
 							row.appendChild(actions);
 							sharedListEl.appendChild(row);
 						}
@@ -1433,40 +1472,18 @@
 				}
 
 				async function loadList() {
-					if (!listServerEl || !listClientEl) return;
-					listServerEl.innerHTML = "";
-					listClientEl.innerHTML = "";
+					if (!listEl) return;
+					listEl.innerHTML = "";
 					try {
 						const res = await apiFetch("/api/files");
 						if (!res.ok) throw new Error("Failed to load files");
 						const items = await res.json();
 						if (!Array.isArray(items) || items.length === 0) {
-							const empty1 = document.createElement("div");
-							empty1.className = "upload__meta";
-							empty1.textContent = "No server-encrypted files yet.";
-							listServerEl.appendChild(empty1);
-
-							const empty2 = document.createElement("div");
-							empty2.className = "upload__meta";
-							empty2.textContent = "No client-encrypted files yet.";
-							listClientEl.appendChild(empty2);
+							const empty = document.createElement("div");
+							empty.className = "upload__meta";
+							empty.textContent = "No uploaded files yet.";
+							listEl.appendChild(empty);
 							return;
-						}
-
-						const serverItems = items.filter((it) => String(it.encryptionMode || "server").toLowerCase() !== "client");
-						const clientItems = items.filter((it) => String(it.encryptionMode || "server").toLowerCase() === "client");
-
-						if (serverItems.length === 0) {
-							const empty = document.createElement("div");
-							empty.className = "upload__meta";
-							empty.textContent = "No server-encrypted files yet.";
-							listServerEl.appendChild(empty);
-						}
-						if (clientItems.length === 0) {
-							const empty = document.createElement("div");
-							empty.className = "upload__meta";
-							empty.textContent = "No client-encrypted files yet.";
-							listClientEl.appendChild(empty);
 						}
 
 						for (const item of items) {
@@ -1682,20 +1699,15 @@
 							actions.appendChild(delBtn);
 							row.appendChild(left);
 							row.appendChild(actions);
-							if (encMode === "client") listClientEl.appendChild(row);
-							else listServerEl.appendChild(row);
+							listEl.appendChild(row);
 						}
 					} catch (e) {
 						const msg = e?.message || "Failed to load list";
 						setMessage(`${msg}. Is the backend running on ${API_BASE}?`);
-						const empty1 = document.createElement("div");
-						empty1.className = "upload__meta";
-						empty1.textContent = "Backend not available.";
-						listServerEl.appendChild(empty1);
-						const empty2 = document.createElement("div");
-						empty2.className = "upload__meta";
-						empty2.textContent = "Backend not available.";
-						listClientEl.appendChild(empty2);
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Backend not available.";
+						listEl.appendChild(empty);
 					}
 				}
 
