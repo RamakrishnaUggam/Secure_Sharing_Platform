@@ -1060,12 +1060,14 @@
 							<input id="uploadInput" type="file" aria-label="Choose files to upload" multiple hidden />
 						</div>
 
+						<div id="selectedFiles" class="upload__message" style="display:none;" aria-label="Selected files"></div>
+
 						<div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="Drop files here">
 							<div class="dropzone__title">Drop files here</div>
 							<div class="dropzone__hint">Files will be encrypted locally and uploaded securely.</div>
 						</div>
 
-						<div id="uploadMessage" class="upload__message" role="status" aria-live="polite"></div>
+						<!-- Inline status removed; we use top toast popups instead -->
 
 						<div class="messenger" aria-label="Messenger">
 							<div class="messenger__pane" aria-label="Files pane">
@@ -1164,7 +1166,8 @@
 				const chatFileInputEl = null;
 				const shareFileSelectEl = null;
 				const chatPassphraseEl = null;
-				const messageEl = document.getElementById("uploadMessage");
+				const messageEl = null;
+				const selectedFilesEl = document.getElementById("selectedFiles");
 
 				/** @type {File[]} */
 				let pending = [];
@@ -1180,20 +1183,21 @@
 					} catch {
 						// ignore
 					}
-					if (!messageEl) return;
-					messageEl.textContent = msg;
-					messageEl.classList.toggle("is-visible", msg.length > 0);
 					clearTimeout(messageTimer);
-					if (msg.length > 0) {
-						messageTimer = setTimeout(() => {
-							try {
-								messageEl.textContent = "";
-								messageEl.classList.remove("is-visible");
-							} catch {
-								// ignore
-							}
-						}, 3000);
+				}
+
+				function renderSelectedFiles() {
+					if (!selectedFilesEl) return;
+					if (!pending || pending.length === 0) {
+						selectedFilesEl.style.display = "none";
+						selectedFilesEl.innerHTML = "";
+						return;
 					}
+					selectedFilesEl.style.display = "block";
+					const rows = pending
+						.map((f) => `${String(f.name || "file")} (${formatBytes(f.size)})`)
+						.join("<br/>");
+					selectedFilesEl.innerHTML = `<div style="font-weight:600;margin-bottom:6px;">Chosen files</div>${rows}`;
 				}
 
 				async function responseErrorMessage(res) {
@@ -1451,6 +1455,7 @@
 					}
 
 					updateUploadButton();
+					renderSelectedFiles();
 					setMessage(`${pending.length} file(s) selected. Click Upload to enter encryption key and upload.`);
 				}
 
@@ -1713,6 +1718,43 @@
 							left.appendChild(name);
 							left.appendChild(when);
 
+							async function downloadItemEncryptedCipher() {
+								try {
+									setMessage("Preparing encrypted download…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/download`);
+									if (!r.ok) throw new Error("Download failed");
+
+									const auth = window.__auth;
+									const user = auth?.currentUser;
+									if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+									const keyText = await window.showKeyPopup({
+										title: "Decryption key",
+										description: "Enter decryption key",
+										primaryText: "Continue",
+										placeholder: "Decryption key"
+									});
+									if (!keyText) throw new Error("Cancelled");
+									const derivedB64 = await keyB64FromUserInput(keyText);
+									if (user?.uid) setStoredFileEncKeyB64(user.uid, item.id, derivedB64);
+
+									const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
+									const bytes = await r.arrayBuffer();
+									if (encModeHeader === "client") {
+										const blob = new Blob([bytes], { type: "application/octet-stream" });
+										await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
+										setMessage("Encrypted file saved.");
+										return;
+									}
+
+									// Legacy server-encrypted: backend returns plaintext.
+									const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
+									await saveBlobAs(blob, item.originalName || "file");
+									setMessage("Saved.");
+								} catch (e) {
+									setMessage(e?.message || "Failed to download.");
+								}
+							}
+
 							async function downloadItemDecryptedOrPlain() {
 								try {
 									setMessage("Downloading…");
@@ -1755,7 +1797,7 @@
 											const passphrase = await window.showKeyPopup({
 												title: "Decryption key",
 												description: "Enter decryption key",
-												primaryText: "Decrypt",
+												primaryText: "Decrypt & Download",
 												placeholder: "Decryption key"
 											});
 											if (!passphrase) throw new Error("Decrypt cancelled");
@@ -1800,22 +1842,19 @@
 							actions.style.alignItems = "center";
 							actions.style.gap = "10px";
 
-							const downloadBtn = document.createElement("button");
-							downloadBtn.type = "button";
-							downloadBtn.className = "iconbtn";
-							downloadBtn.title = encMode === "client" ? "Decrypt & download" : "Download";
-							downloadBtn.setAttribute(
-							"aria-label",
-							`${encMode === "client" ? "Decrypt and download" : "Download"} ${item.originalName || "file"}`
-						);
-							downloadBtn.innerHTML = `
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-									<path d="M7 10l5 5 5-5"></path>
-									<path d="M12 15V3"></path>
-								</svg>
-							`;
-							downloadBtn.addEventListener("click", downloadItemDecryptedOrPlain);
+							const downloadEncryptedBtn = document.createElement("button");
+							downloadEncryptedBtn.type = "button";
+							downloadEncryptedBtn.className = "btn btn--sm";
+							downloadEncryptedBtn.textContent = "Download";
+							downloadEncryptedBtn.setAttribute("aria-label", `Download encrypted ${item.originalName || "file"}`);
+							downloadEncryptedBtn.addEventListener("click", downloadItemEncryptedCipher);
+
+							const decryptBtn = document.createElement("button");
+							decryptBtn.type = "button";
+							decryptBtn.className = "btn btn--primary btn--sm";
+							decryptBtn.textContent = "Decrypt & Download";
+							decryptBtn.setAttribute("aria-label", `Decrypt and download ${item.originalName || "file"}`);
+							decryptBtn.addEventListener("click", downloadItemDecryptedOrPlain);
 
 
 							const shareBtn = document.createElement("button");
@@ -1880,8 +1919,9 @@
 								}
 							});
 
+							actions.appendChild(downloadEncryptedBtn);
+							actions.appendChild(decryptBtn);
 							actions.appendChild(shareBtn);
-							actions.appendChild(downloadBtn);
 							actions.appendChild(delBtn);
 							row.appendChild(left);
 							row.appendChild(actions);
@@ -1935,6 +1975,7 @@
 							}
 						}
 						pending = [];
+						renderSelectedFiles();
 						sessionClientKeyB64 = derivedKeyB64;
 						setMessage("Uploaded.");
 						await loadList();

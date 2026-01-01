@@ -9,7 +9,7 @@
 			.share-toast__wrap {
 				position: fixed;
 				left: 50%;
-				bottom: 18px;
+				top: 18px;
 				transform: translateX(-50%);
 				z-index: 10000;
 				pointer-events: none;
