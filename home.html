@@ -939,8 +939,11 @@
 							<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
 							<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
 							<label class="upload__meta" style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-								<input id="shareableUpload" type="checkbox" />
-								<span>Shareable upload (server-encrypted)</span>
+								<span>Encryption</span>
+								<select id="encryptionMode" style="padding:8px 10px;border-radius:10px;">
+									<option value="client">Client-side (private; share by key)</option>
+									<option value="server">Server-side (shareable in platform)</option>
+								</select>
 							</label>
 							<input id="uploadInput" type="file" multiple hidden />
 						</div>
@@ -1028,7 +1031,7 @@
 				const chooseBtn = document.getElementById("chooseFilesBtn");
 				const uploadBtn = document.getElementById("uploadBtn");
 				const input = document.getElementById("uploadInput");
-				const shareableUploadEl = document.getElementById("shareableUpload");
+					const encryptionModeEl = document.getElementById("encryptionMode");
 				const dropZone = document.getElementById("dropZone");
 				const listEl = document.getElementById("uploadedList");
 				const sharedListEl = document.getElementById("sharedWithMeList");
@@ -1036,6 +1039,7 @@
 
 				/** @type {File[]} */
 				let pending = [];
+				let pendingClientKeyB64 = null;
 
 				function setMessage(text) {
 					if (!messageEl) return;
@@ -1087,6 +1091,66 @@
 					return bytesToHex(new Uint8Array(digest));
 				}
 
+				function generateRandomKeyB64() {
+					const raw = new Uint8Array(32);
+					crypto.getRandomValues(raw);
+					return bytesToB64(raw);
+				}
+
+				function fileEncKeyStorageKey(uid, fileId) {
+					return `fileEncKeyB64:${uid}:${fileId}`;
+				}
+
+				function getStoredFileEncKeyB64(uid, fileId) {
+					try {
+						return localStorage.getItem(fileEncKeyStorageKey(uid, fileId));
+					} catch {
+						return null;
+					}
+				}
+
+				function setStoredFileEncKeyB64(uid, fileId, keyB64) {
+					try {
+						localStorage.setItem(fileEncKeyStorageKey(uid, fileId), String(keyB64 || ""));
+					} catch {
+						// ignore
+					}
+				}
+
+				async function importAesKeyFromB64(keyB64) {
+					const raw = b64ToBytes(keyB64);
+					if (raw.byteLength !== 32) throw new Error("Invalid key");
+					return await crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+				}
+
+				function normalizeUserKeyInput(value) {
+					return String(value || "").trim();
+				}
+
+				async function keyB64FromUserInput(userInput) {
+					const trimmed = normalizeUserKeyInput(userInput);
+					if (!trimmed) throw new Error("Missing key");
+
+					// If it looks like base64, try interpreting it as a raw 32-byte key.
+					try {
+						const raw = b64ToBytes(trimmed);
+						if (raw.byteLength === 32) return bytesToB64(raw);
+					} catch {
+						// fall through
+					}
+
+					// Otherwise treat it as a passphrase and derive a 32-byte key via SHA-256.
+					// Recipients must use the same passphrase.
+					const bytes = new TextEncoder().encode(trimmed);
+					const digest = await crypto.subtle.digest("SHA-256", bytes);
+					return bytesToB64(new Uint8Array(digest));
+				}
+
+				async function importAesKeyFromUserInput(userInput) {
+					const keyB64 = await keyB64FromUserInput(userInput);
+					return await importAesKeyFromB64(keyB64);
+				}
+
 				async function getClientKeyBytes() {
 					const auth = window.__auth;
 					const user = auth?.currentUser;
@@ -1121,6 +1185,17 @@
 					uploadBtn.disabled = pending.length === 0;
 				}
 
+				async function ensurePendingClientKey() {
+					const encMode = String(encryptionModeEl?.value || "client").toLowerCase();
+					if (encMode !== "client") return null;
+					if (pending.length === 0) return null;
+					if (pendingClientKeyB64) return pendingClientKeyB64;
+					const userKeyInput = prompt("Client-side encryption passphrase (share this with recipients to decrypt):");
+					if (!userKeyInput) throw new Error("Missing encryption key");
+					pendingClientKeyB64 = await keyB64FromUserInput(userKeyInput);
+					return pendingClientKeyB64;
+				}
+
 				function addPending(files) {
 					if (!files || files.length === 0) return;
 					const incoming = Array.from(files);
@@ -1131,14 +1206,46 @@
 						pending.push(file);
 						existing.add(key);
 					}
+
+					// If using client-side encryption, ask for key when files are selected.
+					if (pending.length > 0 && String(encryptionModeEl?.value || "client").toLowerCase() === "client") {
+						ensurePendingClientKey().catch((e) => {
+							pending = [];
+							pendingClientKeyB64 = null;
+							updateUploadButton();
+							setMessage(e?.message || "Missing encryption key");
+						});
+					}
+
 					updateUploadButton();
-					const shareable = Boolean(shareableUploadEl?.checked);
+					const encMode = String(encryptionModeEl?.value || "client").toLowerCase();
+					const shareable = encMode === "server";
 					setMessage(
 						shareable
 							? `${pending.length} file(s) selected. Upload will be server-encrypted (shareable inside platform).`
-							: `${pending.length} file(s) selected. Upload will be client-encrypted (private; cannot be shared).`
+						: `${pending.length} file(s) selected. Upload will be client-encrypted (share by sending a key).`
 					);
 				}
+
+				encryptionModeEl?.addEventListener("change", () => {
+					const encMode = String(encryptionModeEl?.value || "client").toLowerCase();
+					if (encMode !== "client") pendingClientKeyB64 = null;
+					if (pending.length === 0) return;
+					const shareable = encMode === "server";
+					setMessage(
+						shareable
+							? `${pending.length} file(s) selected. Upload will be server-encrypted (shareable inside platform).`
+						: `${pending.length} file(s) selected. Upload will be client-encrypted (share by sending a key).`
+					);
+					if (!shareable) {
+						ensurePendingClientKey().catch((e) => {
+							pending = [];
+							pendingClientKeyB64 = null;
+							updateUploadButton();
+							setMessage(e?.message || "Missing encryption key");
+						});
+					}
+				});
 
 				async function getIdToken() {
 					const auth = window.__auth;
@@ -1229,7 +1336,41 @@
 
 									const encMode = String(r.headers.get("x-enc-mode") || "").toLowerCase();
 									if (encMode === "client") {
-										throw new Error("This shared file is client-encrypted and cannot be downloaded yet");
+										const userKeyInput = prompt("This file is client-encrypted. Enter the passphrase provided by the sender:");
+										if (!userKeyInput) throw new Error("Missing decryption key");
+
+										const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
+										const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+										const ivB64 = r.headers.get("x-client-iv-b64") || "";
+										const nameHeader = r.headers.get("x-original-name") || "";
+										const mimeHeader = r.headers.get("x-original-mime") || "";
+										const originalName = decodeURIComponent(nameHeader || "") || item.originalName || "file";
+										const originalMime = decodeURIComponent(mimeHeader || "") || item.mimeType || "application/octet-stream";
+										if (!ivB64) throw new Error("Missing IV");
+
+										const iv = b64ToBytes(ivB64);
+										const key = await importAesKeyFromUserInput(userKeyInput);
+										const ciphertext = await r.arrayBuffer();
+										if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
+											const computedStored = await sha256HexFromArrayBuffer(ciphertext);
+											if (computedStored !== storedShaExpected) throw new Error("Integrity check failed");
+										}
+										const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+										if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+											const computedOriginal = await sha256HexFromArrayBuffer(plaintext);
+											if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+										}
+										const outBlob = new Blob([plaintext], { type: originalMime });
+										const url = URL.createObjectURL(outBlob);
+										const a = document.createElement("a");
+										a.href = url;
+										a.download = originalName;
+										document.body.appendChild(a);
+										a.click();
+										a.remove();
+										URL.revokeObjectURL(url);
+										setMessage("Decrypted and downloaded.");
+										return;
 									}
 
 									const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
@@ -1333,7 +1474,20 @@
 										if (!ivB64) throw new Error("Missing IV");
 
 										const iv = b64ToBytes(ivB64);
-										const key = await importAesKey();
+										const auth = window.__auth;
+										const user = auth?.currentUser;
+										if (!user) throw new Error("Not logged in");
+										const perFileKeyB64 = getStoredFileEncKeyB64(user.uid, item.id);
+										let key;
+										if (perFileKeyB64) {
+											key = await importAesKeyFromB64(perFileKeyB64);
+										} else {
+											const userKeyInput = prompt("This file is client-encrypted. Enter the passphrase you used:");
+											if (!userKeyInput) throw new Error("Missing decryption key");
+											const derivedB64 = await keyB64FromUserInput(userKeyInput);
+											setStoredFileEncKeyB64(user.uid, item.id, derivedB64);
+											key = await importAesKeyFromB64(derivedB64);
+										}
 										const ciphertext = await r.arrayBuffer();
 										if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
 											const computedStored = await sha256HexFromArrayBuffer(ciphertext);
@@ -1414,12 +1568,7 @@
 							`;
 							shareBtn.addEventListener("click", async () => {
 								try {
-									if (String(item.encryptionMode || "").toLowerCase() === "client") {
-										setMessage(
-											"This file is client-encrypted and cannot be shared. Re-upload using 'Shareable upload (server-encrypted)'."
-										);
-										return;
-									}
+									const isClientEnc = String(item.encryptionMode || "").toLowerCase() === "client";
 									const recipientEmail = prompt("Enter recipient email (must be verified):");
 									if (!recipientEmail) return;
 									setMessage("Sharing…");
@@ -1430,6 +1579,10 @@
 									});
 									const j = await r.json().catch(() => null);
 									if (!r.ok) throw new Error(j?.error || "Share failed");
+									if (isClientEnc) {
+										setMessage("Shared. Tell the recipient the passphrase you used to encrypt this file.");
+										return;
+									}
 									setMessage("Shared.");
 								} catch (e) {
 									setMessage(e?.message || "Failed to share.");
@@ -1486,7 +1639,8 @@
 					if (pending.length === 0) return;
 					if (uploadBtn) uploadBtn.disabled = true;
 					try {
-						const shareable = Boolean(shareableUploadEl?.checked);
+						const encMode = String(encryptionModeEl?.value || "client").toLowerCase();
+						const shareable = encMode === "server";
 						if (shareable) {
 							setMessage("Uploading (server-encrypted)…");
 							for (const file of pending) {
@@ -1498,9 +1652,15 @@
 							}
 						} else {
 							setMessage("Encrypting in browser…");
-							const key = await importAesKey();
 							setMessage("Uploading encrypted files…");
+							const derivedKeyB64 = (await ensurePendingClientKey()) || pendingClientKeyB64;
+							if (!derivedKeyB64) throw new Error("Missing encryption key");
+							const key = await importAesKeyFromB64(derivedKeyB64);
 							for (const file of pending) {
+								const auth = window.__auth;
+								const user = auth?.currentUser;
+								if (!user) throw new Error("Not logged in");
+
 								const iv = new Uint8Array(12);
 								crypto.getRandomValues(iv);
 								const plaintext = await file.arrayBuffer();
@@ -1518,10 +1678,15 @@
 								form.append("originalSize", String(file.size));
 								form.append("originalSha256Hex", originalSha256Hex);
 								const res = await apiFetch("/api/files", { method: "POST", body: form });
-								if (!res.ok) throw new Error("Upload failed");
+								const j = await res.json().catch(() => null);
+								if (!res.ok) throw new Error(j?.error || "Upload failed");
+								if (j?.id) {
+									setStoredFileEncKeyB64(user.uid, String(j.id), derivedKeyB64);
+								}
 							}
 						}
 						pending = [];
+						pendingClientKeyB64 = null;
 						setMessage("Uploaded. Refreshing list…");
 						await loadList();
 						setMessage("Done.");

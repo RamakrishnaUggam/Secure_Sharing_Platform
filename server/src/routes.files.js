@@ -173,14 +173,6 @@ export function filesRouter() {
 		const record = await FileRecord.findOne({ _id: req.params.id, ownerUid: req.user.uid }).lean();
 		if (!record) return res.status(404).json({ error: "Not found" });
 
-		// Client-encrypted files cannot be shared without key exchange.
-		if (record.encryptionMode === "client") {
-			return res.status(400).json({
-				error: "This file is client-encrypted and cannot be shared yet",
-				hint: "Upload using server encryption to share, or implement key sharing."
-			});
-		}
-
 		try {
 			const share = await ShareRecord.create({
 				fileId: record._id,
@@ -283,15 +275,8 @@ export function filesRouter() {
 		const record = access.record;
 
 		if (record.encryptionMode === "client") {
-			// Client-encrypted files are only decryptable by the uploader's browser key.
-			// Allow owner download as before; for shared recipients, block for now.
-			if (record.ownerUid !== req.user.uid) {
-				return res.status(400).json({
-					error: "This file is client-encrypted and cannot be downloaded by recipients yet",
-					hint: "Key sharing is required to decrypt."
-				});
-			}
-
+			// Client-encrypted: backend returns ciphertext. Recipients must decrypt client-side
+			// using a key shared out-of-band by the uploader.
 			const ciphertext = fs.readFileSync(record.storagePath);
 			const computedStored = sha256Hex(ciphertext);
 			if (record.storedSha256Hex && computedStored !== record.storedSha256Hex) {
