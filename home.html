@@ -1036,7 +1036,8 @@
 							<div class="upload__meta">Send a file (no popups)</div>
 							<div class="chat__row">
 								<input id="shareRecipient" class="input" type="email" placeholder="recipient@email.com" aria-label="Recipient email" />
-								<select id="shareFileSelect" class="input" aria-label="Select a file to send"></select>
+								<input id="chatFileInput" class="input" type="file" aria-label="Attach a file" />
+								<select id="shareFileSelect" class="input" aria-label="Or select an already uploaded file"></select>
 								<button id="shareSendBtn" class="btn btn--primary btn--sm" type="button">Send</button>
 							</div>
 							<div class="chat__row">
@@ -1108,7 +1109,7 @@
 						return "https://secure-sharing-platform.onrender.com";
 					}
 
-					// Hosted: use same-origin (works if you configure Netlify redirects like /api/* -> your backend)
+					// Hosted: use same-origin (your host can proxy /api/* -> your backend)
 					return "";
 				}
 
@@ -1123,6 +1124,7 @@
 					const listEl = document.getElementById("uploadedList");
 				const sharedListEl = document.getElementById("sharedWithMeList");
 				const shareRecipientEl = document.getElementById("shareRecipient");
+				const chatFileInputEl = document.getElementById("chatFileInput");
 				const shareFileSelectEl = document.getElementById("shareFileSelect");
 				const shareSendBtnEl = document.getElementById("shareSendBtn");
 				const chatPassphraseEl = document.getElementById("chatPassphrase");
@@ -1136,6 +1138,25 @@
 					if (!messageEl) return;
 					messageEl.textContent = String(text || "");
 					messageEl.classList.toggle("is-visible", messageEl.textContent.trim().length > 0);
+				}
+
+				async function responseErrorMessage(res) {
+					const status = Number(res?.status);
+					let detail = "";
+					try {
+						const ct = String(res.headers?.get("content-type") || "");
+						if (ct.includes("application/json")) {
+							const j = await res.json().catch(() => null);
+							detail = j?.error || j?.message || "";
+						} else {
+							detail = (await res.text().catch(() => "")) || "";
+						}
+					} catch {
+						// ignore
+					}
+					detail = String(detail || "").trim();
+					if (detail.length > 240) detail = `${detail.slice(0, 240)}…`;
+					return detail ? `HTTP ${status}: ${detail}` : `HTTP ${status}`;
 				}
 
 				function formatBytes(bytes) {
@@ -1343,13 +1364,15 @@
 
 				function updateUploadButton() {
 					if (!uploadBtn) return;
-					uploadBtn.disabled = pending.length === 0;
+					const encMode = String(encryptionModeEl?.value || "client").toLowerCase();
+					const needsKey = encMode === "client";
+					const passphraseOk = String(uploadPassphraseEl?.value || "").trim().length > 0;
+					uploadBtn.disabled = pending.length === 0 || (needsKey && !passphraseOk);
 				}
 
 				async function ensurePendingClientKey() {
 					const encMode = String(encryptionModeEl?.value || "client").toLowerCase();
 					if (encMode !== "client") return null;
-					if (pending.length === 0) return null;
 					if (pendingClientKeyB64) return pendingClientKeyB64;
 					const userKeyInput = String(uploadPassphraseEl?.value || "").trim();
 					if (!userKeyInput) throw new Error("Enter passphrase for client-side encryption");
@@ -1392,6 +1415,7 @@
 
 				uploadPassphraseEl?.addEventListener("input", () => {
 					pendingClientKeyB64 = null;
+					updateUploadButton();
 				});
 
 				async function getIdToken() {
@@ -1901,9 +1925,60 @@
 				shareSendBtnEl?.addEventListener("click", async () => {
 					try {
 						const recipientEmail = normalizeEmailInput(shareRecipientEl?.value);
-						const fileId = String(shareFileSelectEl?.value || "").trim();
 						if (!recipientEmail || !recipientEmail.includes("@")) throw new Error("Enter a valid recipient email");
-						if (!fileId) throw new Error("Select a file");
+
+						// If a local file is attached, upload it first, then share.
+						const attached = chatFileInputEl?.files?.[0] || null;
+						let fileId = "";
+						if (attached) {
+							setMessage("Encrypting/Uploading…");
+							const encMode = String(encryptionModeEl?.value || "client").toLowerCase();
+							const shareable = encMode === "server";
+							if (shareable) {
+								const form = new FormData();
+								form.append("file", attached, attached.name);
+								form.append("encMode", "server");
+								const res = await apiFetch("/api/files", { method: "POST", body: form });
+								const j = await res.json().catch(() => null);
+								if (!res.ok) throw new Error(j?.error || (await responseErrorMessage(res)) || "Upload failed");
+								fileId = String(j?.id || "");
+								if (!fileId) throw new Error("Upload failed (missing id)");
+							} else {
+								const derivedKeyB64 = (await ensurePendingClientKey()) || pendingClientKeyB64;
+								if (!derivedKeyB64) throw new Error("Missing encryption key");
+								const key = await importAesKeyFromB64(derivedKeyB64);
+								const auth = window.__auth;
+								const user = auth?.currentUser;
+								if (!user) throw new Error("Not logged in");
+
+								const iv = new Uint8Array(12);
+								crypto.getRandomValues(iv);
+								const plaintext = await attached.arrayBuffer();
+								const originalSha256Hex = await sha256HexFromArrayBuffer(plaintext);
+								const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+								const cipherBlob = new Blob([ciphertext], { type: "application/octet-stream" });
+								const ivB64 = bytesToB64(iv);
+
+								const form = new FormData();
+								form.append("file", cipherBlob, `${attached.name}.cipher`);
+								form.append("encMode", "client");
+								form.append("clientIvB64", ivB64);
+								form.append("originalName", attached.name);
+								form.append("mimeType", attached.type || "application/octet-stream");
+								form.append("originalSize", String(attached.size));
+								form.append("originalSha256Hex", originalSha256Hex);
+								const res = await apiFetch("/api/files", { method: "POST", body: form });
+								const j = await res.json().catch(() => null);
+								if (!res.ok) throw new Error(j?.error || (await responseErrorMessage(res)) || "Upload failed");
+								fileId = String(j?.id || "");
+								if (!fileId) throw new Error("Upload failed (missing id)");
+								setStoredFileEncKeyB64(user.uid, fileId, derivedKeyB64);
+							}
+						} else {
+							fileId = String(shareFileSelectEl?.value || "").trim();
+							if (!fileId) throw new Error("Attach a file or select one");
+						}
+
 						setMessage("Sending…");
 						const r = await apiFetch(`/api/files/${encodeURIComponent(fileId)}/share`, {
 							method: "POST",
@@ -1912,7 +1987,9 @@
 						});
 						const j = await r.json().catch(() => null);
 						if (!r.ok) throw new Error(j?.error || "Send failed");
+						if (chatFileInputEl) chatFileInputEl.value = "";
 						setMessage("Sent.");
+						await loadList();
 						await loadChat();
 					} catch (e) {
 						setMessage(e?.message || "Failed to send.");
@@ -1932,7 +2009,7 @@
 								form.append("file", file, file.name);
 								form.append("encMode", "server");
 								const res = await apiFetch("/api/files", { method: "POST", body: form });
-								if (!res.ok) throw new Error("Upload failed");
+								if (!res.ok) throw new Error(await responseErrorMessage(res));
 							}
 						} else {
 							setMessage("Encrypting in browser…");
@@ -1963,7 +2040,7 @@
 								form.append("originalSha256Hex", originalSha256Hex);
 								const res = await apiFetch("/api/files", { method: "POST", body: form });
 								const j = await res.json().catch(() => null);
-								if (!res.ok) throw new Error(j?.error || "Upload failed");
+								if (!res.ok) throw new Error(j?.error || (await responseErrorMessage(res)) || "Upload failed");
 								if (j?.id) {
 									setStoredFileEncKeyB64(user.uid, String(j.id), derivedKeyB64);
 								}
@@ -1974,8 +2051,8 @@
 						setMessage("Uploaded. Refreshing list…");
 						await loadList();
 						setMessage("Done.");
-					} catch {
-						setMessage("Upload failed. Check backend + MongoDB config.");
+					} catch (e) {
+						setMessage(e?.message || "Upload failed.");
 					} finally {
 						updateUploadButton();
 					}

@@ -14,7 +14,7 @@ export const config = {
 	port: Number(process.env.PORT || 3001),
 	corsOrigins: String(
 		process.env.CORS_ORIGIN ||
-			"http://localhost:8000,http://127.0.0.1:8000,https://securefilesharingplatform.netlify.app,https://ramakrishnauggam.github.io"
+		"http://localhost:8000,http://127.0.0.1:8000,https://ramakrishnauggam.github.io"
 	)
 		.split(",")
 		.map((s) => s.trim())
