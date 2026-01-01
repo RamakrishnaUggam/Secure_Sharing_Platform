@@ -139,6 +139,42 @@ export function filesRouter() {
 				ownerUid: f.ownerUid,
 				senderEmail: share.senderEmail || null,
 				encryptionMode: f.encryptionMode || "server",
+				clientIvB64: f.clientIvB64 || null,
+				integrityOk: computeIntegrityOk(f),
+				confidentialityOk: computeConfidentialityOk(f),
+				originalName: f.originalName,
+				mimeType: f.mimeType,
+				size: f.size,
+				createdAt: f.createdAt,
+				sharedAt: share.createdAt
+			});
+		}
+
+		res.json(out);
+	});
+
+	// List files the signed-in user has shared with others.
+	router.get("/shared/by-me", auth, async (req, res) => {
+		const shares = await ShareRecord.find({ createdByUid: req.user.uid }).sort({ createdAt: -1 }).lean();
+		if (shares.length === 0) return res.json([]);
+
+		const fileIds = shares.map((s) => s.fileId);
+		const files = await FileRecord.find({ _id: { $in: fileIds } }).lean();
+		const fileById = new Map(files.map((f) => [String(f._id), f]));
+
+		const out = [];
+		for (const share of shares) {
+			const f = fileById.get(String(share.fileId));
+			if (!f) continue;
+			// Only expose records for files the user still owns.
+			if (String(f.ownerUid) !== String(req.user.uid)) continue;
+			out.push({
+				shareId: String(share._id),
+				id: String(f._id),
+				recipientEmail: share.recipientEmail,
+				senderEmail: share.senderEmail || normalizeEmail(req.user.email) || null,
+				encryptionMode: f.encryptionMode || "server",
+				clientIvB64: f.clientIvB64 || null,
 				integrityOk: computeIntegrityOk(f),
 				confidentialityOk: computeConfidentialityOk(f),
 				originalName: f.originalName,

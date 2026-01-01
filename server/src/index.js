@@ -38,7 +38,16 @@ app.use(
 			if (config.corsOrigins.includes(origin)) return callback(null, true);
 			return callback(new Error(`CORS blocked for origin: ${origin}`));
 		},
-		credentials: false
+		credentials: false,
+		exposedHeaders: [
+			"X-Enc-Mode",
+			"X-Client-Iv-B64",
+			"X-Original-Name",
+			"X-Original-Mime",
+			"X-Stored-Sha256",
+			"X-Original-Sha256",
+			"Content-Disposition"
+		]
 	})
 );
 
