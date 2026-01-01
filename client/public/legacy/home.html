@@ -1,0 +1,2657 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Secure File Sharing Platform</title>
+		<script>
+			(function () {
+				try {
+					const stored = localStorage.getItem("theme");
+					const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+					const theme = stored || (prefersLight ? "light" : "dark");
+					document.documentElement.setAttribute("data-theme", theme);
+				} catch {
+					// ignore
+				}
+			})();
+		</script>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap"
+			rel="stylesheet"
+		/>
+		<style>
+			:root {
+				--bg-1: #05060b;
+				--bg-2: #0a1222;
+				--card: rgba(255, 255, 255, 0.075);
+				--card-2: rgba(255, 255, 255, 0.045);
+				--card-border: rgba(255, 255, 255, 0.14);
+				--text: rgba(255, 255, 255, 0.92);
+				--muted: rgba(255, 255, 255, 0.70);
+				--primary-1: #a78bfa;
+				--primary-2: #22d3ee;
+				--focus: rgba(34, 211, 238, 0.26);
+				--shadow: 0 38px 110px rgba(0, 0, 0, 0.62);
+			}
+
+			html[data-theme="light"] {
+				--bg-1: #f6f7fb;
+				--bg-2: #e9effa;
+				--card: rgba(255, 255, 255, 0.78);
+				--card-2: rgba(255, 255, 255, 0.62);
+				--card-border: rgba(15, 23, 42, 0.10);
+				--text: rgba(15, 23, 42, 0.92);
+				--muted: rgba(15, 23, 42, 0.68);
+				--shadow: 0 24px 70px rgba(2, 6, 23, 0.14);
+			}
+
+			html[data-theme="light"] .nav {
+				background: rgba(255, 255, 255, 0.72);
+				border-bottom-color: rgba(15, 23, 42, 0.10);
+			}
+
+			html[data-theme="light"] .nav__link {
+				color: rgba(15, 23, 42, 0.72);
+			}
+
+			html[data-theme="light"] .nav__link:hover {
+				color: rgba(15, 23, 42, 0.92);
+				background: rgba(15, 23, 42, 0.06);
+			}
+
+			html[data-theme="light"] .nav__cta {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(255, 255, 255, 0.70);
+			}
+
+			html[data-theme="light"] .nav__cta:hover {
+				background: rgba(255, 255, 255, 0.86);
+				border-color: rgba(15, 23, 42, 0.16);
+			}
+
+			html[data-theme="light"] .profile__dropdown {
+				background: rgba(255, 255, 255, 0.92);
+				border-color: rgba(15, 23, 42, 0.12);
+			}
+
+			html[data-theme="light"] .profile__divider {
+				background: rgba(15, 23, 42, 0.12);
+			}
+
+			html[data-theme="light"] .profile__item {
+				color: rgba(15, 23, 42, 0.92);
+				border-color: rgba(15, 23, 42, 0.10);
+				background: rgba(15, 23, 42, 0.04);
+			}
+
+			html[data-theme="light"] .profile__item:hover {
+				background: rgba(15, 23, 42, 0.06);
+				border-color: rgba(15, 23, 42, 0.14);
+			}
+
+			html[data-theme="light"] .btn--primary {
+				color: rgba(15, 23, 42, 0.92);
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			html {
+				scroll-behavior: smooth;
+			}
+
+			body {
+				font-family: "Poppins", sans-serif;
+				color: var(--text);
+				background: radial-gradient(900px circle at 15% 20%, rgba(167, 139, 250, 0.22), transparent 48%),
+					radial-gradient(900px circle at 80% 12%, rgba(34, 211, 238, 0.18), transparent 42%),
+					linear-gradient(180deg, var(--bg-1), var(--bg-2));
+				min-height: 100vh;
+				-webkit-font-smoothing: antialiased;
+				-moz-osx-font-smoothing: grayscale;
+			}
+
+			a {
+				color: inherit;
+				text-decoration: none;
+			}
+
+			.container {
+				width: min(1100px, 92vw);
+				margin: 0 auto;
+			}
+
+			.nav {
+				position: sticky;
+				top: 0;
+				z-index: 20;
+				background: rgba(10, 18, 34, 0.72);
+				backdrop-filter: blur(12px);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+			}
+
+			.nav__inner {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 14px 0;
+				gap: 14px;
+			}
+
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				font-weight: 600;
+				letter-spacing: 0.2px;
+			}
+
+			.brand__mark {
+				width: 34px;
+				height: 34px;
+				border-radius: 10px;
+				object-fit: contain;
+				background: transparent;
+				box-shadow: none;
+			}
+
+			.nav__links {
+				display: flex;
+				align-items: center;
+				gap: 16px;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+			}
+
+			.nav__link {
+				color: var(--muted);
+				font-size: 13px;
+				padding: 6px 8px;
+				border-radius: 10px;
+			}
+
+			.nav__link:hover {
+				color: var(--text);
+				background: rgba(255, 255, 255, 0.06);
+			}
+
+			.nav__cta {
+				display: inline-flex;
+				align-items: center;
+				padding: 8px 12px;
+				border-radius: 12px;
+				font-size: 13px;
+				font-weight: 600;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(255, 255, 255, 0.06);
+			}
+
+			.nav__cta:hover {
+				background: rgba(255, 255, 255, 0.08);
+				border-color: rgba(255, 255, 255, 0.18);
+			}
+
+			.profile {
+				position: relative;
+			}
+
+			.profile__btn {
+				gap: 10px;
+				cursor: pointer;
+				color: var(--text);
+			}
+
+			.profile__btn:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.profile__avatar {
+				width: 28px;
+				height: 28px;
+				border-radius: 10px;
+				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+				box-shadow: 0 14px 40px rgba(124, 58, 237, 0.20);
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 12px;
+				font-weight: 700;
+				color: rgba(255, 255, 255, 0.92);
+			}
+
+			.profile__meta {
+				display: flex;
+				flex-direction: column;
+				gap: 2px;
+				min-width: 0;
+			}
+
+			.profile__label {
+				max-width: 180px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				color: var(--text);
+			}
+
+			.profile__label-email {
+				font-size: 11px;
+				line-height: 1.2;
+				color: var(--muted);
+				max-width: 180px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.profile__dropdown {
+				position: absolute;
+				right: 0;
+				top: calc(100% + 10px);
+				width: min(340px, 90vw);
+				background: rgba(10, 18, 34, 0.92);
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				border-radius: 14px;
+				box-shadow: var(--shadow);
+				backdrop-filter: blur(12px);
+				padding: 12px;
+				display: none;
+				z-index: 50;
+			}
+
+			.profile__dropdown::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 14px;
+				pointer-events: none;
+				box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+			}
+
+			.profile__dropdown.is-open {
+				display: block;
+			}
+
+			.profile__name {
+				font-weight: 600;
+				font-size: 13px;
+				letter-spacing: 0.2px;
+				color: var(--text);
+			}
+
+			.profile__email {
+				margin-top: 2px;
+				font-size: 12px;
+				color: var(--muted);
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			.profile__divider {
+				height: 1px;
+				background: rgba(255, 255, 255, 0.10);
+				margin: 10px 0;
+			}
+
+			.profile__item {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 10px 10px;
+				border-radius: 12px;
+				font-size: 13px;
+				color: var(--text);
+				border: 1px solid rgba(255, 255, 255, 0.10);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			.profile__item:hover {
+				background: rgba(255, 255, 255, 0.07);
+				border-color: rgba(255, 255, 255, 0.14);
+			}
+
+			.profile__item + .profile__item {
+				margin-top: 10px;
+			}
+
+			/* Logout is a link (logout.html) for reliability */
+
+			.nav__cta--primary {
+				border: 0;
+				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+			}
+
+			.hero {
+				padding: 56px 0 18px;
+			}
+
+			.hero__grid {
+				display: grid;
+				grid-template-columns: 1.25fr 0.75fr;
+				gap: 20px;
+				align-items: stretch;
+			}
+
+			.panel {
+				background: linear-gradient(180deg, var(--card), var(--card-2));
+				border: 1px solid var(--card-border);
+				border-radius: 16px;
+				box-shadow: var(--shadow);
+				position: relative;
+			}
+
+			.panel::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 16px;
+				pointer-events: none;
+				box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+			}
+
+			.hero__main {
+				padding: 22px;
+			}
+
+			.hero__title {
+				font-size: clamp(26px, 3.2vw, 40px);
+				line-height: 1.2;
+				margin-bottom: 12px;
+				font-weight: 600;
+			}
+
+			.hero__subtitle {
+				color: var(--muted);
+				font-size: 14px;
+				line-height: 1.6;
+				max-width: 62ch;
+			}
+
+			.hero__actions {
+				display: flex;
+				gap: 12px;
+				flex-wrap: wrap;
+				margin-top: 18px;
+			}
+
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				padding: 12px 14px;
+				border-radius: 12px;
+				font-weight: 600;
+				font-size: 13px;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(255, 255, 255, 0.06);
+				color: var(--text);
+			}
+
+			.btn:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.btn--primary {
+				border: 0;
+				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+				color: rgba(255, 255, 255, 0.92);
+			}
+
+			.hero__side {
+				padding: 18px;
+				display: grid;
+				gap: 10px;
+				align-content: start;
+			}
+
+			.pill {
+				padding: 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.05);
+			}
+
+			.pill__k {
+				font-size: 12px;
+				color: var(--muted);
+				margin-bottom: 4px;
+			}
+
+			.pill__v {
+				font-size: 14px;
+				font-weight: 500;
+			}
+
+			.section {
+				padding: 34px 0;
+			}
+
+			.section__title {
+				font-size: 18px;
+				font-weight: 600;
+				margin-bottom: 10px;
+			}
+
+			.section__desc {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.7;
+				max-width: 80ch;
+			}
+
+			.upload__panel {
+				padding: 18px;
+			}
+
+			.upload__actions {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+				align-items: center;
+				margin-top: 14px;
+			}
+
+			.dropzone {
+				margin-top: 12px;
+				border: 1px dashed rgba(255, 255, 255, 0.22);
+				border-radius: 16px;
+				padding: 16px;
+				background: rgba(255, 255, 255, 0.03);
+				transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+				cursor: pointer;
+			}
+
+			.dropzone:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.dropzone.is-active {
+				border-color: rgba(34, 211, 238, 0.80);
+				background: rgba(34, 211, 238, 0.10);
+				transform: translateY(-1px);
+			}
+
+			html[data-theme="light"] .dropzone {
+				border-color: rgba(15, 23, 42, 0.18);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			html[data-theme="light"] .dropzone.is-active {
+				border-color: rgba(2, 132, 199, 0.50);
+				background: rgba(2, 132, 199, 0.08);
+			}
+
+			.dropzone__title {
+				font-weight: 600;
+				font-size: 14px;
+				margin-bottom: 4px;
+			}
+
+			.dropzone__hint {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.6;
+			}
+
+			.upload__message {
+				margin-top: 12px;
+				padding: 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(255, 255, 255, 0.04);
+				color: var(--text);
+				display: none;
+			}
+
+			.upload__message.is-visible {
+				display: block;
+			}
+
+			.upload__list {
+				margin-top: 12px;
+				display: grid;
+				gap: 10px;
+			}
+
+			.upload__item {
+				display: grid;
+				grid-template-columns: auto 1fr auto;
+				gap: 12px;
+				align-items: center;
+				padding: 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			.upload__item.is-selected {
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			html[data-theme="light"] .upload__item {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.upload__name {
+				font-weight: 600;
+				font-size: 13px;
+				margin-bottom: 2px;
+				word-break: break-word;
+			}
+
+			.upload__meta {
+				color: var(--muted);
+				font-size: 12px;
+				line-height: 1.5;
+			}
+
+			.upload__metaRow {
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				flex-wrap: wrap;
+			}
+
+			.btn--sm {
+				padding: 8px 10px;
+				border-radius: 12px;
+				font-size: 12px;
+			}
+
+			.chat {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+			}
+
+			.messenger {
+				display: grid;
+				grid-template-columns: 1.15fr 1fr;
+				gap: 0;
+				align-items: stretch;
+				margin-top: 12px;
+				height: min(72vh, 720px);
+			}
+
+			@media (max-width: 980px) {
+				.messenger {
+					grid-template-columns: 1fr;
+					height: auto;
+				}
+			}
+
+			.messenger__pane {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+				min-height: 0;
+				max-height: 100%;
+				padding: 12px;
+			}
+
+			@media (max-width: 980px) {
+				.messenger__pane {
+					min-height: 0;
+					max-height: min(45vh, 520px);
+				}
+			}
+
+			.messenger__pane + .messenger__pane {
+				border-left: 1px solid rgba(255, 255, 255, 0.10);
+			}
+
+			html[data-theme="light"] .messenger__pane + .messenger__pane {
+				border-left-color: rgba(15, 23, 42, 0.10);
+			}
+
+			@media (max-width: 980px) {
+				.messenger__pane + .messenger__pane {
+					border-left: none;
+					border-top: 1px solid rgba(255, 255, 255, 0.10);
+					padding-top: 16px;
+				}
+				html[data-theme="light"] .messenger__pane + .messenger__pane {
+					border-top-color: rgba(15, 23, 42, 0.10);
+				}
+			}
+
+			.messenger__scroll {
+				flex: 1;
+				overflow: auto;
+				min-height: 0;
+				padding-right: 4px;
+			}
+
+			.chat__composer {
+				display: grid;
+				grid-template-columns: 1fr;
+				gap: 10px;
+				padding-top: 10px;
+				border-top: 1px solid rgba(255, 255, 255, 0.10);
+				margin-top: 0;
+			}
+
+			html[data-theme="light"] .chat__composer {
+				border-top-color: rgba(15, 23, 42, 0.10);
+			}
+
+			.chat__row {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+				align-items: center;
+			}
+
+			.input {
+				padding: 10px 12px;
+				border-radius: 12px;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(255, 255, 255, 0.04);
+				color: var(--text);
+				min-width: 220px;
+			}
+
+			html[data-theme="light"] .input {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.chat__bubble {
+				max-width: 100%;
+				width: 100%;
+				display: grid;
+				grid-template-columns: auto 1fr auto;
+				gap: 12px;
+				align-items: center;
+				padding: 12px;
+				border-radius: 18px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+				position: relative;
+			}
+
+			.chat__bubble.is-selected {
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.bulkbar {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 10px;
+				padding: 10px 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			html[data-theme="light"] .bulkbar {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.bulkbar[hidden] {
+				display: none;
+			}
+
+			.bulkbar__left {
+				display: inline-flex;
+				gap: 10px;
+				align-items: center;
+			}
+
+			.bulkbar__actions {
+				display: inline-flex;
+				gap: 10px;
+				align-items: center;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+			}
+
+			.bulkbar__label {
+				font-size: 12px;
+				color: var(--muted);
+			}
+
+			.itemselect {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 36px;
+				height: 36px;
+				border-radius: 12px;
+				opacity: 0;
+				transform: translateY(2px);
+				transition: opacity 120ms ease, transform 120ms ease;
+				user-select: none;
+			}
+
+			.upload__item:hover .itemselect,
+			.upload__item.is-selected .itemselect,
+			.chat__bubble:hover .itemselect,
+			.chat__bubble.is-selected .itemselect {
+				opacity: 1;
+				transform: translateY(0);
+			}
+
+			.itemselect input {
+				appearance: none;
+				width: 18px;
+				height: 18px;
+				border-radius: 6px;
+				border: 1px solid rgba(255, 255, 255, 0.18);
+				background: rgba(255, 255, 255, 0.04);
+				cursor: pointer;
+				position: relative;
+			}
+
+			html[data-theme="light"] .itemselect input {
+				border-color: rgba(15, 23, 42, 0.18);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.itemselect input:checked {
+				border-color: rgba(34, 211, 238, 0.65);
+				background: rgba(34, 211, 238, 0.22);
+			}
+
+			.itemselect input:checked::after {
+				content: "";
+				position: absolute;
+				left: 5px;
+				top: 2px;
+				width: 5px;
+				height: 9px;
+				border: solid rgba(255, 255, 255, 0.92);
+				border-width: 0 2px 2px 0;
+				transform: rotate(45deg);
+			}
+
+			html[data-theme="light"] .itemselect input:checked::after {
+				border-color: rgba(15, 23, 42, 0.92);
+			}
+
+			.chat__bubble--in {
+				align-self: flex-start;
+				border-top-left-radius: 8px;
+			}
+
+			.chat__bubble--out {
+				align-self: flex-end;
+				border-top-right-radius: 8px;
+				background: rgba(255, 255, 255, 0.06);
+			}
+
+			html[data-theme="light"] .chat__bubble {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.status {
+				display: inline-flex;
+				gap: 6px;
+				align-items: center;
+				padding: 4px 8px;
+				border-radius: 999px;
+				background: rgba(255, 255, 255, 0.03);
+				border: 1px solid rgba(255, 255, 255, 0.10);
+			}
+
+			html[data-theme="light"] .status {
+				background: rgba(15, 23, 42, 0.03);
+				border-color: rgba(15, 23, 42, 0.10);
+			}
+
+			.status__dot {
+				width: 10px;
+				height: 10px;
+				border-radius: 999px;
+				background: var(--primary-2);
+			}
+
+			.status--ok .status__dot {
+				filter: hue-rotate(100deg) saturate(1.25);
+				opacity: 0.95;
+			}
+
+			.status--bad .status__dot {
+				filter: hue-rotate(-120deg) saturate(1.3);
+				opacity: 0.95;
+			}
+
+			.status__label {
+				color: var(--muted);
+				font-size: 12px;
+			}
+
+			.iconbtn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 36px;
+				height: 36px;
+				border-radius: 12px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+				cursor: pointer;
+				color: var(--text);
+			}
+
+			.iconbtn:hover {
+				background: rgba(255, 255, 255, 0.07);
+				border-color: rgba(255, 255, 255, 0.16);
+			}
+
+			html[data-theme="light"] .iconbtn {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.iconbtn svg {
+				width: 16px;
+				height: 16px;
+			}
+
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 14px;
+				margin-top: 16px;
+			}
+
+			.card {
+				background: linear-gradient(180deg, var(--card), var(--card-2));
+				border: 1px solid var(--card-border);
+				border-radius: 16px;
+				padding: 16px;
+				position: relative;
+			}
+
+			.card::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 16px;
+				pointer-events: none;
+				box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+			}
+
+			.card__title {
+				font-size: 14px;
+				font-weight: 600;
+				margin-bottom: 6px;
+			}
+
+			.card__text {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.7;
+			}
+
+			.steps {
+				margin-top: 16px;
+				display: grid;
+				gap: 10px;
+			}
+
+			.step {
+				display: grid;
+				grid-template-columns: 40px 1fr;
+				gap: 12px;
+				align-items: start;
+				padding: 14px 16px;
+				border-radius: 16px;
+				background: rgba(255, 255, 255, 0.05);
+				border: 1px solid rgba(255, 255, 255, 0.12);
+			}
+
+			.step__n {
+				width: 40px;
+				height: 40px;
+				border-radius: 14px;
+				display: grid;
+				place-items: center;
+				background: linear-gradient(135deg, rgba(167, 139, 250, 0.78), rgba(34, 211, 238, 0.62));
+				font-weight: 600;
+			}
+
+			.step__t {
+				font-size: 14px;
+				font-weight: 600;
+				margin-bottom: 2px;
+			}
+
+			.step__d {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.7;
+			}
+
+			.cta {
+				padding: 28px 0 52px;
+			}
+
+			.cta__box {
+				padding: 22px;
+				border-radius: 18px;
+				background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(6, 182, 212, 0.18));
+				border: 1px solid rgba(255, 255, 255, 0.14);
+			}
+
+			.footer {
+				border-top: 1px solid rgba(255, 255, 255, 0.10);
+				padding: 18px 0 26px;
+				color: var(--muted);
+				font-size: 12px;
+			}
+
+			.footer__inner {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+
+			.footer__links {
+				display: flex;
+				gap: 14px;
+				flex-wrap: wrap;
+			}
+
+			.footer__links a:hover {
+				color: var(--text);
+			}
+
+			@media (max-width: 900px) {
+				.hero__grid {
+					grid-template-columns: 1fr;
+				}
+				.grid {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			.theme-toggle {
+				position: fixed;
+				top: 16px;
+				right: 16px;
+				width: 42px;
+				height: 42px;
+				border-radius: 14px;
+				display: grid;
+				place-items: center;
+				cursor: pointer;
+				border: 1px solid var(--card-border);
+				background: linear-gradient(180deg, var(--card), var(--card-2));
+				box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+				color: var(--text);
+				z-index: 100;
+			}
+
+			.theme-toggle:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus), 0 18px 60px rgba(0, 0, 0, 0.22);
+			}
+
+			.theme-toggle svg {
+				width: 18px;
+				height: 18px;
+			}
+
+			html[data-theme="dark"] .theme-toggle .icon-moon {
+				display: none;
+			}
+
+			html[data-theme="light"] .theme-toggle .icon-sun {
+				display: none;
+			}
+		</style>
+		<script type="module">
+			import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+			import {
+				getAuth,
+				onAuthStateChanged,
+				signOut,
+				reload,
+				setPersistence,
+				browserSessionPersistence,
+				EmailAuthProvider,
+				reauthenticateWithCredential
+			} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+			const firebaseConfig = {
+				apiKey: "AIzaSyD7f6dVud8ScJtsfu9K_RZh4gJqgkIbvqk",
+				authDomain: "fir-56c08.firebaseapp.com",
+				projectId: "fir-56c08",
+				storageBucket: "fir-56c08.firebasestorage.app",
+				messagingSenderId: "1044236312500",
+				appId: "1:1044236312500:web:9aa914b0b61f7cf1899ce1",
+				measurementId: "G-NPQ69E5X69"
+			};
+
+			initializeApp(firebaseConfig);
+			const auth = getAuth();
+			window.__auth = auth;
+			try {
+				await setPersistence(auth, browserSessionPersistence);
+			} catch {
+				// ignore
+			}
+
+			function whenReady(fn) {
+				if (document.readyState === "loading") {
+					document.addEventListener("DOMContentLoaded", fn, { once: true });
+				} else {
+					fn();
+				}
+			}
+
+			function closeProfileDropdown() {
+				const profileButton = document.getElementById("profileButton");
+				const profileDropdown = document.getElementById("profileDropdown");
+				if (profileDropdown) profileDropdown.classList.remove("is-open");
+				if (profileButton) profileButton.setAttribute("aria-expanded", "false");
+			}
+
+			function setupProfileDropdown() {
+				const profileMenu = document.getElementById("profileMenu");
+				const profileButton = document.getElementById("profileButton");
+				const profileDropdown = document.getElementById("profileDropdown");
+				if (!profileMenu || !profileButton || !profileDropdown) return;
+
+				profileButton.addEventListener("click", () => {
+					const willOpen = !profileDropdown.classList.contains("is-open");
+					if (willOpen) {
+						profileDropdown.classList.add("is-open");
+						profileButton.setAttribute("aria-expanded", "true");
+					} else {
+						closeProfileDropdown();
+					}
+				});
+
+				document.addEventListener("click", (event) => {
+					if (profileMenu.hidden) return;
+					const target = event.target;
+					if (!(target instanceof Node)) return;
+					if (!profileMenu.contains(target)) closeProfileDropdown();
+				});
+
+				document.addEventListener("keydown", (event) => {
+					if (event.key === "Escape") closeProfileDropdown();
+				});
+			}
+
+			function setNavForAuth(user) {
+				whenReady(() => {
+					const profileMenu = document.getElementById("profileMenu");
+					const profileName = document.getElementById("profileName");
+					const profileEmail = document.getElementById("profileEmail");
+					const profileLabel = document.getElementById("profileLabel");
+					const profileLabelEmail = document.getElementById("profileLabelEmail");
+					const profileAvatar = document.querySelector(".profile__avatar");
+
+					const isLoggedIn = !!user;
+					if (profileMenu) profileMenu.hidden = !isLoggedIn;
+
+					if (isLoggedIn) {
+						const displayName = (user?.displayName || "").trim();
+						const email = (user?.email || "").trim();
+						const fallbackName = email ? email.split("@")[0] : "User";
+						const label = displayName || fallbackName;
+
+						if (profileName) profileName.textContent = label;
+						if (profileEmail) profileEmail.textContent = email;
+						if (profileLabel) profileLabel.textContent = label;
+						if (profileLabelEmail) profileLabelEmail.textContent = email;
+						if (profileAvatar) {
+							profileAvatar.textContent = String(label || "U").trim().slice(0, 1).toUpperCase() || "U";
+						}
+					}
+
+					closeProfileDropdown();
+				});
+			}
+
+			// Block access to home page when logged out or email is unverified.
+			onAuthStateChanged(auth, (user) => {
+				(async () => {
+					if (!user) {
+						window.location.replace("index.html");
+						return;
+					}
+
+					try {
+						await reload(user);
+					} catch {
+						// ignore
+					}
+
+					if (!user.emailVerified) {
+						try {
+							await signOut(auth);
+						} catch {
+							// ignore
+						}
+						window.location.replace("index.html?verify=1");
+						return;
+					}
+
+					setNavForAuth(user);
+				})();
+			});
+			window.__doSignOut = async () => {
+				await signOut(auth);
+			};
+			window.__reauthWithPassword = async (password) => {
+				const user = auth.currentUser;
+				const email = String(user?.email || "").trim();
+				if (!user || !email) throw new Error("No email/password user is signed in");
+				const pw = String(password || "");
+				if (!pw) throw new Error("Missing password");
+				const cred = EmailAuthProvider.credential(email, pw);
+				await reauthenticateWithCredential(user, cred);
+				try {
+					await user.getIdToken(true);
+				} catch {
+					// ignore
+				}
+			};
+			// Initial state while auth loads
+			setNavForAuth(null);
+			whenReady(() => setupProfileDropdown());
+		</script>
+	</head>
+	<body>
+		<button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+			<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<circle cx="12" cy="12" r="4"></circle>
+				<path d="M12 2v2"></path>
+				<path d="M12 20v2"></path>
+				<path d="M4.93 4.93l1.41 1.41"></path>
+				<path d="M17.66 17.66l1.41 1.41"></path>
+				<path d="M2 12h2"></path>
+				<path d="M20 12h2"></path>
+				<path d="M4.93 19.07l1.41-1.41"></path>
+				<path d="M17.66 6.34l1.41-1.41"></path>
+			</svg>
+			<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
+			</svg>
+		</button>
+		<header class="nav" aria-label="Primary">
+			<div class="container nav__inner">
+				<a class="brand" href="#top" aria-label="Secure File Sharing Platform">
+					<img class="brand__mark" src="secure%20share%20logo.png" alt="Secure Share" />
+					<span>Secure File Sharing</span>
+				</a>
+
+				<nav class="nav__links" aria-label="Site">
+					<div class="profile" id="profileMenu" hidden>
+						<button class="nav__cta profile__btn" id="profileButton" type="button" aria-haspopup="menu" aria-expanded="false">
+							<span class="profile__avatar" aria-hidden="true"></span>
+							<span class="profile__meta">
+								<span class="profile__label" id="profileLabel">Profile</span>
+								<span class="profile__label-email" id="profileLabelEmail"></span>
+							</span>
+						</button>
+						<div class="profile__dropdown" id="profileDropdown" role="menu" aria-label="Profile">
+							<div class="profile__name" id="profileName">User</div>
+							<div class="profile__email" id="profileEmail"></div>
+							<div class="profile__divider" role="separator"></div>
+							<a class="profile__item" href="forgot-password.html" role="menuitem">Reset password</a>
+							<button class="profile__item" id="deleteAccountBtn" type="button" role="menuitem">Delete account</button>
+							<a class="profile__item" href="logout.html" role="menuitem">Logout</a>
+						</div>
+					</div>
+				</nav>
+			</div>
+		</header>
+
+		<main id="top">
+			<section class="section" id="uploads">
+				<div class="container">
+					<h2 class="section__title">Upload / Download</h2>
+					<p class="section__desc">
+						Choose or drop files, then Upload. All files are encrypted in your browser (AES-GCM) and uploaded as ciphertext.
+						Downloads support encrypted save or decrypt-then-save.
+					</p>
+
+					<div class="panel upload__panel" aria-label="Upload container">
+						<div class="upload__actions" aria-label="Upload actions">
+							<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
+							<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
+							<input id="uploadInput" type="file" aria-label="Choose files to upload" multiple hidden />
+						</div>
+
+						<div id="selectedFiles" class="upload__message" style="display:none;" aria-label="Selected files"></div>
+
+						<div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="Drop files here">
+							<div class="dropzone__title">Drop files here</div>
+							<div class="dropzone__hint">Files will be encrypted locally and uploaded securely.</div>
+						</div>
+
+						<!-- Inline status removed; we use top toast popups instead -->
+
+						<div class="messenger" aria-label="Messenger">
+							<div class="messenger__pane" aria-label="Files pane">
+									<div class="upload__meta" style="margin-bottom: 6px;">Uploaded files</div>
+									<div class="bulkbar" id="uploadedBulkbar" hidden aria-label="Uploaded bulk actions"></div>
+								<div class="messenger__scroll">
+									<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
+								</div>
+							</div>
+
+							<div class="messenger__pane" aria-label="Messages pane">
+									<div class="upload__meta" style="margin-bottom: 6px;">Received</div>
+									<div class="bulkbar" id="receivedBulkbar" hidden aria-label="Received bulk actions"></div>
+								<div class="messenger__scroll">
+									<div id="sharedWithMeList" class="upload__list chat" aria-label="Messages list"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</main>
+		<script src="share-popup.js"></script>
+		<script>
+			(function () {
+				const button = document.getElementById("themeToggle");
+				if (!button) return;
+
+				function getTheme() {
+					return document.documentElement.getAttribute("data-theme") || "dark";
+				}
+
+				function setTheme(theme) {
+					document.documentElement.setAttribute("data-theme", theme);
+					try {
+						localStorage.setItem("theme", theme);
+					} catch {
+						// ignore
+					}
+					const label = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+					button.setAttribute("aria-label", label);
+					button.title = label;
+				}
+
+				setTheme(getTheme());
+				button.addEventListener("click", () => {
+					setTheme(getTheme() === "dark" ? "light" : "dark");
+				});
+			})();
+		</script>
+		<script>
+			(function () {
+				function normalizeBaseUrl(value) {
+					const v = String(value || "").trim();
+					if (!v) return "";
+					return v.replace(/\/+$/, "");
+				}
+
+				function resolveApiBase() {
+					try {
+						const url = new URL(window.location.href);
+						const fromQuery = url.searchParams.get("apiBase") || url.searchParams.get("api");
+						if (fromQuery) {
+							const normalized = normalizeBaseUrl(fromQuery);
+							localStorage.setItem("apiBase", normalized);
+							return normalized;
+						}
+
+						const fromStorage = normalizeBaseUrl(localStorage.getItem("apiBase"));
+						if (fromStorage) return fromStorage;
+					} catch {
+						// ignore
+					}
+
+					// Local dev defaults
+					if (location.hostname === "127.0.0.1") return "http://127.0.0.1:3001";
+					if (location.hostname === "localhost") return "http://localhost:3001";
+
+					// GitHub Pages cannot proxy /api to your backend, so default to your hosted API.
+					if (String(location.hostname || "").toLowerCase().endsWith(".github.io")) {
+						return "https://secure-sharing-platform.onrender.com";
+					}
+
+					// Hosted: use same-origin (your host can proxy /api/* -> your backend)
+					return "";
+				}
+
+				const API_BASE = resolveApiBase();
+
+				const chooseBtn = document.getElementById("chooseFilesBtn");
+				const uploadBtn = document.getElementById("uploadBtn");
+				const input = document.getElementById("uploadInput");
+				const uploadPassphraseEl = null;
+				const dropZone = document.getElementById("dropZone");
+				const listEl = document.getElementById("uploadedList");
+				const sharedListEl = document.getElementById("sharedWithMeList");
+				const uploadedBulkbarEl = document.getElementById("uploadedBulkbar");
+				const receivedBulkbarEl = document.getElementById("receivedBulkbar");
+				const shareSendBtnEl = null;
+				const chatFileInputEl = null;
+				const shareFileSelectEl = null;
+				const chatPassphraseEl = null;
+				const messageEl = null;
+				const selectedFilesEl = document.getElementById("selectedFiles");
+
+				const selectedUploadedIds = new Set();
+				const selectedReceivedShareIds = new Set();
+				let receivedItemsCache = [];
+
+				/** @type {File[]} */
+				let pending = [];
+				let sessionClientKeyB64 = null;
+
+				let messageTimer = null;
+				function setMessage(text) {
+					const msg = String(text || "").trim();
+					try {
+						if (typeof window.showToastPopup === "function" && msg) {
+							window.showToastPopup(msg, { durationMs: 3000 });
+						}
+					} catch {
+						// ignore
+					}
+					clearTimeout(messageTimer);
+				}
+
+				function setBulkbarHidden(el, hidden) {
+					if (!el) return;
+					el.hidden = !!hidden;
+				}
+
+				function clearSelectionForMissing(currentIdsSet, selectedSet) {
+					for (const id of Array.from(selectedSet)) {
+						if (!currentIdsSet.has(id)) selectedSet.delete(id);
+					}
+				}
+
+				function createItemSelectControl({ ariaLabel, checked, onChange }) {
+					const wrap = document.createElement("label");
+					wrap.className = "itemselect";
+					const cb = document.createElement("input");
+					cb.type = "checkbox";
+					cb.checked = !!checked;
+					cb.setAttribute("aria-label", ariaLabel);
+					cb.addEventListener("change", () => onChange?.(cb.checked));
+					wrap.appendChild(cb);
+					return { wrap, cb };
+				}
+
+				function renderSelectedFiles() {
+					if (!selectedFilesEl) return;
+					if (!pending || pending.length === 0) {
+						selectedFilesEl.style.display = "none";
+						selectedFilesEl.innerHTML = "";
+						return;
+					}
+					selectedFilesEl.style.display = "block";
+					const rows = pending
+						.map((f) => `${String(f.name || "file")} (${formatBytes(f.size)})`)
+						.join("<br/>");
+					selectedFilesEl.innerHTML = `<div style="font-weight:600;margin-bottom:6px;">Chosen files</div>${rows}`;
+				}
+
+				async function responseErrorMessage(res) {
+					const status = Number(res?.status);
+					let detail = "";
+					try {
+						const ct = String(res.headers?.get("content-type") || "");
+						if (ct.includes("application/json")) {
+							const j = await res.json().catch(() => null);
+							detail = j?.error || j?.message || "";
+						} else {
+							detail = (await res.text().catch(() => "")) || "";
+						}
+					} catch {
+						// ignore
+					}
+					detail = String(detail || "").trim();
+					if (detail.length > 240) detail = `${detail.slice(0, 240)}…`;
+					return detail ? `HTTP ${status}: ${detail}` : `HTTP ${status}`;
+				}
+
+				function formatBytes(bytes) {
+					if (!Number.isFinite(bytes) || bytes < 0) return "—";
+					const units = ["B", "KB", "MB", "GB"];
+					let value = bytes;
+					let unitIndex = 0;
+					while (value >= 1024 && unitIndex < units.length - 1) {
+						value /= 1024;
+						unitIndex++;
+					}
+					return `${value.toFixed(unitIndex === 0 ? 0 : 2)} ${units[unitIndex]}`;
+				}
+
+				function fileKey(file) {
+					return `${file.name}::${file.size}::${file.lastModified}`;
+				}
+
+				function bytesToB64(bytes) {
+					let binary = "";
+					const chunkSize = 0x8000;
+					for (let i = 0; i < bytes.length; i += chunkSize) {
+						const chunk = bytes.subarray(i, i + chunkSize);
+						binary += String.fromCharCode(...chunk);
+					}
+					return btoa(binary);
+				}
+
+				function b64ToBytes(b64) {
+					const binary = atob(String(b64 || ""));
+					const out = new Uint8Array(binary.length);
+					for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+					return out;
+				}
+
+				function bytesToHex(bytes) {
+					let out = "";
+					for (const b of bytes) out += b.toString(16).padStart(2, "0");
+					return out;
+				}
+
+				async function sha256HexFromArrayBuffer(buf) {
+					const digest = await crypto.subtle.digest("SHA-256", buf);
+					return bytesToHex(new Uint8Array(digest));
+				}
+
+				function formatDateTime(value) {
+					if (!value) return "—";
+					try {
+						const d = new Date(value);
+						if (Number.isNaN(d.getTime())) return "—";
+						return d.toLocaleString();
+					} catch {
+						return "—";
+					}
+				}
+
+				function formatRelativeTime(value) {
+					if (!value) return "—";
+					const d = new Date(value);
+					const ms = d.getTime();
+					if (!Number.isFinite(ms)) return "—";
+					const diffMs = Date.now() - ms;
+					const future = diffMs < 0;
+					const absMs = Math.abs(diffMs);
+					const sec = Math.floor(absMs / 1000);
+					if (sec < 10) return "just now";
+					if (sec < 60) return future ? `in ${sec}s` : `${sec}s ago`;
+					const min = Math.floor(sec / 60);
+					if (min < 60) return future ? `in ${min}m` : `${min}m ago`;
+					const hr = Math.floor(min / 60);
+					if (hr < 24) return future ? `in ${hr}h` : `${hr}h ago`;
+					const day = Math.floor(hr / 24);
+					if (day < 7) return future ? `in ${day}d` : `${day}d ago`;
+					const wk = Math.floor(day / 7);
+					if (wk < 5) return future ? `in ${wk}w` : `${wk}w ago`;
+					const mo = Math.floor(day / 30);
+					if (mo < 12) return future ? `in ${mo}mo` : `${mo}mo ago`;
+					const yr = Math.floor(day / 365);
+					return future ? `in ${yr}y` : `${yr}y ago`;
+				}
+
+				function usernameFromEmail(email) {
+					const e = String(email || "").trim().toLowerCase();
+					if (!e || !e.includes("@")) return "Unknown";
+					return e.split("@")[0] || "Unknown";
+				}
+
+				function normalizeEmailInput(value) {
+					return String(value || "").trim().toLowerCase();
+				}
+
+				async function saveBlobAs(blob, filename) {
+					const suggestedName = String(filename || "file");
+					if (typeof window.showSaveFilePicker === "function") {
+						try {
+							const handle = await window.showSaveFilePicker({ suggestedName });
+							const writable = await handle.createWritable();
+							await writable.write(blob);
+							await writable.close();
+							return;
+						} catch (e) {
+							// User cancelled or not allowed -> fallback to browser download.
+						}
+					}
+
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement("a");
+					a.href = url;
+					a.download = suggestedName;
+					document.body.appendChild(a);
+					a.click();
+					a.remove();
+					setTimeout(() => URL.revokeObjectURL(url), 30_000);
+				}
+
+				function generateRandomKeyB64() {
+					const raw = new Uint8Array(32);
+					crypto.getRandomValues(raw);
+					return bytesToB64(raw);
+				}
+
+				function fileEncKeyStorageKey(uid, fileId) {
+					return `fileEncKeyB64:${uid}:${fileId}`;
+				}
+
+				function getStoredFileEncKeyB64(uid, fileId) {
+					try {
+						return localStorage.getItem(fileEncKeyStorageKey(uid, fileId));
+					} catch {
+						return null;
+					}
+				}
+
+				function setStoredFileEncKeyB64(uid, fileId, keyB64) {
+					try {
+						localStorage.setItem(fileEncKeyStorageKey(uid, fileId), String(keyB64 || ""));
+					} catch {
+						// ignore
+					}
+				}
+
+				async function importAesKeyFromB64(keyB64) {
+					const raw = b64ToBytes(keyB64);
+					if (raw.byteLength !== 32) throw new Error("Invalid key");
+					return await crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+				}
+
+				function normalizeUserKeyInput(value) {
+					return String(value || "").trim();
+				}
+
+				async function keyB64FromUserInput(userInput) {
+					const trimmed = normalizeUserKeyInput(userInput);
+					if (!trimmed) throw new Error("Missing key");
+
+					// If it looks like base64, try interpreting it as a raw 32-byte key.
+					try {
+						const raw = b64ToBytes(trimmed);
+						if (raw.byteLength === 32) return bytesToB64(raw);
+					} catch {
+						// fall through
+					}
+
+					// Otherwise treat it as a passphrase and derive a 32-byte key via SHA-256.
+					// Recipients must use the same passphrase.
+					const bytes = new TextEncoder().encode(trimmed);
+					const digest = await crypto.subtle.digest("SHA-256", bytes);
+					return bytesToB64(new Uint8Array(digest));
+				}
+
+				async function importAesKeyFromUserInput(userInput) {
+					const keyB64 = await keyB64FromUserInput(userInput);
+					return await importAesKeyFromB64(keyB64);
+				}
+
+				async function getClientKeyBytes() {
+					const auth = window.__auth;
+					const user = auth?.currentUser;
+					if (!user) throw new Error("Not logged in");
+					const storageKey = `clientEncKeyB64:${user.uid}`;
+					let b64 = null;
+					try {
+						b64 = localStorage.getItem(storageKey);
+					} catch {
+						// ignore
+					}
+					if (!b64) {
+						const raw = new Uint8Array(32);
+						crypto.getRandomValues(raw);
+						b64 = bytesToB64(raw);
+						try {
+							localStorage.setItem(storageKey, b64);
+						} catch {
+							// ignore
+						}
+					}
+					return b64ToBytes(b64);
+				}
+
+				async function importAesKey() {
+					const raw = await getClientKeyBytes();
+					return await crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+				}
+
+				function updateUploadButton() {
+					if (!uploadBtn) return;
+					uploadBtn.disabled = pending.length === 0;
+				}
+
+				async function ensureSessionClientKeyB64(optionalPassphrase) {
+					if (sessionClientKeyB64) return sessionClientKeyB64;
+					let passphrase = String(optionalPassphrase || "").trim();
+					if (!passphrase) {
+						if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+						passphrase = (await window.showKeyPopup({
+							title: "Key",
+							description: "Enter key to encrypt files",
+							primaryText: "Continue",
+							placeholder: "Key"
+						})) || "";
+					}
+					passphrase = String(passphrase || "").trim();
+					if (!passphrase) throw new Error("Key is required");
+					sessionClientKeyB64 = await keyB64FromUserInput(passphrase);
+					return sessionClientKeyB64;
+				}
+
+				function addPending(files) {
+					if (!files || files.length === 0) return;
+					const incoming = Array.from(files);
+					const existing = new Set(pending.map(fileKey));
+					for (const file of incoming) {
+						const key = fileKey(file);
+						if (existing.has(key)) continue;
+						pending.push(file);
+						existing.add(key);
+					}
+
+					updateUploadButton();
+					renderSelectedFiles();
+					setMessage(`${pending.length} file(s) selected. Click Upload to enter encryption key and upload.`);
+				}
+
+				async function getIdToken() {
+					const auth = window.__auth;
+					const user = auth?.currentUser;
+					if (!user) throw new Error("Not logged in");
+					return await user.getIdToken();
+				}
+
+				async function apiFetch(path, options = {}) {
+					const token = await getIdToken();
+					const headers = new Headers(options.headers || {});
+					headers.set("Authorization", `Bearer ${token}`);
+					try {
+						const url = `${API_BASE}${path}`;
+						return await fetch(url, { ...options, headers });
+					} catch (e) {
+						try {
+							// eslint-disable-next-line no-console
+							console.error("apiFetch failed", {
+								path,
+								apiBase: API_BASE,
+								pageOrigin: window.location.origin,
+								online: navigator.onLine,
+								error: e
+							});
+						} catch {
+							// ignore
+						}
+
+						const origin = (() => {
+							try {
+								return window.location.origin;
+							} catch {
+								return "(unknown)";
+							}
+						})();
+						const inner = String(e?.message || e || "").trim();
+						const innerText = inner ? ` (${inner})` : "";
+						const online = (() => {
+							try {
+								return navigator.onLine ? "online" : "offline";
+							} catch {
+								return "unknown";
+							}
+						})();
+						throw new Error(
+							`Failed to fetch${innerText}. API base: ${API_BASE || "(same-origin)"}. Page origin: ${origin}. Network: ${online}.`
+						);
+					}
+				}
+
+				async function shareUploadedFile({ fileId, recipientEmail }) {
+					setMessage("Sending…");
+					const r = await apiFetch(`/api/files/${encodeURIComponent(fileId)}/share`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ recipientEmail })
+					});
+					const j = await r.json().catch(() => null);
+					if (!r.ok) throw new Error(j?.error || "Send failed");
+				}
+
+				async function deleteUploadedFile(item) {
+					setMessage("Deleting…");
+					const r = await apiFetch(`/api/files/${encodeURIComponent(String(item.id))}`, { method: "DELETE" });
+					const j = await r.json().catch(() => null);
+					if (!r.ok) throw new Error(j?.error || "Delete failed");
+				}
+
+				async function deleteReceivedShare(item) {
+					const shareId = String(item.shareId || "").trim();
+					if (!shareId) throw new Error("Missing share id");
+					setMessage("Deleting…");
+					const r = await apiFetch(`/api/files/shares/${encodeURIComponent(shareId)}`, { method: "DELETE" });
+					const j = await r.json().catch(() => null);
+					if (!r.ok) throw new Error(j?.error || "Delete failed");
+				}
+
+				async function downloadUploadedEncryptedCipher(item) {
+					try {
+						setMessage("Preparing encrypted download…");
+						const r = await apiFetch(`/api/files/${encodeURIComponent(String(item.id))}/download`);
+						if (!r.ok) throw new Error("Download failed");
+						const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
+						const bytes = await r.arrayBuffer();
+						if (encModeHeader === "client") {
+							const blob = new Blob([bytes], { type: "application/octet-stream" });
+							await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
+							setMessage("Encrypted file saved.");
+							return;
+						}
+						const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
+						await saveBlobAs(blob, item.originalName || "file");
+						setMessage("Saved.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to download.");
+					}
+				}
+
+				async function downloadUploadedDecryptedOrPlain(item) {
+					try {
+						setMessage("Downloading…");
+						const r = await apiFetch(`/api/files/${encodeURIComponent(String(item.id))}/download`);
+						if (!r.ok) throw new Error("Download failed");
+						const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
+						if (encModeHeader === "client") {
+							const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
+							const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+							const ivB64 = r.headers.get("x-client-iv-b64") || item.clientIvB64 || "";
+							const nameHeader = r.headers.get("x-original-name") || "";
+							const mimeHeader = r.headers.get("x-original-mime") || "";
+							let originalName = item.originalName || "file";
+							try {
+								const fromHeader = decodeURIComponent(nameHeader || "");
+								if (fromHeader) originalName = fromHeader;
+							} catch {
+								// ignore
+							}
+							let originalMime = item.mimeType || "application/octet-stream";
+							try {
+								const fromHeader = decodeURIComponent(mimeHeader || "");
+								if (fromHeader) originalMime = fromHeader;
+							} catch {
+								// ignore
+							}
+							if (!ivB64) throw new Error("Missing IV");
+
+							const iv = b64ToBytes(ivB64);
+							const auth = window.__auth;
+							const user = auth?.currentUser;
+							if (!user) throw new Error("Not logged in");
+							const perFileKeyB64 = getStoredFileEncKeyB64(user.uid, String(item.id));
+							let key;
+							if (perFileKeyB64) {
+								key = await importAesKeyFromB64(perFileKeyB64);
+							} else {
+								if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+								const passphrase = await window.showKeyPopup({
+									title: "Decryption key",
+									description: "Enter decryption key",
+									primaryText: "Decrypt & Download",
+									placeholder: "Decryption key"
+								});
+								if (!passphrase) throw new Error("Decrypt cancelled");
+								const derivedB64 = await keyB64FromUserInput(passphrase);
+								setStoredFileEncKeyB64(user.uid, String(item.id), derivedB64);
+								key = await importAesKeyFromB64(derivedB64);
+							}
+							const ciphertext = await r.arrayBuffer();
+							if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
+								const computedStored = await sha256HexFromArrayBuffer(ciphertext);
+								if (computedStored !== storedShaExpected) throw new Error("Integrity check failed");
+							}
+							const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+							if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+								const computedOriginal = await sha256HexFromArrayBuffer(plaintext);
+								if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+							}
+							const outBlob = new Blob([plaintext], { type: originalMime });
+							await saveBlobAs(outBlob, originalName);
+							setMessage("Decrypted and saved.");
+							return;
+						}
+
+						const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+						const bytes = await r.arrayBuffer();
+						if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+							const computedOriginal = await sha256HexFromArrayBuffer(bytes);
+							if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+						}
+						const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
+						await saveBlobAs(blob, item.originalName || "file");
+						setMessage("Saved.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to download.");
+					}
+				}
+
+				async function downloadReceivedEncrypted(item) {
+					try {
+						const itemId = item.id || item.fileId || item._id;
+						if (!itemId) throw new Error("Missing file id");
+						setMessage("Downloading encrypted…");
+						const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
+						if (!r.ok) {
+							const j = await r.json().catch(() => null);
+							throw new Error(j?.error || "Download failed");
+						}
+						const bytes = await r.arrayBuffer();
+						const blob = new Blob([bytes], { type: "application/octet-stream" });
+						await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
+						setMessage("Encrypted file saved.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to download.");
+					}
+				}
+
+				async function downloadReceivedDecrypted(item) {
+					try {
+						const auth = window.__auth;
+						const user = auth?.currentUser;
+						const itemId = item.id || item.fileId || item._id;
+						if (!itemId) throw new Error("Missing file id");
+						setMessage("Downloading…");
+						const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
+						if (!r.ok) {
+							const j = await r.json().catch(() => null);
+							throw new Error(j?.error || "Download failed");
+						}
+						if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+						const keyText = await window.showKeyPopup({
+							title: "Decryption key",
+							description: "Enter decryption key",
+							primaryText: "Decrypt & Download",
+							placeholder: "Decryption key"
+						});
+						if (!keyText) throw new Error("Decrypt cancelled");
+						const derivedB64 = await keyB64FromUserInput(keyText);
+						if (user?.uid) setStoredFileEncKeyB64(user.uid, String(itemId), derivedB64);
+						const key = await importAesKeyFromB64(derivedB64);
+
+						const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
+						const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+						const ivB64 = r.headers.get("x-client-iv-b64") || item.clientIvB64 || "";
+						const nameHeader = r.headers.get("x-original-name") || "";
+						const mimeHeader = r.headers.get("x-original-mime") || "";
+						let originalName = item.originalName || "file";
+						try {
+							const fromHeader = decodeURIComponent(nameHeader || "");
+							if (fromHeader) originalName = fromHeader;
+						} catch {
+							// ignore
+						}
+						let originalMime = item.mimeType || "application/octet-stream";
+						try {
+							const fromHeader = decodeURIComponent(mimeHeader || "");
+							if (fromHeader) originalMime = fromHeader;
+						} catch {
+							// ignore
+						}
+						if (!ivB64) throw new Error("Missing IV");
+
+						const iv = b64ToBytes(ivB64);
+						const ciphertext = await r.arrayBuffer();
+						if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
+							const computedStored = await sha256HexFromArrayBuffer(ciphertext);
+							if (computedStored !== storedShaExpected) throw new Error("Integrity check failed");
+						}
+						const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+						if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+							const computedOriginal = await sha256HexFromArrayBuffer(plaintext);
+							if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+						}
+						const outBlob = new Blob([plaintext], { type: originalMime });
+						await saveBlobAs(outBlob, originalName);
+						setMessage("Decrypted and saved.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to download.");
+					}
+				}
+
+				function renderUploadedBulkbar(items) {
+					if (!uploadedBulkbarEl) return;
+					if (!Array.isArray(items) || items.length === 0) {
+						setBulkbarHidden(uploadedBulkbarEl, true);
+						return;
+					}
+					setBulkbarHidden(uploadedBulkbarEl, false);
+					uploadedBulkbarEl.innerHTML = "";
+
+					const allIds = items.map((it) => String(it.id));
+					const allSelected = allIds.length > 0 && allIds.every((id) => selectedUploadedIds.has(id));
+					const someSelected = allIds.some((id) => selectedUploadedIds.has(id));
+
+					const left = document.createElement("div");
+					left.className = "bulkbar__left";
+					const selectAll = document.createElement("input");
+					selectAll.type = "checkbox";
+					selectAll.checked = allSelected;
+					selectAll.indeterminate = !allSelected && someSelected;
+					selectAll.setAttribute("aria-label", "Select all uploaded files");
+					selectAll.addEventListener("change", () => {
+						if (selectAll.checked) {
+							for (const id of allIds) selectedUploadedIds.add(id);
+						} else {
+							for (const id of allIds) selectedUploadedIds.delete(id);
+						}
+						void loadList();
+					});
+					const label = document.createElement("div");
+					label.className = "bulkbar__label";
+					label.textContent = `${selectedUploadedIds.size} selected`;
+					left.appendChild(selectAll);
+					left.appendChild(label);
+
+					const actions = document.createElement("div");
+					actions.className = "bulkbar__actions";
+
+					const btnDownload = document.createElement("button");
+					btnDownload.type = "button";
+					btnDownload.className = "btn btn--sm";
+					btnDownload.textContent = "Download";
+					btnDownload.disabled = selectedUploadedIds.size === 0;
+					btnDownload.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+						for (const it of selected) await downloadUploadedEncryptedCipher(it);
+					});
+
+					const btnDecrypt = document.createElement("button");
+					btnDecrypt.type = "button";
+					btnDecrypt.className = "btn btn--primary btn--sm";
+					btnDecrypt.textContent = "Decrypt & Download";
+					btnDecrypt.disabled = selectedUploadedIds.size === 0;
+					btnDecrypt.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+						for (const it of selected) await downloadUploadedDecryptedOrPlain(it);
+					});
+
+					const btnShare = document.createElement("button");
+					btnShare.type = "button";
+					btnShare.className = "btn btn--sm";
+					btnShare.textContent = "Share";
+					btnShare.disabled = selectedUploadedIds.size === 0;
+					btnShare.addEventListener("click", async () => {
+						try {
+							if (typeof window.showTextPopup !== "function") throw new Error("Popup not available");
+							const recipientEmail = await window.showTextPopup({
+								title: "Share",
+								description: "Enter recipient email",
+								primaryText: "Share",
+								placeholder: "recipient@email.com",
+								type: "email",
+								ariaLabel: "Recipient email"
+							});
+							const email = String(recipientEmail || "").trim().toLowerCase();
+							if (!email || !email.includes("@")) throw new Error("Invalid email");
+							const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+							for (const it of selected) await shareUploadedFile({ fileId: String(it.id), recipientEmail: email });
+							setMessage("Sent.");
+							await loadChat();
+						} catch (e) {
+							setMessage(e?.message || "Share failed.");
+						}
+					});
+
+					const btnDelete = document.createElement("button");
+					btnDelete.type = "button";
+					btnDelete.className = "btn btn--sm";
+					btnDelete.textContent = "Delete";
+					btnDelete.disabled = selectedUploadedIds.size === 0;
+					btnDelete.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+						const ok = confirm(`Delete ${selected.length} file(s)?`);
+						if (!ok) return;
+						for (const it of selected) {
+							await deleteUploadedFile(it);
+							selectedUploadedIds.delete(String(it.id));
+						}
+						setMessage("Deleted.");
+						await loadList();
+					});
+
+					actions.appendChild(btnDownload);
+					actions.appendChild(btnDecrypt);
+					actions.appendChild(btnShare);
+					actions.appendChild(btnDelete);
+
+					uploadedBulkbarEl.appendChild(left);
+					uploadedBulkbarEl.appendChild(actions);
+				}
+
+				function renderReceivedBulkbar(items) {
+					if (!receivedBulkbarEl) return;
+					if (!Array.isArray(items) || items.length === 0) {
+						setBulkbarHidden(receivedBulkbarEl, true);
+						return;
+					}
+					setBulkbarHidden(receivedBulkbarEl, false);
+					receivedBulkbarEl.innerHTML = "";
+
+					const allShareIds = items.map((it) => String(it.shareId || "")).filter(Boolean);
+					const allSelected = allShareIds.length > 0 && allShareIds.every((id) => selectedReceivedShareIds.has(id));
+					const someSelected = allShareIds.some((id) => selectedReceivedShareIds.has(id));
+
+					const left = document.createElement("div");
+					left.className = "bulkbar__left";
+					const selectAll = document.createElement("input");
+					selectAll.type = "checkbox";
+					selectAll.checked = allSelected;
+					selectAll.indeterminate = !allSelected && someSelected;
+					selectAll.setAttribute("aria-label", "Select all received files");
+					selectAll.addEventListener("change", () => {
+						if (selectAll.checked) {
+							for (const id of allShareIds) selectedReceivedShareIds.add(id);
+						} else {
+							for (const id of allShareIds) selectedReceivedShareIds.delete(id);
+						}
+						void loadChat();
+					});
+					const label = document.createElement("div");
+					label.className = "bulkbar__label";
+					label.textContent = `${selectedReceivedShareIds.size} selected`;
+					left.appendChild(selectAll);
+					left.appendChild(label);
+
+					const actions = document.createElement("div");
+					actions.className = "bulkbar__actions";
+
+					const btnDownload = document.createElement("button");
+					btnDownload.type = "button";
+					btnDownload.className = "btn btn--sm";
+					btnDownload.textContent = "Download";
+					btnDownload.disabled = selectedReceivedShareIds.size === 0;
+					btnDownload.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
+						for (const it of selected) await downloadReceivedEncrypted(it);
+					});
+
+					const btnDecrypt = document.createElement("button");
+					btnDecrypt.type = "button";
+					btnDecrypt.className = "btn btn--primary btn--sm";
+					btnDecrypt.textContent = "Decrypt & Download";
+					btnDecrypt.disabled = selectedReceivedShareIds.size === 0;
+					btnDecrypt.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
+						for (const it of selected) await downloadReceivedDecrypted(it);
+					});
+
+					const btnDelete = document.createElement("button");
+					btnDelete.type = "button";
+					btnDelete.className = "btn btn--sm";
+					btnDelete.textContent = "Delete";
+					btnDelete.disabled = selectedReceivedShareIds.size === 0;
+					btnDelete.addEventListener("click", async () => {
+						const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
+						const ok = confirm(`Delete ${selected.length} received item(s)?`);
+						if (!ok) return;
+						for (const it of selected) {
+							await deleteReceivedShare(it);
+							selectedReceivedShareIds.delete(String(it.shareId));
+						}
+						setMessage("Deleted.");
+						await loadChat();
+					});
+
+					actions.appendChild(btnDownload);
+					actions.appendChild(btnDecrypt);
+					actions.appendChild(btnDelete);
+
+					receivedBulkbarEl.appendChild(left);
+					receivedBulkbarEl.appendChild(actions);
+				}
+
+				async function loadChat() {
+					if (!sharedListEl) return;
+					sharedListEl.innerHTML = "";
+					try {
+						const incomingRes = await apiFetch("/api/files/shared/with-me");
+						if (!incomingRes.ok) throw new Error("Failed to load shared files");
+						const incoming = await incomingRes.json();
+
+						const messages = [];
+						if (Array.isArray(incoming)) {
+							for (const item of incoming) messages.push({ ...item, direction: "in" });
+						}
+
+						messages.sort((a, b) => new Date(a.sharedAt).getTime() - new Date(b.sharedAt).getTime());
+						receivedItemsCache = messages;
+
+						if (messages.length === 0) {
+							receivedItemsCache = [];
+							renderReceivedBulkbar([]);
+							const empty = document.createElement("div");
+							empty.className = "upload__meta";
+							empty.textContent = "No shared files yet.";
+							sharedListEl.appendChild(empty);
+							return;
+						}
+
+						clearSelectionForMissing(new Set(messages.map((m) => String(m.shareId || "")).filter(Boolean)), selectedReceivedShareIds);
+						renderReceivedBulkbar(messages);
+
+						const auth = window.__auth;
+						const user = auth?.currentUser;
+						const myEmail = normalizeEmailInput(user?.email || "");
+
+						for (const item of messages) {
+							const row = document.createElement("div");
+							row.className = "chat__bubble chat__bubble--in";
+							const shareIdForSel = String(item.shareId || "").trim();
+							const isSelected = shareIdForSel && selectedReceivedShareIds.has(shareIdForSel);
+							if (isSelected) row.classList.add("is-selected");
+
+							let selWrap = null;
+							if (shareIdForSel) {
+								const { wrap, cb } = createItemSelectControl({
+									ariaLabel: `Select received ${item.originalName || "file"}`,
+									checked: isSelected,
+									onChange(checked) {
+										if (checked) selectedReceivedShareIds.add(shareIdForSel);
+										else selectedReceivedShareIds.delete(shareIdForSel);
+										void loadChat();
+									}
+								});
+								selWrap = wrap;
+								cb.addEventListener("click", (e) => e.stopPropagation());
+							}
+
+							const left = document.createElement("div");
+							left.style.minWidth = "0";
+
+							const header = document.createElement("div");
+							header.className = "upload__meta";
+							const sender = usernameFromEmail(item.senderEmail);
+							header.textContent = `${sender} → You`;
+
+							const name = document.createElement("div");
+							name.className = "upload__name";
+							name.textContent = item.originalName || "(unnamed)";
+
+							const when = document.createElement("div");
+							when.className = "upload__meta";
+							when.textContent = `Shared ${formatRelativeTime(item.sharedAt)}`;
+
+							left.appendChild(header);
+							left.appendChild(name);
+							left.appendChild(when);
+
+							const actions = document.createElement("div");
+							actions.style.display = "flex";
+							actions.style.alignItems = "center";
+							actions.style.gap = "10px";
+
+							const downloadEncryptedBtn = document.createElement("button");
+							downloadEncryptedBtn.type = "button";
+							downloadEncryptedBtn.className = "btn btn--sm";
+							downloadEncryptedBtn.textContent = "Download";
+							downloadEncryptedBtn.setAttribute("aria-label", `Download encrypted ${item.originalName || "file"}`);
+							downloadEncryptedBtn.addEventListener("click", () => void downloadReceivedEncrypted(item));
+
+							const deleteBtn = document.createElement("button");
+							deleteBtn.type = "button";
+							deleteBtn.className = "btn btn--sm";
+							deleteBtn.textContent = "Delete";
+							deleteBtn.setAttribute("aria-label", `Delete received ${item.originalName || "file"}`);
+							deleteBtn.addEventListener("click", async () => {
+								try {
+									await deleteReceivedShare(item);
+									setMessage("Deleted.");
+									selectedReceivedShareIds.delete(String(item.shareId || ""));
+									await loadChat();
+								} catch (e) {
+									setMessage(e?.message || "Delete failed.");
+								}
+							});
+
+							const decryptBtn = document.createElement("button");
+							decryptBtn.type = "button";
+							decryptBtn.className = "btn btn--primary btn--sm";
+							decryptBtn.textContent = "Decrypt & Download";
+							decryptBtn.setAttribute("aria-label", `Decrypt and download ${item.originalName || "file"}`);
+							decryptBtn.addEventListener("click", () => void downloadReceivedDecrypted(item));
+
+							actions.appendChild(downloadEncryptedBtn);
+							actions.appendChild(decryptBtn);
+							actions.appendChild(deleteBtn);
+							if (selWrap) row.appendChild(selWrap);
+							else {
+								const spacer = document.createElement("div");
+								spacer.style.width = "36px";
+								spacer.style.height = "36px";
+								row.appendChild(spacer);
+							}
+							row.appendChild(left);
+							row.appendChild(actions);
+							sharedListEl.appendChild(row);
+						}
+					} catch {
+						receivedItemsCache = [];
+						renderReceivedBulkbar([]);
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Backend not available.";
+						sharedListEl.appendChild(empty);
+					}
+				}
+
+				let uploadedItemsCache = [];
+
+				function refreshShareFileSelect() {
+					// Removed from page; sending is handled by popup.
+				}
+
+				async function loadList() {
+					if (!listEl) return;
+					listEl.innerHTML = "";
+					try {
+						const res = await apiFetch("/api/files");
+						if (!res.ok) throw new Error("Failed to load files");
+						const items = await res.json();
+						uploadedItemsCache = Array.isArray(items) ? items : [];
+						clearSelectionForMissing(new Set(uploadedItemsCache.map((it) => String(it.id))), selectedUploadedIds);
+						renderUploadedBulkbar(uploadedItemsCache);
+						refreshShareFileSelect();
+						if (!Array.isArray(items) || items.length === 0) {
+							renderUploadedBulkbar([]);
+							const empty = document.createElement("div");
+							empty.className = "upload__meta";
+							empty.textContent = "No uploaded files yet.";
+							listEl.appendChild(empty);
+							return;
+						}
+
+						for (const item of items) {
+							const row = document.createElement("div");
+							row.className = "upload__item";
+							const itemId = String(item.id);
+							const isSelected = selectedUploadedIds.has(itemId);
+							if (isSelected) row.classList.add("is-selected");
+							const { wrap: selWrap, cb: selCb } = createItemSelectControl({
+								ariaLabel: `Select ${item.originalName || "file"}`,
+								checked: isSelected,
+								onChange(checked) {
+									if (checked) selectedUploadedIds.add(itemId);
+									else selectedUploadedIds.delete(itemId);
+									void loadList();
+								}
+							});
+							selCb.addEventListener("click", (e) => e.stopPropagation());
+
+							const left = document.createElement("div");
+							const name = document.createElement("div");
+							name.className = "upload__name";
+							name.textContent = item.originalName || "(unnamed)";
+
+							const when = document.createElement("div");
+							when.className = "upload__meta";
+							when.textContent = `Uploaded ${formatRelativeTime(item.createdAt)}`;
+
+							const encMode = String(item.encryptionMode || "server").toLowerCase();
+							left.appendChild(name);
+							left.appendChild(when);
+
+							async function downloadItemEncryptedCipher() {
+								try {
+									setMessage("Preparing encrypted download…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/download`);
+									if (!r.ok) throw new Error("Download failed");
+
+									const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
+									const bytes = await r.arrayBuffer();
+									if (encModeHeader === "client") {
+										const blob = new Blob([bytes], { type: "application/octet-stream" });
+										await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
+										setMessage("Encrypted file saved.");
+										return;
+									}
+
+									// Legacy server-encrypted: backend returns plaintext.
+									const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
+									await saveBlobAs(blob, item.originalName || "file");
+									setMessage("Saved.");
+								} catch (e) {
+									setMessage(e?.message || "Failed to download.");
+								}
+							}
+
+							async function downloadItemDecryptedOrPlain() {
+								try {
+									setMessage("Downloading…");
+									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/download`);
+									if (!r.ok) throw new Error("Download failed");
+
+									const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
+									if (encModeHeader === "client") {
+										const storedShaExpected = String(r.headers.get("x-stored-sha256") || "").toLowerCase();
+										const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+										const ivB64 = r.headers.get("x-client-iv-b64") || item.clientIvB64 || "";
+										const nameHeader = r.headers.get("x-original-name") || "";
+										const mimeHeader = r.headers.get("x-original-mime") || "";
+										let originalName = item.originalName || "file";
+										try {
+											const fromHeader = decodeURIComponent(nameHeader || "");
+											if (fromHeader) originalName = fromHeader;
+										} catch {
+											// ignore
+										}
+										let originalMime = item.mimeType || "application/octet-stream";
+										try {
+											const fromHeader = decodeURIComponent(mimeHeader || "");
+											if (fromHeader) originalMime = fromHeader;
+										} catch {
+											// ignore
+										}
+										if (!ivB64) throw new Error("Missing IV");
+
+										const iv = b64ToBytes(ivB64);
+										const auth = window.__auth;
+										const user = auth?.currentUser;
+										if (!user) throw new Error("Not logged in");
+										const perFileKeyB64 = getStoredFileEncKeyB64(user.uid, item.id);
+										let key;
+										if (perFileKeyB64) {
+											key = await importAesKeyFromB64(perFileKeyB64);
+										} else {
+											if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+											const passphrase = await window.showKeyPopup({
+												title: "Decryption key",
+												description: "Enter decryption key",
+												primaryText: "Decrypt & Download",
+												placeholder: "Decryption key"
+											});
+											if (!passphrase) throw new Error("Decrypt cancelled");
+											const derivedB64 = await keyB64FromUserInput(passphrase);
+											setStoredFileEncKeyB64(user.uid, item.id, derivedB64);
+											key = await importAesKeyFromB64(derivedB64);
+										}
+										const ciphertext = await r.arrayBuffer();
+										if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
+											const computedStored = await sha256HexFromArrayBuffer(ciphertext);
+											if (computedStored !== storedShaExpected) throw new Error("Integrity check failed");
+										}
+										const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+										if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+											const computedOriginal = await sha256HexFromArrayBuffer(plaintext);
+											if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+										}
+										const outBlob = new Blob([plaintext], { type: originalMime });
+										await saveBlobAs(outBlob, originalName);
+										setMessage("Decrypted and saved.");
+										return;
+									}
+
+									// Server-encrypted mode: backend returns plaintext.
+									const originalShaExpected = String(r.headers.get("x-original-sha256") || "").toLowerCase();
+									const bytes = await r.arrayBuffer();
+									if (originalShaExpected && /^[a-f0-9]{64}$/.test(originalShaExpected)) {
+										const computedOriginal = await sha256HexFromArrayBuffer(bytes);
+										if (computedOriginal !== originalShaExpected) throw new Error("Integrity check failed");
+									}
+									const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
+									await saveBlobAs(blob, item.originalName || "file");
+									setMessage("Saved.");
+								} catch (e) {
+									setMessage(e?.message || "Failed to download.");
+								}
+							}
+
+
+							const actions = document.createElement("div");
+							actions.style.display = "flex";
+							actions.style.alignItems = "center";
+							actions.style.gap = "10px";
+
+							const downloadEncryptedBtn = document.createElement("button");
+							downloadEncryptedBtn.type = "button";
+							downloadEncryptedBtn.className = "btn btn--sm";
+							downloadEncryptedBtn.textContent = "Download";
+							downloadEncryptedBtn.setAttribute("aria-label", `Download encrypted ${item.originalName || "file"}`);
+							downloadEncryptedBtn.addEventListener("click", () => void downloadUploadedEncryptedCipher(item));
+
+							const decryptBtn = document.createElement("button");
+							decryptBtn.type = "button";
+							decryptBtn.className = "btn btn--primary btn--sm";
+							decryptBtn.textContent = "Decrypt & Download";
+							decryptBtn.setAttribute("aria-label", `Decrypt and download ${item.originalName || "file"}`);
+							decryptBtn.addEventListener("click", () => void downloadUploadedDecryptedOrPlain(item));
+
+
+							const shareBtn = document.createElement("button");
+							shareBtn.type = "button";
+							shareBtn.className = "iconbtn";
+							shareBtn.title = "Share";
+							shareBtn.setAttribute("aria-label", `Share ${item.originalName || "file"}`);
+							shareBtn.innerHTML = `
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<circle cx="18" cy="5" r="3"></circle>
+									<circle cx="6" cy="12" r="3"></circle>
+									<circle cx="18" cy="19" r="3"></circle>
+									<path d="M8.7 10.7l6.6-3.4"></path>
+									<path d="M8.7 13.3l6.6 3.4"></path>
+								</svg>
+							`;
+							shareBtn.addEventListener("click", async () => {
+								try {
+									if (typeof window.showSharePopup !== "function") throw new Error("Share popup not available");
+									const result = await window.showSharePopup({ uploaded: uploadedItemsCache, defaultFileId: item.id });
+									if (!result) return;
+									await shareUploadedFile({ fileId: result.fileId, recipientEmail: result.recipientEmail });
+									setMessage("Sent.");
+									await loadChat();
+								} catch (e) {
+									setMessage(e?.message || "Send failed.");
+								}
+							});
+							const delBtn = document.createElement("button");
+							delBtn.type = "button";
+							delBtn.className = "iconbtn";
+							delBtn.title = "Delete";
+							delBtn.setAttribute("aria-label", `Delete ${item.originalName || "file"}`);
+							delBtn.innerHTML = `
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M3 6h18"></path>
+									<path d="M8 6V4h8v2"></path>
+									<path d="M19 6l-1 14H6L5 6"></path>
+									<path d="M10 11v6"></path>
+									<path d="M14 11v6"></path>
+								</svg>
+							`;
+							delBtn.addEventListener("click", async () => {
+								try {
+									const ok = confirm(`Delete ${item.originalName || "this file"}?`);
+									if (!ok) return;
+									await deleteUploadedFile(item);
+									setMessage("Deleted.");
+									selectedUploadedIds.delete(itemId);
+									await loadList();
+								} catch (e) {
+									setMessage(e?.message || "Failed to delete.");
+								}
+							});
+
+							row.appendChild(selWrap);
+							actions.appendChild(downloadEncryptedBtn);
+							actions.appendChild(decryptBtn);
+							actions.appendChild(shareBtn);
+							actions.appendChild(delBtn);
+							row.appendChild(left);
+							row.appendChild(actions);
+							listEl.appendChild(row);
+						}
+					} catch (e) {
+						const msg = e?.message || "Failed to load list";
+						setMessage(`${msg}. Is the backend running on ${API_BASE}?`);
+						renderUploadedBulkbar([]);
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Backend not available.";
+						listEl.appendChild(empty);
+					}
+				}
+
+					const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+					if (deleteAccountBtn) {
+						deleteAccountBtn.addEventListener("click", async () => {
+							try {
+								if (typeof window.showKeyPopup !== "function") throw new Error("Popup not available");
+								const password = await window.showKeyPopup({
+									title: "Delete account",
+									description: "Enter your password to confirm account deletion.",
+									primaryText: "Delete",
+									placeholder: "Password"
+								});
+								if (!password) return;
+
+								setMessage("Confirming password…");
+								await window.__reauthWithPassword?.(password);
+
+								setMessage("Deleting account…");
+								const r = await apiFetch("/api/account", { method: "DELETE" });
+								const j = await r.json().catch(() => null);
+								if (!r.ok) throw new Error(j?.error || "Delete account failed");
+
+								try {
+									await window.__doSignOut?.();
+								} catch {
+									// ignore
+								}
+								window.location.replace("index.html?deleted=1");
+							} catch (e) {
+								setMessage(e?.message || "Failed to delete account.");
+							}
+						});
+					}
+
+				async function uploadEncryptedToServer(encryptionKeyText) {
+					if (pending.length === 0) return;
+					if (uploadBtn) uploadBtn.disabled = true;
+					try {
+						const keyText = String(encryptionKeyText || "").trim();
+						if (!keyText) throw new Error("Encryption key is required");
+						setMessage("Encrypting & uploading…");
+						const derivedKeyB64 = await ensureSessionClientKeyB64(keyText);
+						const key = await importAesKeyFromB64(derivedKeyB64);
+						for (const file of pending) {
+							const auth = window.__auth;
+							const user = auth?.currentUser;
+							if (!user) throw new Error("Not logged in");
+
+							const iv = new Uint8Array(12);
+							crypto.getRandomValues(iv);
+							const plaintext = await file.arrayBuffer();
+							const originalSha256Hex = await sha256HexFromArrayBuffer(plaintext);
+							const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+							const cipherBlob = new Blob([ciphertext], { type: "application/octet-stream" });
+							const ivB64 = bytesToB64(iv);
+
+							const form = new FormData();
+							form.append("file", cipherBlob, `${file.name}.cipher`);
+							form.append("encMode", "client");
+							form.append("clientIvB64", ivB64);
+							form.append("originalName", file.name);
+							form.append("mimeType", file.type || "application/octet-stream");
+							form.append("originalSize", String(file.size));
+							form.append("originalSha256Hex", originalSha256Hex);
+							const res = await apiFetch("/api/files", { method: "POST", body: form });
+							const j = await res.json().catch(() => null);
+							if (!res.ok) throw new Error(j?.error || (await responseErrorMessage(res)) || "Upload failed");
+							if (j?.id) {
+								setStoredFileEncKeyB64(user.uid, String(j.id), derivedKeyB64);
+							}
+						}
+						pending = [];
+						renderSelectedFiles();
+						sessionClientKeyB64 = derivedKeyB64;
+						setMessage("Uploaded.");
+						await loadList();
+						setMessage("Done.");
+					} catch (e) {
+						setMessage(e?.message || "Upload failed.");
+					} finally {
+						updateUploadButton();
+					}
+				}
+
+				chooseBtn?.addEventListener("click", () => input?.click());
+				input?.addEventListener("change", () => {
+					addPending(input.files);
+					input.value = "";
+				});
+
+				uploadBtn?.addEventListener("click", async () => {
+					try {
+						if (pending.length === 0) return;
+						if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+						const keyText = await window.showKeyPopup({
+							title: "Upload",
+							description: "Enter encryption key",
+							primaryText: "Upload",
+							placeholder: "Encryption key"
+						});
+						if (!keyText) {
+							setMessage("Upload cancelled.");
+							return;
+						}
+						await uploadEncryptedToServer(keyText);
+					} catch (e) {
+						setMessage(e?.message || "Upload failed.");
+					}
+				});
+
+				if (dropZone) {
+					dropZone.addEventListener("click", () => input?.click());
+					dropZone.addEventListener("keydown", (e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							input?.click();
+						}
+					});
+
+					for (const ev of ["dragenter", "dragover"]) {
+						dropZone.addEventListener(ev, (e) => {
+							e.preventDefault();
+							dropZone.classList.add("is-active");
+						});
+					}
+
+					for (const ev of ["dragleave", "dragend"]) {
+						dropZone.addEventListener(ev, () => dropZone.classList.remove("is-active"));
+					}
+
+					dropZone.addEventListener("drop", (e) => {
+						e.preventDefault();
+						dropZone.classList.remove("is-active");
+						addPending(e.dataTransfer?.files);
+					});
+				}
+
+				document.addEventListener("dragover", (e) => e.preventDefault());
+				document.addEventListener("drop", (e) => e.preventDefault());
+
+				updateUploadButton();
+				// Wait a tick so auth state has time to populate.
+				setTimeout(() => {
+					void loadList();
+					void loadChat();
+				}, 700);
+			})();
+		</script>
+	</body>
+</html>
