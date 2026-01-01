@@ -1455,7 +1455,42 @@
 								}
 							});
 
+							let downloadEncryptedBtn = null;
+							if (encMode === "client") {
+								downloadEncryptedBtn = document.createElement("button");
+								downloadEncryptedBtn.type = "button";
+								downloadEncryptedBtn.className = "btn btn--sm";
+								downloadEncryptedBtn.textContent = "Download encrypted";
+								downloadEncryptedBtn.setAttribute("aria-label", `Download encrypted ${item.originalName || "file"}`);
+								downloadEncryptedBtn.addEventListener("click", async () => {
+									try {
+										const itemId = item.id || item.fileId || item._id;
+										if (!itemId) throw new Error("Missing file id");
+										setMessage("Downloading encrypted…");
+										const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
+										if (!r.ok) {
+											const j = await r.json().catch(() => null);
+											throw new Error(j?.error || "Download failed");
+										}
+										const bytes = await r.arrayBuffer();
+										const blob = new Blob([bytes], { type: "application/octet-stream" });
+										const url = URL.createObjectURL(blob);
+										const a = document.createElement("a");
+										a.href = url;
+										a.download = `${item.originalName || "file"}.cipher`;
+										document.body.appendChild(a);
+										a.click();
+										a.remove();
+										URL.revokeObjectURL(url);
+										setMessage("Encrypted download started.");
+									} catch (e) {
+										setMessage(e?.message || "Failed to download.");
+									}
+								});
+							}
+
 							actions.appendChild(downloadBtn);
+							if (downloadEncryptedBtn) actions.appendChild(downloadEncryptedBtn);
 							row.appendChild(header);
 							row.appendChild(name);
 							row.appendChild(when);
