@@ -27,7 +27,11 @@ const fileRecordSchema = new mongoose.Schema(
 		// or provided by client for client-encrypted uploads).
 		originalSha256Hex: { type: String, required: false },
 		// storedSha256Hex: SHA-256 of the stored bytes on disk (ciphertext for both modes).
-		storedSha256Hex: { type: String, required: false }
+		storedSha256Hex: { type: String, required: false },
+
+		// If set, the owner has deleted the file from their dashboard, but the file can remain
+		// available for existing recipients (ShareRecord entries) until all recipients delete.
+		ownerDeletedAt: { type: Date, required: false, default: null, index: true }
 	},
 	{ timestamps: true }
 );

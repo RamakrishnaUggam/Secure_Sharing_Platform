@@ -121,12 +121,37 @@ export function filesRouter() {
 
 		const share = await ShareRecord.findOne({ _id: shareId, recipientEmail: email });
 		if (!share) return res.status(404).json({ error: "Not found" });
+		const fileId = share.fileId;
 		await share.deleteOne();
+
+		// If the owner previously deleted the file and this was the last share,
+		// we can safely delete the stored bytes + FileRecord now.
+		try {
+			const remainingShares = await ShareRecord.countDocuments({ fileId });
+			if (remainingShares === 0) {
+				const file = await FileRecord.findById(fileId);
+				if (file && file.ownerDeletedAt) {
+					try {
+						const p = resolveStoragePath(file);
+						if (p) fs.unlinkSync(p);
+					} catch {
+						// ignore
+					}
+					await file.deleteOne();
+					return res.json({ ok: true, cleanedUp: true });
+				}
+			}
+		} catch {
+			// ignore
+		}
+		
 		res.json({ ok: true });
 	});
 
-	router.get("/", auth, async (req, res) => {
-		const files = await FileRecord.find({ ownerUid: req.user.uid }).sort({ createdAt: -1 }).lean();
+		router.get("/", auth, async (req, res) => {
+			const files = await FileRecord.find({ ownerUid: req.user.uid, ownerDeletedAt: null })
+				.sort({ createdAt: -1 })
+				.lean();
 		res.json(
 			files.map((f) => ({
 				id: String(f._id),
@@ -192,8 +217,9 @@ export function filesRouter() {
 		for (const share of shares) {
 			const f = fileById.get(String(share.fileId));
 			if (!f) continue;
-			// Only expose records for files the user still owns.
+			// Only expose records for files the user still owns and hasn't deleted.
 			if (String(f.ownerUid) !== String(req.user.uid)) continue;
+			if (f.ownerDeletedAt) continue;
 			out.push({
 				shareId: String(share._id),
 				id: String(f._id),
@@ -308,6 +334,14 @@ export function filesRouter() {
 	router.delete("/:id", auth, async (req, res) => {
 		const record = await FileRecord.findOne({ _id: req.params.id, ownerUid: req.user.uid });
 		if (!record) return res.status(404).json({ error: "Not found" });
+
+		// If the file is shared, keep it for recipients and only hide it from the owner.
+		const shareCount = await ShareRecord.countDocuments({ fileId: record._id });
+		if (shareCount > 0) {
+			record.ownerDeletedAt = new Date();
+			await record.save();
+			return res.json({ ok: true, keptForRecipients: true });
+		}
 
 		try {
 			const p = resolveStoragePath(record);
