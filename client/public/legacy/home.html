@@ -200,9 +200,14 @@
 			}
 
 			.profile__btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: flex-start;
 				gap: 10px;
 				cursor: pointer;
 				color: var(--text);
+				text-align: left;
+				min-width: 0;
 			}
 
 			.profile__btn:focus {
@@ -227,12 +232,13 @@
 			.profile__meta {
 				display: flex;
 				flex-direction: column;
+				align-items: flex-start;
 				gap: 2px;
 				min-width: 0;
 			}
 
 			.profile__label {
-				max-width: 180px;
+				max-width: 220px;
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
@@ -243,10 +249,19 @@
 				font-size: 11px;
 				line-height: 1.2;
 				color: var(--muted);
-				max-width: 180px;
+				max-width: 220px;
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
+			}
+
+			@media (max-width: 560px) {
+				.profile__label {
+					max-width: 140px;
+				}
+				.profile__label-email {
+					max-width: 140px;
+				}
 			}
 
 			.profile__dropdown {
@@ -302,7 +317,8 @@
 			.profile__item {
 				display: flex;
 				align-items: center;
-				justify-content: space-between;
+				justify-content: flex-start;
+				gap: 10px;
 				padding: 10px 10px;
 				border-radius: 12px;
 				font-size: 13px;

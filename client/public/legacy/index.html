@@ -250,61 +250,76 @@
             color: rgba(2, 132, 199, 0.92);
         }
 
-        .howitworks {
-            margin-top: 10px;
-            padding: 10px 12px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: var(--text);
-            font-size: 12px;
-            line-height: 1.55;
-            display: none;
-        }
-
-        html[data-theme="light"] .howitworks {
-            background: rgba(15, 23, 42, 0.03);
-            border-color: rgba(15, 23, 42, 0.12);
-        }
-
-        .howitworks.is-open {
-            display: block;
-        }
-
-        .about-panel {
+        .aboutHover {
             position: fixed;
             top: 16px;
             right: 70px;
-            width: min(520px, calc(100vw - 140px));
-            padding: 12px 14px;
-            border-radius: 14px;
-            background: linear-gradient(180deg, var(--card), var(--card-2));
-            border: 1px solid var(--card-border);
-            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
-            color: var(--text);
-            backdrop-filter: blur(12px);
-            z-index: 99;
+            z-index: 101;
         }
 
-        .about-panel__title {
+        .aboutTrigger {
+            height: 42px;
+            padding: 0 12px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 1px solid var(--card-border);
+            background: linear-gradient(180deg, var(--card), var(--card-2));
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+            color: var(--text);
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.2px;
-            margin-bottom: 6px;
         }
 
-        .about-panel__text {
-            font-size: 12px;
-            line-height: 1.55;
+        .aboutTrigger:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px var(--focus), 0 18px 60px rgba(0, 0, 0, 0.22);
+        }
+
+        .aboutOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            z-index: 100;
+        }
+
+        .aboutHover:hover .aboutOverlay {
+            display: flex;
+        }
+
+        .aboutOverlay__card {
+            width: min(980px, 96vw);
+            height: min(92vh, 980px);
+            background: linear-gradient(180deg, var(--card), var(--card-2));
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+            padding: 16px;
+            overflow: auto;
+            color: var(--text);
+        }
+
+        .aboutOverlay__title {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            margin-bottom: 10px;
+        }
+
+        .aboutOverlay__text {
+            font-size: 13px;
+            line-height: 1.7;
             color: var(--muted);
-        }
-
-        @media (max-width: 700px) {
-            .about-panel {
-                position: static;
-                width: 100%;
-                margin-bottom: 12px;
-            }
+            white-space: pre-wrap;
         }
 
         .social a {
@@ -372,10 +387,21 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
             </svg>
         </button>
-        <div class="about-panel" aria-label="About">
-            <div class="about-panel__title">About</div>
-            <div class="about-panel__text">
-                This platform encrypts files locally in your browser before upload. Share files to a registered email inside the platform, then the receiver can download and decrypt using the key you provide. For security, closing the tab/browser requires logging in again.
+        <div class="aboutHover" aria-label="About">
+            <button class="aboutTrigger" type="button" aria-label="About">About</button>
+            <div class="aboutOverlay" role="dialog" aria-modal="true" aria-label="About">
+                <div class="aboutOverlay__card">
+                    <div class="aboutOverlay__title">About</div>
+                    <div class="aboutOverlay__text" id="aboutText">
+                        Secure Share is a web-based secure file sharing platform designed to help users safely upload, store, and share files while maintaining complete control over their data. The platform focuses on end-to-end security, simplicity, and accessibility, using only free and widely adopted technologies.
+
+                        The frontend is built using plain HTML, CSS, and JavaScript, ensuring lightweight performance and compatibility across browsers. The backend is developed with Node.js and Express, handling secure API requests, file metadata management, and access control. MongoDB, accessed through Mongoose, is used to store user details and file metadata efficiently.
+
+                        For authentication, the system integrates Firebase Authentication on the client side, while firebase-admin is used on the backend to verify user identity and protect API endpoints. Files are encrypted on the client side using AES encryption before upload and decrypted in the browser after download, ensuring that sensitive data is never exposed to the server or storage provider.
+
+                        With features such as encrypted uploads, secure link-based sharing, integrity verification, and an intuitive dashboard, Secure Share provides a reliable solution for personal, academic, and small-scale file management while offering a strong foundation for future scalability.
+                    </div>
+                </div>
             </div>
         </div>
         <div class="main">
