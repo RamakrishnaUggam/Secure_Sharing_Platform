@@ -322,6 +322,52 @@
 		});
 	};
 
+	/**
+	 * Generic visible-text popup (useful for email prompts).
+	 * @param {{ title?: string, description?: string, primaryText?: string, placeholder?: string, type?: string, ariaLabel?: string, value?: string }} opts
+	 * @returns {Promise<string|null>}
+	 */
+	window.showTextPopup = function showTextPopup(opts = {}) {
+		const title = String(opts.title || "Enter value");
+		const description = String(opts.description || "Enter a value.");
+		const primaryText = String(opts.primaryText || "Continue");
+		const placeholder = String(opts.placeholder || "Enter value");
+		const type = String(opts.type || "text");
+		const ariaLabel = String(opts.ariaLabel || "Value");
+		const value = opts.value != null ? String(opts.value) : "";
+
+		const stack = document.createElement("div");
+		stack.className = "share-popup__stack";
+		const input = createInput({
+			type,
+			placeholder,
+			value,
+			ariaLabel
+		});
+		if (type === "email") {
+			input.autocomplete = "email";
+			input.inputMode = "email";
+			input.spellcheck = false;
+		}
+		stack.appendChild(input);
+
+		return showPopup({
+			title,
+			description,
+			primaryText,
+			bodyEl: stack,
+			initialFocusEl: input,
+			onSubmit() {
+				const v = String(input.value || "").trim();
+				if (!v) {
+					input.focus();
+					return null;
+				}
+				return v;
+			}
+		});
+	};
+
 	// Backwards-compatible alias (older code may still call this).
 	window.showPassphrasePopup = function showPassphrasePopup(opts = {}) {
 		return window.showKeyPopup({

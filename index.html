@@ -271,6 +271,42 @@
             display: block;
         }
 
+        .about-panel {
+            position: fixed;
+            top: 16px;
+            right: 70px;
+            width: min(520px, calc(100vw - 140px));
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: linear-gradient(180deg, var(--card), var(--card-2));
+            border: 1px solid var(--card-border);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+            color: var(--text);
+            backdrop-filter: blur(12px);
+            z-index: 99;
+        }
+
+        .about-panel__title {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            margin-bottom: 6px;
+        }
+
+        .about-panel__text {
+            font-size: 12px;
+            line-height: 1.55;
+            color: var(--muted);
+        }
+
+        @media (max-width: 700px) {
+            .about-panel {
+                position: static;
+                width: 100%;
+                margin-bottom: 12px;
+            }
+        }
+
         .social a {
             color: rgba(255, 255, 255, 0.92);
             text-decoration: none;
@@ -336,6 +372,12 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
             </svg>
         </button>
+        <div class="about-panel" aria-label="About">
+            <div class="about-panel__title">About</div>
+            <div class="about-panel__text">
+                This platform encrypts files locally in your browser before upload. Share files to a registered email inside the platform, then the receiver can download and decrypt using the key you provide. For security, closing the tab/browser requires logging in again.
+            </div>
+        </div>
         <div class="main">
             <div class="background">
             <div class="shape"></div>
@@ -345,14 +387,6 @@
             <div class="app-title">Secure File Sharing Platform</div>
             <h3>Login Here</h3>
             <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
-
-			<div class="meta-row">
-				<a href="#" id="howItWorksLink">How it works</a>
-			</div>
-			<div id="howItWorksBox" class="howitworks" aria-live="polite">
-				Files are encrypted locally in your browser before upload. You can share files to another registered email inside the platform, then the receiver downloads and decrypts using the key you provide.
-			</div>
-
             <label for="">Username</label>
             <input id="email" type="email" placeholder="Email" required />
             <label for="">Password</label>
@@ -395,18 +429,6 @@
                 button.addEventListener("click", () => {
                     setTheme(getTheme() === "dark" ? "light" : "dark");
                 });
-            })();
-        </script>
-        <script>
-            (function () {
-                const howLink = document.getElementById("howItWorksLink");
-                const box = document.getElementById("howItWorksBox");
-                if (howLink && box) {
-                    howLink.addEventListener("click", (e) => {
-                        e.preventDefault();
-                        box.classList.toggle("is-open");
-                    });
-                }
             })();
         </script>
     </body>

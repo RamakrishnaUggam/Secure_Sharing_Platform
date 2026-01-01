@@ -202,6 +202,7 @@
 			.profile__btn {
 				gap: 10px;
 				cursor: pointer;
+				color: var(--text);
 			}
 
 			.profile__btn:focus {
@@ -235,6 +236,7 @@
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
+				color: var(--text);
 			}
 
 			.profile__label-email {
@@ -279,6 +281,7 @@
 				font-weight: 600;
 				font-size: 13px;
 				letter-spacing: 0.2px;
+				color: var(--text);
 			}
 
 			.profile__email {
@@ -303,7 +306,7 @@
 				padding: 10px 10px;
 				border-radius: 12px;
 				font-size: 13px;
-				color: rgba(255, 255, 255, 0.92);
+				color: var(--text);
 				border: 1px solid rgba(255, 255, 255, 0.10);
 				background: rgba(255, 255, 255, 0.04);
 			}
@@ -576,11 +579,13 @@
 				gap: 0;
 				align-items: stretch;
 				margin-top: 12px;
+				height: min(72vh, 720px);
 			}
 
 			@media (max-width: 980px) {
 				.messenger {
 					grid-template-columns: 1fr;
+					height: auto;
 				}
 			}
 
@@ -588,8 +593,16 @@
 				display: flex;
 				flex-direction: column;
 				gap: 10px;
-				min-height: 420px;
+				min-height: 0;
+				max-height: 100%;
 				padding: 12px;
+			}
+
+			@media (max-width: 980px) {
+				.messenger__pane {
+					min-height: 0;
+					max-height: min(45vh, 520px);
+				}
 			}
 
 			.messenger__pane + .messenger__pane {
@@ -614,6 +627,7 @@
 			.messenger__scroll {
 				flex: 1;
 				overflow: auto;
+				min-height: 0;
 				padding-right: 4px;
 			}
 
@@ -652,9 +666,12 @@
 			}
 
 			.chat__bubble {
-				max-width: 78%;
+				max-width: 100%;
+				width: 100%;
 				display: grid;
-				gap: 8px;
+				grid-template-columns: auto 1fr auto;
+				gap: 12px;
+				align-items: center;
 				padding: 12px;
 				border-radius: 18px;
 				border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1972,12 +1989,14 @@
 					btnShare.disabled = selectedUploadedIds.size === 0;
 					btnShare.addEventListener("click", async () => {
 						try {
-							if (typeof window.showKeyPopup !== "function") throw new Error("Popup not available");
-							const recipientEmail = await window.showKeyPopup({
+							if (typeof window.showTextPopup !== "function") throw new Error("Popup not available");
+							const recipientEmail = await window.showTextPopup({
 								title: "Share",
 								description: "Enter recipient email",
 								primaryText: "Share",
-								placeholder: "recipient@email.com"
+								placeholder: "recipient@email.com",
+								type: "email",
+								ariaLabel: "Recipient email"
 							});
 							const email = String(recipientEmail || "").trim().toLowerCase();
 							if (!email || !email.includes("@")) throw new Error("Invalid email");
@@ -2073,40 +2092,6 @@
 						for (const it of selected) await downloadReceivedDecrypted(it);
 					});
 
-					const btnShare = document.createElement("button");
-					btnShare.type = "button";
-					btnShare.className = "btn btn--sm";
-					btnShare.textContent = "Share";
-					btnShare.disabled = selectedReceivedShareIds.size === 0;
-					btnShare.addEventListener("click", async () => {
-						try {
-							const auth = window.__auth;
-							const user = auth?.currentUser;
-							if (!user) throw new Error("Not logged in");
-							if (typeof window.showKeyPopup !== "function") throw new Error("Popup not available");
-							const recipientEmail = await window.showKeyPopup({
-								title: "Share",
-								description: "Enter recipient email",
-								primaryText: "Share",
-								placeholder: "recipient@email.com"
-							});
-							const email = String(recipientEmail || "").trim().toLowerCase();
-							if (!email || !email.includes("@")) throw new Error("Invalid email");
-							const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
-							let sharedCount = 0;
-							for (const it of selected) {
-								if (String(it.ownerUid || "") !== String(user.uid || "")) continue;
-								await shareUploadedFile({ fileId: String(it.id), recipientEmail: email });
-								sharedCount++;
-							}
-							if (sharedCount === 0) throw new Error("You can only share files you own");
-							setMessage("Sent.");
-							await loadChat();
-						} catch (e) {
-							setMessage(e?.message || "Share failed.");
-						}
-					});
-
 					const btnDelete = document.createElement("button");
 					btnDelete.type = "button";
 					btnDelete.className = "btn btn--sm";
@@ -2126,7 +2111,6 @@
 
 					actions.appendChild(btnDownload);
 					actions.appendChild(btnDecrypt);
-					actions.appendChild(btnShare);
 					actions.appendChild(btnDelete);
 
 					receivedBulkbarEl.appendChild(left);
@@ -2172,6 +2156,8 @@
 							const shareIdForSel = String(item.shareId || "").trim();
 							const isSelected = shareIdForSel && selectedReceivedShareIds.has(shareIdForSel);
 							if (isSelected) row.classList.add("is-selected");
+
+							let selWrap = null;
 							if (shareIdForSel) {
 								const { wrap, cb } = createItemSelectControl({
 									ariaLabel: `Select received ${item.originalName || "file"}`,
@@ -2182,12 +2168,12 @@
 										void loadChat();
 									}
 								});
-								wrap.style.position = "absolute";
-								wrap.style.left = "10px";
-								wrap.style.top = "10px";
-								row.appendChild(wrap);
+								selWrap = wrap;
 								cb.addEventListener("click", (e) => e.stopPropagation());
 							}
+
+							const left = document.createElement("div");
+							left.style.minWidth = "0";
 
 							const header = document.createElement("div");
 							header.className = "upload__meta";
@@ -2201,6 +2187,10 @@
 							const when = document.createElement("div");
 							when.className = "upload__meta";
 							when.textContent = `Shared ${formatRelativeTime(item.sharedAt)}`;
+
+							left.appendChild(header);
+							left.appendChild(name);
+							left.appendChild(when);
 
 							const actions = document.createElement("div");
 							actions.style.display = "flex";
@@ -2240,9 +2230,14 @@
 							actions.appendChild(downloadEncryptedBtn);
 							actions.appendChild(decryptBtn);
 							actions.appendChild(deleteBtn);
-							row.appendChild(header);
-							row.appendChild(name);
-							row.appendChild(when);
+							if (selWrap) row.appendChild(selWrap);
+							else {
+								const spacer = document.createElement("div");
+								spacer.style.width = "36px";
+								spacer.style.height = "36px";
+								row.appendChild(spacer);
+							}
+							row.appendChild(left);
 							row.appendChild(actions);
 							sharedListEl.appendChild(row);
 						}
