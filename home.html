@@ -1338,7 +1338,20 @@
 					const token = await getIdToken();
 					const headers = new Headers(options.headers || {});
 					headers.set("Authorization", `Bearer ${token}`);
-					return await fetch(`${API_BASE}${path}`, { ...options, headers });
+					try {
+						return await fetch(`${API_BASE}${path}`, { ...options, headers });
+					} catch (e) {
+						const origin = (() => {
+							try {
+								return window.location.origin;
+							} catch {
+								return "(unknown)";
+							}
+						})();
+						throw new Error(
+							`Failed to fetch. API base: ${API_BASE || "(same-origin)"}. Page origin: ${origin}. If hosted, ensure backend CORS allows this origin.`
+						);
+					}
 				}
 
 				async function loadSharedWithMe() {

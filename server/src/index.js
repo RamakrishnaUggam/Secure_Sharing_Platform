@@ -16,6 +16,7 @@ app.use(
 	cors({
 		origin(origin, callback) {
 			const isDev = String(process.env.NODE_ENV || "").toLowerCase() !== "production";
+			const githubPagesOrigin = "https://ramakrishnauggam.github.io";
 			function isLocalDevOrigin(value) {
 				if (!value) return true;
 				if (value === "null") return true;
@@ -31,6 +32,7 @@ app.use(
 
 			// Allow non-browser tools (curl, Postman) which may not send an Origin header.
 			if (!origin) return callback(null, true);
+			if (origin === githubPagesOrigin) return callback(null, true);
 			if (isDev && isLocalDevOrigin(origin)) return callback(null, true);
 			if (config.corsAllowAll) return callback(null, true);
 			if (config.corsOrigins.includes(origin)) return callback(null, true);
