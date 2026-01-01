@@ -376,6 +376,7 @@
 				font-size: 13px;
 				border: 1px solid rgba(255, 255, 255, 0.14);
 				background: rgba(255, 255, 255, 0.06);
+				color: var(--text);
 			}
 
 			.btn:focus {
@@ -386,6 +387,7 @@
 			.btn--primary {
 				border: 0;
 				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+				color: rgba(255, 255, 255, 0.92);
 			}
 
 			.hero__side {
@@ -1431,14 +1433,16 @@
 					if (sessionClientKeyB64) return sessionClientKeyB64;
 					let passphrase = String(optionalPassphrase || "").trim();
 					if (!passphrase) {
-						if (typeof window.showPassphrasePopup !== "function") throw new Error("Passphrase popup not available");
-						passphrase = (await window.showPassphrasePopup({
-							title: "Passphrase",
-							description: "Enter passphrase to encrypt files"
+						if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+						passphrase = (await window.showKeyPopup({
+							title: "Key",
+							description: "Enter key to encrypt files",
+							primaryText: "Continue",
+							placeholder: "Key"
 						})) || "";
 					}
 					passphrase = String(passphrase || "").trim();
-					if (!passphrase) throw new Error("Passphrase is required");
+					if (!passphrase) throw new Error("Key is required");
 					sessionClientKeyB64 = await keyB64FromUserInput(passphrase);
 					return sessionClientKeyB64;
 				}
@@ -1567,18 +1571,6 @@
 								try {
 									const itemId = item.id || item.fileId || item._id;
 									if (!itemId) throw new Error("Missing file id");
-										const auth = window.__auth;
-										const user = auth?.currentUser;
-										if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
-										const keyText = await window.showKeyPopup({
-											title: "Decryption key",
-											description: "Enter decryption key",
-											primaryText: "Continue",
-											placeholder: "Decryption key"
-										});
-										if (!keyText) throw new Error("Cancelled");
-										const derivedB64 = await keyB64FromUserInput(keyText);
-										if (user?.uid) setStoredFileEncKeyB64(user.uid, itemId, derivedB64);
 									setMessage("Downloading encrypted…");
 									const r = await apiFetch(`/api/files/${encodeURIComponent(itemId)}/download`);
 									if (!r.ok) {
@@ -1591,6 +1583,26 @@
 									setMessage("Encrypted file saved.");
 								} catch (e) {
 									setMessage(e?.message || "Failed to download.");
+								}
+							});
+
+							const deleteBtn = document.createElement("button");
+							deleteBtn.type = "button";
+							deleteBtn.className = "btn btn--sm";
+							deleteBtn.textContent = "Delete";
+							deleteBtn.setAttribute("aria-label", `Delete received ${item.originalName || "file"}`);
+							deleteBtn.addEventListener("click", async () => {
+								try {
+									const shareId = String(item.shareId || "").trim();
+									if (!shareId) throw new Error("Missing share id");
+									setMessage("Deleting…");
+									const r = await apiFetch(`/api/files/shares/${encodeURIComponent(shareId)}`, { method: "DELETE" });
+									const j = await r.json().catch(() => null);
+									if (!r.ok) throw new Error(j?.error || "Delete failed");
+									setMessage("Deleted.");
+									await loadChat();
+								} catch (e) {
+									setMessage(e?.message || "Delete failed.");
 								}
 							});
 
@@ -1664,6 +1676,7 @@
 
 							actions.appendChild(downloadEncryptedBtn);
 							actions.appendChild(decryptBtn);
+							actions.appendChild(deleteBtn);
 							row.appendChild(header);
 							row.appendChild(name);
 							row.appendChild(when);
@@ -1723,19 +1736,6 @@
 									setMessage("Preparing encrypted download…");
 									const r = await apiFetch(`/api/files/${encodeURIComponent(item.id)}/download`);
 									if (!r.ok) throw new Error("Download failed");
-
-									const auth = window.__auth;
-									const user = auth?.currentUser;
-									if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
-									const keyText = await window.showKeyPopup({
-										title: "Decryption key",
-										description: "Enter decryption key",
-										primaryText: "Continue",
-										placeholder: "Decryption key"
-									});
-									if (!keyText) throw new Error("Cancelled");
-									const derivedB64 = await keyB64FromUserInput(keyText);
-									if (user?.uid) setStoredFileEncKeyB64(user.uid, item.id, derivedB64);
 
 									const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
 									const bytes = await r.arrayBuffer();

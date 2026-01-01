@@ -99,6 +99,19 @@ export function filesRouter() {
 	const auth = requireAuth();
 	const masterKey = getMasterKey(config.masterKeyHex);
 
+	// Receiver deletes a received share (removes from "Received").
+	router.delete("/shares/:shareId", auth, async (req, res) => {
+		const email = normalizeEmail(req.user.email);
+		if (!email) return res.status(400).json({ error: "No email on user" });
+		const shareId = String(req.params.shareId || "").trim();
+		if (!shareId) return res.status(400).json({ error: "Missing shareId" });
+
+		const share = await ShareRecord.findOne({ _id: shareId, recipientEmail: email });
+		if (!share) return res.status(404).json({ error: "Not found" });
+		await share.deleteOne();
+		res.json({ ok: true });
+	});
+
 	router.get("/", auth, async (req, res) => {
 		const files = await FileRecord.find({ ownerUid: req.user.uid }).sort({ createdAt: -1 }).lean();
 		res.json(

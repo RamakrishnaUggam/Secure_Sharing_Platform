@@ -20,14 +20,26 @@
 			.share-toast__card {
 				pointer-events: none;
 				width: 100%;
-				background: var(--card, rgba(255,255,255,0.08));
+				background: linear-gradient(180deg, var(--card, rgba(255,255,255,0.08)), var(--card-2, rgba(255,255,255,0.045)));
 				border: 1px solid var(--card-border, rgba(255,255,255,0.14));
 				border-radius: 14px;
 				box-shadow: var(--shadow, 0 38px 110px rgba(0, 0, 0, 0.62));
+				backdrop-filter: blur(12px);
 				padding: 12px 14px;
+				position: relative;
+				overflow: hidden;
 				opacity: 0;
 				transform: translateY(8px);
 				transition: opacity 140ms ease, transform 140ms ease;
+			}
+
+			.share-toast__card::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				border-radius: 14px;
+				pointer-events: none;
+				box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 			}
 
 			.share-toast__card.is-visible {
@@ -37,7 +49,8 @@
 
 			.share-toast__text {
 				font-size: 13px;
-				opacity: 0.95;
+				opacity: 0.98;
+				font-weight: 600;
 			}
 
 			.share-popup__backdrop {
