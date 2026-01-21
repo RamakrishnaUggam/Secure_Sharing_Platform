@@ -1325,6 +1325,16 @@
 				}
 
 				function resolveApiBase() {
+					// When the page is opened directly from disk (file://), there is no host to infer,
+					// but we still want local development to work.
+					try {
+						if (String(window.location.protocol || "").toLowerCase() === "file:") {
+							return "http://localhost:3001";
+						}
+					} catch {
+						// ignore
+					}
+
 					try {
 						const url = new URL(window.location.href);
 						const fromQuery = url.searchParams.get("apiBase") || url.searchParams.get("api");
@@ -2147,7 +2157,10 @@
 					sharedListEl.innerHTML = "";
 					try {
 						const incomingRes = await apiFetch("/api/files/shared/with-me");
-						if (!incomingRes.ok) throw new Error("Failed to load shared files");
+						if (!incomingRes.ok) {
+							const j = await incomingRes.json().catch(() => null);
+							throw new Error(j?.error || j?.message || `Failed to load shared files (${incomingRes.status})`);
+						}
 						const incoming = await incomingRes.json();
 
 						const messages = [];
@@ -2266,12 +2279,14 @@
 							row.appendChild(actions);
 							sharedListEl.appendChild(row);
 						}
-					} catch {
+					} catch (e) {
 						receivedItemsCache = [];
 						renderReceivedBulkbar([]);
+						const msg = String(e?.message || "Backend not available.").trim();
+						if (msg) setMessage(msg);
 						const empty = document.createElement("div");
 						empty.className = "upload__meta";
-						empty.textContent = "Backend not available.";
+						empty.textContent = msg || "Backend not available.";
 						sharedListEl.appendChild(empty);
 					}
 				}
@@ -2287,7 +2302,10 @@
 					listEl.innerHTML = "";
 					try {
 						const res = await apiFetch("/api/files");
-						if (!res.ok) throw new Error("Failed to load files");
+						if (!res.ok) {
+							const j = await res.json().catch(() => null);
+							throw new Error(j?.error || j?.message || `Failed to load files (${res.status})`);
+						}
 						const items = await res.json();
 						uploadedItemsCache = Array.isArray(items) ? items : [];
 						clearSelectionForMissing(new Set(uploadedItemsCache.map((it) => String(it.id))), selectedUploadedIds);
@@ -2526,7 +2544,7 @@
 						renderUploadedBulkbar([]);
 						const empty = document.createElement("div");
 						empty.className = "upload__meta";
-						empty.textContent = "Backend not available.";
+						empty.textContent = String(msg || "Backend not available.");
 						listEl.appendChild(empty);
 					}
 				}

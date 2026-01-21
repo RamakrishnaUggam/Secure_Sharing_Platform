@@ -14,6 +14,9 @@ import { ShareRecord } from "./models/ShareRecord.js";
 
 const app = express();
 
+let dbReady = false;
+let dbLastError = null;
+
 app.use(express.json({ limit: "1mb" }));
 
 app.use(
@@ -65,14 +68,62 @@ app.get("/", (_req, res) => {
 	});
 });
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req, res) =>
+	res.json({
+		ok: true,
+		db: {
+			ok: dbReady,
+			lastError: dbLastError
+		}
+	})
+);
 
 initFirebaseAdmin(config.firebaseServiceAccountJson);
-await connectDb(config.mongoUri);
+
+async function connectDbWithRetry() {
+	let delayMs = 1000;
+	// Keep retrying: this makes local development resilient when the DB is sleeping,
+	// DNS is temporarily blocked, or the network comes up after the server.
+	// eslint-disable-next-line no-constant-condition
+	while (true) {
+		try {
+			await connectDb(config.mongoUri);
+			dbReady = true;
+			dbLastError = null;
+			// eslint-disable-next-line no-console
+			console.log("MongoDB connected");
+			return;
+		} catch (e) {
+			dbReady = false;
+			dbLastError = {
+				message: String(e?.message || e),
+				code: String(e?.code || "")
+			};
+			// eslint-disable-next-line no-console
+			console.error("MongoDB connection failed; retrying...", dbLastError);
+			await new Promise((r) => setTimeout(r, delayMs));
+			delayMs = Math.min(Math.floor(delayMs * 1.8), 30000);
+		}
+	}
+}
+
+void connectDbWithRetry();
 
 app.get("/api/me", requireAuth(), (req, res) => {
 	res.json({ uid: req.user.uid, email: req.user.email });
 });
+
+function requireDbReady() {
+	return function (_req, res, next) {
+		if (dbReady) return next();
+		return res.status(503).json({
+			error: "Database unavailable",
+			details: dbLastError,
+			hint:
+				"Check MONGODB_URI and network/DNS. For mongodb+srv URIs, SRV DNS lookups must be allowed on your network."
+		});
+	};
+}
 
 function normalizeEmail(value) {
 	return String(value || "")
@@ -100,6 +151,15 @@ function resolveStoragePath(record) {
 
 // Delete account: removes user files, shares, stored file bytes, and Firebase Auth user.
 app.delete("/api/account", requireAuth(), async (req, res) => {
+	if (!dbReady) {
+		return res.status(503).json({
+			error: "Database unavailable",
+			details: dbLastError,
+			hint:
+				"Check MONGODB_URI and network/DNS. For mongodb+srv URIs, SRV DNS lookups must be allowed on your network."
+		});
+	}
+
 	const uid = String(req.user?.uid || "");
 	if (!uid) return res.status(400).json({ error: "Missing uid" });
 	const email = normalizeEmail(req.user?.email);
@@ -149,7 +209,7 @@ app.delete("/api/account", requireAuth(), async (req, res) => {
 	res.json({ ok: true });
 });
 
-app.use("/api/files", filesRouter());
+app.use("/api/files", requireDbReady(), filesRouter());
 
 app.use((err, _req, res, _next) => {
 	// eslint-disable-next-line no-console
