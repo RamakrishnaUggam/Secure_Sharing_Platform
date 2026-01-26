@@ -6,10 +6,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import admin from "firebase-admin";
 
-import { requireAuth } from "./auth.js";
+import { requireAuth, isFirebaseAdminConfigured } from "./auth.js";
 import { config } from "./config.js";
 import { FileRecord } from "./models/FileRecord.js";
 import { ShareRecord } from "./models/ShareRecord.js";
+import { Group } from "./models/Group.js";
+import { AuditLog } from "./models/AuditLog.js";
 import { getMasterKey, wrapDataKey, unwrapDataKey } from "./cryptoBox.js";
 
 const upload = multer({
@@ -82,6 +84,41 @@ function normalizeEmail(value) {
 		.toLowerCase();
 }
 
+function shareIsActive(share) {
+	if (!share) return false;
+	if (share.revokedAt) return false;
+	if (share.expiresAt) {
+		try {
+			if (new Date(share.expiresAt).getTime() <= Date.now()) return false;
+		} catch {
+			// ignore
+		}
+	}
+	return true;
+}
+
+function canDownloadFromShare(share) {
+	const perm = String(share?.permission || "download").toLowerCase();
+	return perm === "download";
+}
+
+async function writeAudit(req, { action, targetType, targetId, meta }) {
+	try {
+		await AuditLog.create({
+			actorUid: String(req.user?.uid || "") || undefined,
+			actorEmail: normalizeEmail(req.user?.email) || undefined,
+			action: String(action || ""),
+			targetType: String(targetType || ""),
+			targetId: targetId != null ? String(targetId) : undefined,
+			meta: meta || undefined,
+			ip: String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "") || undefined,
+			userAgent: String(req.headers["user-agent"] || "") || undefined
+		});
+	} catch {
+		// best effort
+	}
+}
+
 async function canAccessFile({ fileId, uid, email }) {
 	if (!fileId) return false;
 	if (!uid && !email) return false;
@@ -94,6 +131,8 @@ async function canAccessFile({ fileId, uid, email }) {
 	if (!norm) return { ok: false, record };
 	const share = await ShareRecord.findOne({ fileId: record._id, recipientEmail: norm }).lean();
 	if (!share) return { ok: false, record };
+	if (!shareIsActive(share)) return { ok: false, record };
+	if (!canDownloadFromShare(share)) return { ok: false, record };
 	return { ok: true, record };
 }
 
@@ -110,17 +149,52 @@ function encryptFileBufferToDisk({ buffer, outPath }) {
 export function filesRouter() {
 	const router = express.Router();
 	const auth = requireAuth();
-	const masterKey = getMasterKey(config.masterKeyHex);
 
-	// Receiver deletes a received share (removes from "Received").
+	let masterKey = null;
+	if (!config.masterKeyHex) {
+		router.use((_req, res) =>
+			res.status(500).json({
+				error: "Server not configured",
+				hint: "Set MASTER_KEY_HEX in server environment (.env)"
+			})
+		);
+		return router;
+	}
+
+	try {
+		masterKey = getMasterKey(config.masterKeyHex);
+	} catch (e) {
+		router.use((_req, res) =>
+			res.status(500).json({
+				error: "Invalid MASTER_KEY_HEX",
+				details: String(e?.message || e)
+			})
+		);
+		return router;
+	}
+
+	// Delete a share record.
+	// - Recipient can delete a received share (removes from "Received").
+	// - Sender/owner can delete (revoke) a sent share (removes access for the recipient).
 	router.delete("/shares/:shareId", auth, async (req, res) => {
 		const email = normalizeEmail(req.user.email);
-		if (!email) return res.status(400).json({ error: "No email on user" });
+		const uid = String(req.user.uid || "").trim();
+		if (!email && !uid) return res.status(400).json({ error: "No user identity" });
 		const shareId = String(req.params.shareId || "").trim();
 		if (!shareId) return res.status(400).json({ error: "Missing shareId" });
 
-		const share = await ShareRecord.findOne({ _id: shareId, recipientEmail: email });
+		const share = await ShareRecord.findById(shareId);
 		if (!share) return res.status(404).json({ error: "Not found" });
+
+		const recipientEmail = normalizeEmail(share.recipientEmail);
+		const senderEmail = normalizeEmail(share.senderEmail);
+		const allowed =
+			(email && recipientEmail && recipientEmail === email) ||
+			(email && senderEmail && senderEmail === email) ||
+			(uid && String(share.ownerUid || "") === uid) ||
+			(uid && String(share.createdByUid || "") === uid);
+		if (!allowed) return res.status(404).json({ error: "Not found" });
+
 		const fileId = share.fileId;
 		await share.deleteOne();
 
@@ -182,6 +256,7 @@ export function filesRouter() {
 
 		const out = [];
 		for (const share of shares) {
+			if (!shareIsActive(share)) continue;
 			const f = fileById.get(String(share.fileId));
 			if (!f) continue;
 			out.push({
@@ -189,6 +264,11 @@ export function filesRouter() {
 				id: String(f._id),
 				ownerUid: f.ownerUid,
 				senderEmail: share.senderEmail || null,
+				permission: share.permission || "download",
+				comment: String(share.comment || ""),
+				sourceType: share.sourceType || "direct",
+				groupId: share.groupId ? String(share.groupId) : null,
+				expiresAt: share.expiresAt || null,
 				encryptionMode: f.encryptionMode || "server",
 				clientIvB64: f.clientIvB64 || null,
 				integrityOk: computeIntegrityOk(f),
@@ -215,6 +295,7 @@ export function filesRouter() {
 
 		const out = [];
 		for (const share of shares) {
+			if (!shareIsActive(share)) continue;
 			const f = fileById.get(String(share.fileId));
 			if (!f) continue;
 			// Only expose records for files the user still owns and hasn't deleted.
@@ -225,6 +306,11 @@ export function filesRouter() {
 				id: String(f._id),
 				recipientEmail: share.recipientEmail,
 				senderEmail: share.senderEmail || normalizeEmail(req.user.email) || null,
+				permission: share.permission || "download",
+				comment: String(share.comment || ""),
+				sourceType: share.sourceType || "direct",
+				groupId: share.groupId ? String(share.groupId) : null,
+				expiresAt: share.expiresAt || null,
 				encryptionMode: f.encryptionMode || "server",
 				clientIvB64: f.clientIvB64 || null,
 				integrityOk: computeIntegrityOk(f),
@@ -246,19 +332,29 @@ export function filesRouter() {
 		if (!recipientEmail) return res.status(400).json({ error: "Missing recipientEmail" });
 		if (!recipientEmail.includes("@")) return res.status(400).json({ error: "Invalid recipientEmail" });
 		const senderEmail = normalizeEmail(req.user.email);
+		const comment = String(req.body?.comment || "").trim().slice(0, 500);
 
 		// Only allow sharing to a real Firebase Auth user with a verified email.
-		try {
-			const recipientUser = await admin.auth().getUserByEmail(recipientEmail);
-			if (!recipientUser.emailVerified) {
-				return res.status(400).json({ error: "Recipient email is not verified" });
+		// In dev, if Firebase Admin credentials aren't configured, skip this check so the UI remains usable.
+		const isDev = String(process.env.NODE_ENV || "").toLowerCase() !== "production";
+		if (isFirebaseAdminConfigured()) {
+			try {
+				const recipientUser = await admin.auth().getUserByEmail(recipientEmail);
+				if (!recipientUser.emailVerified) {
+					return res.status(400).json({ error: "Recipient email is not verified" });
+				}
+			} catch (e) {
+				const code = String(e?.code || e?.errorInfo?.code || "");
+				if (code === "auth/user-not-found") {
+					return res.status(400).json({ error: "Recipient email is not registered" });
+				}
+				throw e;
 			}
-		} catch (e) {
-			const code = String(e?.code || e?.errorInfo?.code || "");
-			if (code === "auth/user-not-found") {
-				return res.status(400).json({ error: "Recipient email is not registered" });
-			}
-			throw e;
+		} else if (!isDev) {
+			return res.status(500).json({
+				error: "Firebase Admin credentials not configured",
+				hint: "Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON"
+			});
 		}
 
 		const record = await FileRecord.findOne({ _id: req.params.id, ownerUid: req.user.uid }).lean();
@@ -270,7 +366,16 @@ export function filesRouter() {
 				ownerUid: record.ownerUid,
 				senderEmail: senderEmail || undefined,
 				recipientEmail,
-				createdByUid: req.user.uid
+				createdByUid: req.user.uid,
+				sourceType: "direct",
+				permission: "download",
+				comment
+			});
+			void writeAudit(req, {
+				action: "file.share.direct",
+				targetType: "file",
+				targetId: String(record._id),
+				meta: { recipientEmail, commentLength: comment ? comment.length : 0 }
 			});
 			return res.status(201).json({ ok: true, shareId: String(share._id) });
 		} catch (e) {
@@ -278,6 +383,99 @@ export function filesRouter() {
 			if (String(e?.code || "") === "11000") return res.json({ ok: true, alreadyShared: true });
 			throw e;
 		}
+	});
+
+	// Share a file with all members of a group.
+	router.post("/:id/share-group", auth, async (req, res) => {
+		const groupId = String(req.body?.groupId || "").trim();
+		if (!groupId) return res.status(400).json({ error: "Missing groupId" });
+		const requestedPermission = String(req.body?.permission || "").toLowerCase();
+		const senderEmail = normalizeEmail(req.user.email);
+		const comment = String(req.body?.comment || "").trim().slice(0, 500);
+
+		const record = await FileRecord.findOne({ _id: req.params.id, ownerUid: req.user.uid }).lean();
+		if (!record) return res.status(404).json({ error: "Not found" });
+
+		const group = await Group.findById(groupId).lean();
+		if (!group) return res.status(404).json({ error: "Group not found" });
+		if (group.isDisabled) return res.status(403).json({ error: "Group disabled" });
+		if (group.expiresAt && new Date(group.expiresAt).getTime() <= Date.now()) {
+			return res.status(403).json({ error: "Group expired" });
+		}
+		const myMember = (group.members || []).find((m) => String(m.uid) === String(req.user.uid));
+		if (!myMember) return res.status(403).json({ error: "Not a group member" });
+		const myRole = String(myMember.role || "viewer");
+		if (!["owner", "admin", "editor", "member"].includes(myRole)) {
+			return res.status(403).json({ error: "Insufficient group role" });
+		}
+
+		const permission = ["view_only", "download"].includes(requestedPermission)
+			? requestedPermission
+			: String(group.defaultPermission || "view_only");
+
+		const members = Array.isArray(group.members) ? group.members : [];
+		const recipients = members
+			.map((m) => ({ uid: String(m.uid || ""), email: normalizeEmail(m.email) }))
+			.filter((m) => m.uid && m.email && m.uid !== String(req.user.uid));
+
+		let created = 0;
+		let alreadyShared = 0;
+		let skipped = 0;
+		const errors = [];
+
+		for (const r of recipients) {
+			try {
+				// Validate user still exists and is verified.
+				// In dev, allow shares even if Firebase Admin isn't configured.
+				const isDev = String(process.env.NODE_ENV || "").toLowerCase() !== "production";
+				if (isFirebaseAdminConfigured()) {
+					const u = await admin.auth().getUserByEmail(r.email);
+					if (!u?.emailVerified) {
+						skipped += 1;
+						continue;
+					}
+				} else if (!isDev) {
+					throw new Error("Firebase Admin credentials not configured");
+				}
+
+				await ShareRecord.create({
+					fileId: record._id,
+					ownerUid: record.ownerUid,
+					senderEmail: senderEmail || undefined,
+					recipientEmail: r.email,
+					createdByUid: req.user.uid,
+					sourceType: "group",
+					groupId: group._id,
+					permission,
+					comment,
+					expiresAt: group.expiresAt || null
+				});
+				created += 1;
+			} catch (e) {
+				if (String(e?.code || "") === "11000") {
+					alreadyShared += 1;
+					continue;
+				}
+				errors.push({ email: r.email, error: String(e?.message || e) });
+			}
+		}
+
+		void writeAudit(req, {
+			action: "file.share.group",
+			targetType: "file",
+			targetId: String(record._id),
+			meta: {
+				groupId: String(group._id),
+				permission,
+				commentLength: comment ? comment.length : 0,
+				created,
+				alreadyShared,
+				skipped,
+				errorsCount: errors.length
+			}
+		});
+
+		return res.json({ ok: true, created, alreadyShared, skipped, errors });
 	});
 
 	router.post("/", auth, upload.single("file"), async (req, res) => {
@@ -358,6 +556,7 @@ export function filesRouter() {
 		const access = await canAccessFile({ fileId: req.params.id, uid: req.user.uid, email: req.user.email });
 		if (!access.record) return res.status(404).json({ error: "Not found" });
 		if (!access.ok) return res.status(403).json({ error: "Forbidden" });
+		void writeAudit(req, { action: "file.download", targetType: "file", targetId: String(req.params.id), meta: {} });
 		const record = access.record;
 		const p = resolveStoragePath(record);
 		if (!p || !fs.existsSync(p)) return res.status(404).json({ error: "Stored file missing" });

@@ -7,8 +7,11 @@ import admin from "firebase-admin";
 
 import { config } from "./config.js";
 import { connectDb } from "./db.js";
-import { initFirebaseAdmin, requireAuth } from "./auth.js";
+import { initFirebaseAdmin, requireAuth, isFirebaseAdminConfigured } from "./auth.js";
 import { filesRouter } from "./routes.files.js";
+import { adminRouter } from "./routes.admin.js";
+import { groupsRouter } from "./routes.groups.js";
+import { metricsMiddleware, getMetricsSnapshot } from "./metrics.js";
 import { FileRecord } from "./models/FileRecord.js";
 import { ShareRecord } from "./models/ShareRecord.js";
 
@@ -18,6 +21,8 @@ let dbReady = false;
 let dbLastError = null;
 
 app.use(express.json({ limit: "1mb" }));
+
+app.use(metricsMiddleware());
 
 app.use(
 	cors({
@@ -71,16 +76,29 @@ app.get("/", (_req, res) => {
 app.get("/health", (_req, res) =>
 	res.json({
 		ok: true,
+		config: {
+			missing: config.missing
+		},
 		db: {
 			ok: dbReady,
 			lastError: dbLastError
-		}
+		},
+		traffic: getMetricsSnapshot()
 	})
 );
 
 initFirebaseAdmin(config.firebaseServiceAccountJson);
 
 async function connectDbWithRetry() {
+	if (!config.mongoUri) {
+		dbReady = false;
+		dbLastError = {
+			message: "Missing required env var: MONGODB_URI",
+			code: "MISSING_ENV"
+		};
+		return;
+	}
+
 	let delayMs = 1000;
 	// Keep retrying: this makes local development resilient when the DB is sleeping,
 	// DNS is temporarily blocked, or the network comes up after the server.
@@ -112,6 +130,8 @@ void connectDbWithRetry();
 app.get("/api/me", requireAuth(), (req, res) => {
 	res.json({ uid: req.user.uid, email: req.user.email });
 });
+
+app.use("/api/groups", groupsRouter());
 
 function requireDbReady() {
 	return function (_req, res, next) {
@@ -199,17 +219,27 @@ app.delete("/api/account", requireAuth(), async (req, res) => {
 	}
 
 	// 4) Delete Firebase Auth user
-	try {
-		await admin.auth().deleteUser(uid);
-	} catch (e) {
-		const code = String(e?.code || e?.errorInfo?.code || "");
-		if (code !== "auth/user-not-found") throw e;
+	const isDev = String(process.env.NODE_ENV || "").toLowerCase() !== "production";
+	if (isFirebaseAdminConfigured()) {
+		try {
+			await admin.auth().deleteUser(uid);
+		} catch (e) {
+			const code = String(e?.code || e?.errorInfo?.code || "");
+			if (code !== "auth/user-not-found") throw e;
+		}
+	} else if (!isDev) {
+		return res.status(500).json({
+			error: "Firebase Admin credentials not configured",
+			hint: "Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON"
+		});
 	}
 
 	res.json({ ok: true });
 });
 
 app.use("/api/files", requireDbReady(), filesRouter());
+
+app.use("/api/admin", adminRouter({ requireDbReady: requireDbReady() }));
 
 app.use((err, _req, res, _next) => {
 	// eslint-disable-next-line no-console

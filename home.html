@@ -21,6 +21,12 @@
 			rel="stylesheet"
 		/>
 		<style>
+			/* Ensure the HTML [hidden] attribute always hides elements, even if other
+			   CSS rules (e.g., display:flex) would otherwise keep them visible. */
+			[hidden] {
+				display: none !important;
+			}
+
 			:root {
 				--bg-1: #05060b;
 				--bg-2: #0a1222;
@@ -592,6 +598,50 @@
 				font-size: 12px;
 			}
 
+			.tabbar {
+				display: inline-flex;
+				gap: 10px;
+				align-items: center;
+				flex-wrap: wrap;
+				padding: 10px 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			html[data-theme="light"] .tabbar {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.tabbar__btn {
+				appearance: none;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(255, 255, 255, 0.06);
+				color: var(--text);
+				padding: 8px 10px;
+				border-radius: 12px;
+				font-size: 12px;
+				font-weight: 600;
+				cursor: pointer;
+			}
+
+			.tabbar__btn:hover {
+				background: rgba(255, 255, 255, 0.08);
+				border-color: rgba(255, 255, 255, 0.18);
+			}
+
+			html[data-theme="light"] .tabbar__btn {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(255, 255, 255, 0.70);
+				color: rgba(15, 23, 42, 0.92);
+			}
+
+			.tabbar__btn.is-active {
+				box-shadow: 0 0 0 4px var(--focus);
+				border-color: rgba(34, 211, 238, 0.40);
+			}
+
 			.chat {
 				display: flex;
 				flex-direction: column;
@@ -600,11 +650,15 @@
 
 			.messenger {
 				display: grid;
-				grid-template-columns: 1.15fr 1fr;
+				grid-template-columns: 1.15fr 1fr 0.9fr;
 				gap: 0;
 				align-items: stretch;
 				margin-top: 12px;
 				height: min(72vh, 720px);
+			}
+
+			.messenger.is-single {
+				grid-template-columns: 1fr;
 			}
 
 			@media (max-width: 980px) {
@@ -654,6 +708,160 @@
 				overflow: auto;
 				min-height: 0;
 				padding-right: 4px;
+			}
+
+			/* Chats: separate scrolling for user list + thread (desktop). */
+			@media (min-width: 981px) {
+				#paneChats .messenger__scroll {
+					overflow: hidden;
+				}
+
+				#paneChats .chatui {
+					height: 100%;
+				}
+
+				#paneChats .chatui__users,
+				#paneChats .chatui__thread {
+					overflow: auto;
+					overscroll-behavior: contain;
+				}
+			}
+
+			/* Groups: list + options panel like Chats. */
+			.groupui {
+				display: grid;
+				grid-template-columns: 0.95fr 1.25fr;
+				gap: 12px;
+				min-height: 0;
+			}
+
+			@media (max-width: 980px) {
+				.groupui {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			.groupui__list,
+			.groupui__right,
+			.groupui__thread {
+				min-height: 0;
+			}
+
+			.groupui__right {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+			}
+
+			.groupui__thread {
+				flex: 1;
+			}
+
+			.groupopts {
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+				padding: 10px 12px;
+				max-height: 300px;
+				overflow: auto;
+				overscroll-behavior: contain;
+			}
+
+			html[data-theme="light"] .groupopts {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.groupopts__hdr {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12px;
+				margin-bottom: 8px;
+			}
+
+			.groupopts__hdrActions {
+				display: inline-flex;
+				gap: 10px;
+				align-items: center;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+			}
+
+			.groupopts__grid {
+				display: grid;
+				grid-template-columns: 1fr;
+				gap: 10px;
+			}
+
+			@media (min-width: 981px) {
+				.groupopts__grid {
+					grid-template-columns: 1fr 1fr;
+				}
+				.groupopts__grid .span2 {
+					grid-column: span 2;
+				}
+			}
+
+			.groupopts__label {
+				font-size: 12px;
+				opacity: 0.9;
+				margin-bottom: 6px;
+			}
+
+			.groupopts__input {
+				width: 100%;
+				border-radius: 10px;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				background: rgba(0, 0, 0, 0.18);
+				color: inherit;
+				padding: 10px 12px;
+				outline: none;
+			}
+
+			html[data-theme="light"] .groupopts__input {
+				border-color: rgba(15, 23, 42, 0.18);
+				background: rgba(255, 255, 255, 0.85);
+			}
+
+			.groupopts__input:disabled {
+				opacity: 0.65;
+			}
+
+			/* Groups: separate scrolling for list + thread (desktop). */
+			@media (min-width: 981px) {
+				#paneGroups .messenger__scroll {
+					overflow: hidden;
+				}
+
+				#paneGroups .groupui {
+					height: 100%;
+				}
+
+				#paneGroups .groupui__list,
+				#paneGroups .groupui__thread {
+					overflow: auto;
+					overscroll-behavior: contain;
+				}
+			}
+
+			/* Groups: make list scrollable on small screens too (smaller container). */
+			@media (max-width: 980px) {
+				#paneGroups .groupui__list {
+					max-height: 320px;
+					overflow: auto;
+					overscroll-behavior: contain;
+				}
+			}
+
+			.groups__divider {
+				height: 1px;
+				background: rgba(255, 255, 255, 0.10);
+				margin: 12px 0;
+			}
+
+			html[data-theme="light"] .groups__divider {
+				background: rgba(15, 23, 42, 0.10);
 			}
 
 			.chat__composer {
@@ -706,6 +914,234 @@
 
 			.chat__bubble.is-selected {
 				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.chatui {
+				display: grid;
+				grid-template-columns: 0.95fr 1.25fr;
+				gap: 12px;
+				min-height: 0;
+			}
+
+			@media (max-width: 980px) {
+				.chatui {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			.chatui__users,
+			.chatui__thread {
+				overflow: auto;
+				min-height: 0;
+				padding-right: 4px;
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+			}
+
+			/* Chat selection highlighting (dynamic line around user + chat) */
+			.chatui__users .upload__item {
+				position: relative;
+			}
+
+			.chatui__users .upload__item.is-selected {
+				box-shadow: none;
+				border-color: rgba(255, 255, 255, 0.22);
+			}
+
+			.chatui__users .upload__item.is-selected::before {
+				content: "";
+				position: absolute;
+				left: -1px;
+				top: 10px;
+				bottom: 10px;
+				width: 4px;
+				border-radius: 999px;
+				background: var(--focus);
+			}
+
+			.chatui__thread.is-active {
+				border-radius: 14px;
+				box-shadow: 0 0 0 4px var(--focus);
+				padding: 12px;
+			}
+
+			/* Message differentiation inside selected chat */
+			.chatui__thread .chat__bubble.chatmsg--in {
+				border-left: 4px solid rgba(34, 197, 94, 0.85);
+			}
+			.chatui__thread .chat__bubble.chatmsg--out {
+				border-left: 4px solid rgba(59, 130, 246, 0.85);
+			}
+			.chatui__thread .chat__bubble.chatmsg--in,
+			.chatui__thread .chat__bubble.chatmsg--out {
+				padding-left: 10px;
+			}
+
+			.chatui__topbar {
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				justify-content: space-between;
+				flex-wrap: wrap;
+				padding: 10px 12px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+				.chatcomposer {
+					display: flex;
+					gap: 10px;
+					align-items: center;
+					padding: 10px 12px;
+					border-radius: 14px;
+					border: 1px solid rgba(255, 255, 255, 0.12);
+					background: rgba(255, 255, 255, 0.04);
+					margin-top: 10px;
+				}
+
+				html[data-theme="light"] .chatcomposer {
+					border-color: rgba(15, 23, 42, 0.12);
+					background: rgba(15, 23, 42, 0.03);
+				}
+
+				.chatcomposer__select {
+					padding: 10px 12px;
+					border-radius: 12px;
+					border: 1px solid rgba(255, 255, 255, 0.14);
+					background: rgba(255, 255, 255, 0.06);
+					color: inherit;
+					outline: none;
+					max-width: 220px;
+				}
+
+				html[data-theme="light"] .chatcomposer__select {
+					border-color: rgba(15, 23, 42, 0.12);
+					background: rgba(255, 255, 255, 0.8);
+				}
+
+				.chatcomposer__input {
+					flex: 1;
+					min-width: 140px;
+					padding: 10px 12px;
+					border-radius: 12px;
+					border: 1px solid rgba(255, 255, 255, 0.14);
+					background: rgba(255, 255, 255, 0.06);
+					color: inherit;
+					outline: none;
+				}
+
+				html[data-theme="light"] .chatcomposer__input {
+					border-color: rgba(15, 23, 42, 0.12);
+					background: rgba(255, 255, 255, 0.8);
+				}
+
+				.chatcomposer__input:focus,
+				.chatcomposer__select:focus {
+					box-shadow: 0 0 0 4px var(--focus, rgba(34, 211, 238, 0.26));
+				}
+
+					.filepicker {
+						position: relative;
+						max-width: 220px;
+						flex: 0 0 auto;
+					}
+
+					.filepicker__btn {
+						display: inline-flex;
+						align-items: center;
+						justify-content: space-between;
+						gap: 10px;
+						width: 220px;
+						cursor: pointer;
+						white-space: nowrap;
+						overflow: hidden;
+						text-overflow: ellipsis;
+					}
+
+					.filepicker__menu {
+						position: absolute;
+						left: 0;
+						top: calc(100% + 8px);
+						width: 260px;
+						max-width: min(74vw, 320px);
+						background: rgba(10, 18, 34, 0.92);
+						border: 1px solid rgba(255, 255, 255, 0.14);
+						border-radius: 14px;
+						box-shadow: var(--shadow);
+						backdrop-filter: blur(12px);
+						padding: 8px;
+						z-index: 60;
+					}
+
+					/* In chat/group composers near the bottom, open the picker upward so it stays visible inside scroll containers. */
+					#paneChats .filepicker__menu,
+					#paneGroups .filepicker__menu {
+						top: auto;
+						bottom: calc(100% + 8px);
+					}
+
+					html[data-theme="light"] .filepicker__menu {
+						background: rgba(255, 255, 255, 0.94);
+						border-color: rgba(15, 23, 42, 0.12);
+					}
+
+					.filepicker__item {
+						appearance: none;
+						-webkit-appearance: none;
+						font-family: inherit;
+						width: 100%;
+						text-align: left;
+						border: 1px solid rgba(255, 255, 255, 0.10);
+						background: rgba(255, 255, 255, 0.04);
+						color: var(--text);
+						border-radius: 12px;
+						padding: 10px 10px;
+						font-size: 13px;
+						cursor: pointer;
+					}
+
+					html[data-theme="light"] .filepicker__item {
+						border-color: rgba(15, 23, 42, 0.12);
+						background: rgba(15, 23, 42, 0.04);
+						color: rgba(15, 23, 42, 0.92);
+					}
+
+					.filepicker__item:hover {
+						background: rgba(255, 255, 255, 0.07);
+						border-color: rgba(255, 255, 255, 0.14);
+					}
+
+					.filepicker__item + .filepicker__item {
+						margin-top: 8px;
+					}
+
+					.filepicker__sub {
+						margin-top: 8px;
+						padding-left: 10px;
+						display: grid;
+						gap: 8px;
+						max-height: 220px;
+						overflow: auto;
+					}
+
+					.filepicker__sub .filepicker__item {
+						font-size: 12.5px;
+						padding: 9px 10px;
+					}
+
+				.chat__text {
+					font-size: 13px;
+					opacity: 0.95;
+					margin-top: 4px;
+					white-space: pre-wrap;
+					word-break: break-word;
+				}
+
+			html[data-theme="light"] .chatui__topbar {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
 			}
 
 			.bulkbar {
@@ -1049,7 +1485,7 @@
 				signOut,
 				reload,
 				setPersistence,
-				browserSessionPersistence,
+				browserLocalPersistence,
 				EmailAuthProvider,
 				reauthenticateWithCredential
 			} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
@@ -1068,7 +1504,7 @@
 			const auth = getAuth();
 			window.__auth = auth;
 			try {
-				await setPersistence(auth, browserSessionPersistence);
+				await setPersistence(auth, browserLocalPersistence);
 			} catch {
 				// ignore
 			}
@@ -1245,42 +1681,152 @@
 		<main id="top">
 			<section class="section" id="uploads">
 				<div class="container">
-					<h2 class="section__title">Upload / Download</h2>
-					<p class="section__desc">
-						Choose or drop files, then Upload. All files are encrypted in your browser (AES-GCM) and uploaded as ciphertext.
-						Downloads support encrypted save or decrypt-then-save.
-					</p>
+					<div id="uploadedHeader">
+						<h2 class="section__title">Upload / Download</h2>
+						<p class="section__desc">
+							Choose or drop files, then Upload. All files are encrypted in your browser (AES-GCM) and uploaded as ciphertext.
+							Downloads support encrypted save or decrypt-then-save.
+						</p>
+					</div>
 
 					<div class="panel upload__panel" aria-label="Upload container">
-						<div class="upload__actions" aria-label="Upload actions">
-							<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
-							<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
-							<input id="uploadInput" type="file" aria-label="Choose files to upload" multiple hidden />
-						</div>
+						<div id="uploadedControls">
+							<div class="upload__actions" aria-label="Upload actions">
+								<button class="btn" id="chooseFilesBtn" type="button">Choose files</button>
+								<button class="btn btn--primary" id="uploadBtn" type="button" disabled>Upload</button>
+								<input id="uploadInput" type="file" aria-label="Choose files to upload" multiple hidden />
+							</div>
 
-						<div id="selectedFiles" class="upload__message" style="display:none;" aria-label="Selected files"></div>
+							<div id="selectedFiles" class="upload__message" style="display:none;" aria-label="Selected files"></div>
 
-						<div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="Drop files here">
-							<div class="dropzone__title">Drop files here</div>
-							<div class="dropzone__hint">Files will be encrypted locally and uploaded securely.</div>
+							<div id="dropZone" class="dropzone" role="button" tabindex="0" aria-label="Drop files here">
+								<div class="dropzone__title">Drop files here</div>
+								<div class="dropzone__hint">Files will be encrypted locally and uploaded securely.</div>
+							</div>
 						</div>
 
 						<!-- Inline status removed; we use top toast popups instead -->
 
-						<div class="messenger" aria-label="Messenger">
-							<div class="messenger__pane" aria-label="Files pane">
+						<div class="tabbar" role="tablist" aria-label="Sections" style="margin-top: 12px;">
+							<button class="tabbar__btn is-active" id="tabUploadedBtn" type="button" role="tab" aria-selected="true">Uploaded</button>
+							<button class="tabbar__btn" id="tabChatsBtn" type="button" role="tab" aria-selected="false">Chats</button>
+							<button class="tabbar__btn" id="tabGroupsBtn" type="button" role="tab" aria-selected="false">Groups</button>
+						</div>
+
+						<div class="messenger is-single" id="messenger" aria-label="Messenger">
+							<div class="messenger__pane" id="paneUploaded" aria-label="Files pane">
 									<div class="upload__meta" style="margin-bottom: 6px;">Uploaded files</div>
 									<div class="bulkbar" id="uploadedBulkbar" hidden aria-label="Uploaded bulk actions"></div>
 								<div class="messenger__scroll">
 									<div id="uploadedList" class="upload__list" aria-label="Uploaded list"></div>
 								</div>
+								<div class="chatcomposer" aria-label="Quick share from uploaded">
+									<div class="filepicker" id="uploadedFilePickerWrap">
+										<button class="chatcomposer__select filepicker__btn" id="uploadedFilePickerBtn" type="button" aria-haspopup="menu" aria-expanded="false">Select file…</button>
+										<div class="filepicker__menu" id="uploadedFilePickerMenu" role="menu" hidden>
+											<button class="filepicker__item" id="uploadedPickerDeviceBtn" type="button">Choose from device…</button>
+											<button class="filepicker__item" id="uploadedPickerUploadedToggle" type="button" aria-expanded="false">From uploaded ▸</button>
+											<div class="filepicker__sub" id="uploadedPickerUploadedList" hidden></div>
+										</div>
+									</div>
+									<input id="uploadedDeviceFileInput" type="file" hidden />
+									<input class="chatcomposer__input" id="uploadedMessageInput" type="text" placeholder="Type a message…" aria-label="Message" />
+									<button class="btn btn--primary btn--sm" id="uploadedSendBtn" type="button" disabled>Send</button>
+								</div>
 							</div>
 
-							<div class="messenger__pane" aria-label="Messages pane">
-									<div class="upload__meta" style="margin-bottom: 6px;">Received</div>
-									<div class="bulkbar" id="receivedBulkbar" hidden aria-label="Received bulk actions"></div>
+							<div class="messenger__pane" id="paneChats" aria-label="Messages pane" hidden>
+								<div class="upload__metaRow" style="justify-content: space-between; gap: 12px;">
+									<div class="upload__meta" style="margin-bottom: 6px;">Chats</div>
+									<button class="btn btn--sm" id="refreshChatsBtn" type="button">Refresh</button>
+								</div>
+								<div class="chatui__topbar" aria-label="Chat header" hidden>
+									<div style="min-width: 0;">
+										<div class="upload__name" id="chatHeaderName">Select a user</div>
+										<div class="upload__meta" id="chatHeaderMeta"></div>
+									</div>
+									<div style="display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+										<button class="btn btn--primary btn--sm" id="chatShareBtn" type="button" disabled>Share</button>
+									</div>
+								</div>
 								<div class="messenger__scroll">
-									<div id="sharedWithMeList" class="upload__list chat" aria-label="Messages list"></div>
+									<div class="chatui" aria-label="Chat UI">
+										<div id="chatUsersList" class="chatui__users" aria-label="Shared users"></div>
+										<div id="chatThreadList" class="chatui__thread" aria-label="Chat thread"></div>
+									</div>
+								</div>
+								<div class="chatcomposer" aria-label="Chat input">
+									<div class="filepicker" id="chatFilePickerWrap">
+										<button class="chatcomposer__select filepicker__btn" id="chatFilePickerBtn" type="button" aria-haspopup="menu" aria-expanded="false">Select file…</button>
+										<div class="filepicker__menu" id="chatFilePickerMenu" role="menu" hidden>
+											<button class="filepicker__item" id="chatPickerDeviceBtn" type="button">Choose from device…</button>
+											<button class="filepicker__item" id="chatPickerUploadedToggle" type="button" aria-expanded="false">From uploaded ▸</button>
+											<div class="filepicker__sub" id="chatPickerUploadedList" hidden></div>
+										</div>
+									</div>
+									<input id="chatDeviceFileInput" type="file" hidden />
+									<input class="chatcomposer__input" id="chatMessageInput" type="text" placeholder="Type a message…" aria-label="Message" />
+									<button class="btn btn--primary btn--sm" id="chatSendBtn" type="button" disabled>Send</button>
+								</div>
+							</div>
+
+							<div class="messenger__pane" id="paneGroups" aria-label="Groups pane" hidden>
+								<div class="upload__metaRow" style="justify-content: space-between; gap: 12px;">
+									<div class="upload__meta" style="margin-bottom: 6px;">Groups</div>
+									<div style="display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+										<button class="btn btn--sm" id="refreshGroupsBtn" type="button">Refresh</button>
+										<button class="btn btn--primary btn--sm" id="createGroupBtn" type="button">Create group</button>
+									</div>
+								</div>
+								<div class="messenger__scroll">
+									<div class="groupui" aria-label="Groups UI">
+										<div id="groupsList" class="upload__list groupui__list" aria-label="Groups list"></div>
+										<div class="groupui__right" id="groupRightPane" aria-label="Group thread" hidden>
+											<div class="chatui__topbar" id="groupTopbar" aria-label="Group header" hidden>
+												<div style="min-width: 0;">
+													<div class="upload__name" id="groupHeaderName">Select a group</div>
+													<div class="upload__meta" id="groupHeaderMeta"></div>
+												</div>
+												<div style="display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+													<button class="iconbtn" id="groupOptionsBtn" type="button" aria-label="Options" title="Options" disabled>
+														<span aria-hidden="true">⚙</span>
+													</button>
+													<button class="btn btn--sm" id="refreshGroupThreadBtn" type="button" disabled>Refresh</button>
+												</div>
+											</div>
+
+											<div class="groupopts" id="groupOptionsPanel" hidden aria-label="Group options">
+												<div class="groupopts__hdr">
+													<div class="upload__meta">Options</div>
+													<div class="groupopts__hdrActions">
+														<button class="btn btn--primary btn--sm" id="groupOptionsSaveBtn" type="button" hidden disabled>Save</button>
+														<button class="btn btn--sm" id="groupOptionsCloseBtn" type="button">Close</button>
+													</div>
+												</div>
+												<div id="groupDetails" class="upload__list" aria-label="Group options fields"></div>
+											</div>
+
+											<div id="groupThreadList" class="chatui__thread groupui__thread" aria-label="Group shared files"></div>
+
+											<div class="chatcomposer" aria-label="Group share input">
+												<div class="filepicker" id="groupFilePickerWrap">
+													<button class="chatcomposer__select filepicker__btn" id="groupFilePickerBtn" type="button" aria-haspopup="menu" aria-expanded="false">Select file…</button>
+													<div class="filepicker__menu" id="groupFilePickerMenu" role="menu" hidden>
+														<button class="filepicker__item" id="groupPickerDeviceBtn" type="button">Choose from device…</button>
+														<button class="filepicker__item" id="groupPickerUploadedToggle" type="button" aria-expanded="false">From uploaded ▸</button>
+														<div class="filepicker__sub" id="groupPickerUploadedList" hidden></div>
+													</div>
+												</div>
+												<input id="groupDeviceFileInput" type="file" hidden />
+												<select class="chatcomposer__select" id="groupPermissionSelect" aria-label="Permission">
+													<option value="view_only">View-only</option>
+													<option value="download" selected>Download</option>
+												</select>
+												<input class="chatcomposer__input" id="groupMessageInput" type="text" placeholder="Type a message…" aria-label="Message" />
+												<button class="btn btn--primary btn--sm" id="groupSendBtn" type="button" disabled>Send</button>
+											</div>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -1289,6 +1835,71 @@
 			</section>
 		</main>
 		<script src="share-popup.js"></script>
+		<script>
+			// Lightweight tab switcher: runs independently from the main app script.
+			(function () {
+				const STORAGE_KEY = "homeActiveSection";
+
+				function setTab(btn, active) {
+					if (!btn) return;
+					btn.classList.toggle("is-active", !!active);
+					btn.setAttribute("aria-selected", active ? "true" : "false");
+				}
+
+				function apply(section) {
+					const key = String(section || "uploaded").toLowerCase();
+					const showUploaded = key === "uploaded";
+					const showChats = key === "chats";
+					const showGroups = key === "groups";
+
+					const paneUploadedEl = document.getElementById("paneUploaded");
+					const paneChatsEl = document.getElementById("paneChats");
+					const paneGroupsEl = document.getElementById("paneGroups");
+					const uploadedHeaderEl = document.getElementById("uploadedHeader");
+					const uploadedControlsEl = document.getElementById("uploadedControls");
+
+					if (paneUploadedEl) paneUploadedEl.hidden = !showUploaded;
+					if (paneChatsEl) paneChatsEl.hidden = !showChats;
+					if (paneGroupsEl) paneGroupsEl.hidden = !showGroups;
+					if (uploadedHeaderEl) uploadedHeaderEl.hidden = !showUploaded;
+					if (uploadedControlsEl) uploadedControlsEl.hidden = !showUploaded;
+
+					setTab(document.getElementById("tabUploadedBtn"), showUploaded);
+					setTab(document.getElementById("tabChatsBtn"), showChats);
+					setTab(document.getElementById("tabGroupsBtn"), showGroups);
+
+					try {
+						localStorage.setItem(STORAGE_KEY, key);
+					} catch {
+						// ignore
+					}
+				}
+
+				function init() {
+					const tabUploaded = document.getElementById("tabUploadedBtn");
+					const tabChats = document.getElementById("tabChatsBtn");
+					const tabGroups = document.getElementById("tabGroupsBtn");
+
+					if (tabUploaded) tabUploaded.addEventListener("click", () => apply("uploaded"));
+					if (tabChats) tabChats.addEventListener("click", () => apply("chats"));
+					if (tabGroups) tabGroups.addEventListener("click", () => apply("groups"));
+
+					let initial = "uploaded";
+					try {
+						initial = localStorage.getItem(STORAGE_KEY) || initial;
+					} catch {
+						// ignore
+					}
+					apply(initial);
+				}
+
+				if (document.readyState === "loading") {
+					document.addEventListener("DOMContentLoaded", init);
+				} else {
+					init();
+				}
+			})();
+		</script>
 		<script>
 			(function () {
 				const button = document.getElementById("themeToggle");
@@ -1344,15 +1955,16 @@
 							return normalized;
 						}
 
+						// Local dev: prefer a stable, matching host. This prevents a stale apiBase
+						// in localStorage (e.g., localhost) from breaking when opening via 127.0.0.1.
+						if (location.hostname === "127.0.0.1") return "http://127.0.0.1:3001";
+						if (location.hostname === "localhost") return "http://localhost:3001";
+
 						const fromStorage = normalizeBaseUrl(localStorage.getItem("apiBase"));
 						if (fromStorage) return fromStorage;
 					} catch {
 						// ignore
 					}
-
-					// Local dev defaults
-					if (location.hostname === "127.0.0.1") return "http://127.0.0.1:3001";
-					if (location.hostname === "localhost") return "http://localhost:3001";
 
 					// GitHub Pages cannot proxy /api to your backend, so default to your hosted API.
 					if (String(location.hostname || "").toLowerCase().endsWith(".github.io")) {
@@ -1371,19 +1983,126 @@
 				const uploadPassphraseEl = null;
 				const dropZone = document.getElementById("dropZone");
 				const listEl = document.getElementById("uploadedList");
-				const sharedListEl = document.getElementById("sharedWithMeList");
+				const sharedListEl = null;
 				const uploadedBulkbarEl = document.getElementById("uploadedBulkbar");
-				const receivedBulkbarEl = document.getElementById("receivedBulkbar");
+				const receivedBulkbarEl = null;
+				const refreshChatsBtnEl = document.getElementById("refreshChatsBtn");
+				const chatUsersListEl = document.getElementById("chatUsersList");
+				const chatThreadListEl = document.getElementById("chatThreadList");
+				const chatHeaderNameEl = document.getElementById("chatHeaderName");
+				const chatHeaderMetaEl = document.getElementById("chatHeaderMeta");
+				const chatShareBtnEl = document.getElementById("chatShareBtn");
+				const chatFilePickerWrapEl = document.getElementById("chatFilePickerWrap");
+				const chatFilePickerBtnEl = document.getElementById("chatFilePickerBtn");
+				const chatFilePickerMenuEl = document.getElementById("chatFilePickerMenu");
+				const chatPickerDeviceBtnEl = document.getElementById("chatPickerDeviceBtn");
+				const chatPickerUploadedToggleEl = document.getElementById("chatPickerUploadedToggle");
+				const chatPickerUploadedListEl = document.getElementById("chatPickerUploadedList");
+				const chatDeviceFileInputEl = document.getElementById("chatDeviceFileInput");
+				const chatMessageInputEl = document.getElementById("chatMessageInput");
+				const chatSendBtnEl = document.getElementById("chatSendBtn");
+				const uploadedFilePickerWrapEl = document.getElementById("uploadedFilePickerWrap");
+				const uploadedFilePickerBtnEl = document.getElementById("uploadedFilePickerBtn");
+				const uploadedFilePickerMenuEl = document.getElementById("uploadedFilePickerMenu");
+				const uploadedPickerDeviceBtnEl = document.getElementById("uploadedPickerDeviceBtn");
+				const uploadedPickerUploadedToggleEl = document.getElementById("uploadedPickerUploadedToggle");
+				const uploadedPickerUploadedListEl = document.getElementById("uploadedPickerUploadedList");
+				const uploadedDeviceFileInputEl = document.getElementById("uploadedDeviceFileInput");
+				const uploadedMessageInputEl = document.getElementById("uploadedMessageInput");
+				const uploadedSendBtnEl = document.getElementById("uploadedSendBtn");
+				const groupsListEl = document.getElementById("groupsList");
+				const groupDetailsEl = document.getElementById("groupDetails");
+				const groupRightPaneEl = document.getElementById("groupRightPane");
+				const groupTopbarEl = document.getElementById("groupTopbar");
+				const groupHeaderNameEl = document.getElementById("groupHeaderName");
+				const groupHeaderMetaEl = document.getElementById("groupHeaderMeta");
+				const groupOptionsBtnEl = document.getElementById("groupOptionsBtn");
+				const refreshGroupThreadBtnEl = document.getElementById("refreshGroupThreadBtn");
+				const groupOptionsPanelEl = document.getElementById("groupOptionsPanel");
+				const groupOptionsCloseBtnEl = document.getElementById("groupOptionsCloseBtn");
+				const groupOptionsSaveBtnEl = document.getElementById("groupOptionsSaveBtn");
+				const groupThreadListEl = document.getElementById("groupThreadList");
+				const groupFilePickerWrapEl = document.getElementById("groupFilePickerWrap");
+				const groupFilePickerBtnEl = document.getElementById("groupFilePickerBtn");
+				const groupFilePickerMenuEl = document.getElementById("groupFilePickerMenu");
+				const groupPickerDeviceBtnEl = document.getElementById("groupPickerDeviceBtn");
+				const groupPickerUploadedToggleEl = document.getElementById("groupPickerUploadedToggle");
+				const groupPickerUploadedListEl = document.getElementById("groupPickerUploadedList");
+				const groupDeviceFileInputEl = document.getElementById("groupDeviceFileInput");
+				const groupPermissionSelectEl = document.getElementById("groupPermissionSelect");
+				const groupMessageInputEl = document.getElementById("groupMessageInput");
+				const groupSendBtnEl = document.getElementById("groupSendBtn");
+				const createGroupBtnEl = document.getElementById("createGroupBtn");
+				const refreshGroupsBtnEl = document.getElementById("refreshGroupsBtn");
 				const shareSendBtnEl = null;
 				const chatFileInputEl = null;
 				const shareFileSelectEl = null;
 				const chatPassphraseEl = null;
 				const messageEl = null;
 				const selectedFilesEl = document.getElementById("selectedFiles");
+				const uploadedHeaderEl = document.getElementById("uploadedHeader");
+				const uploadedControlsEl = document.getElementById("uploadedControls");
+
+				const messengerEl = document.getElementById("messenger");
+				const paneUploadedEl = document.getElementById("paneUploaded");
+				const paneChatsEl = document.getElementById("paneChats");
+				const paneGroupsEl = document.getElementById("paneGroups");
+				const tabUploadedBtnEl = document.getElementById("tabUploadedBtn");
+				const tabChatsBtnEl = document.getElementById("tabChatsBtn");
+				const tabGroupsBtnEl = document.getElementById("tabGroupsBtn");
+
+				function setActiveSection(section) {
+					const key = String(section || "uploaded").toLowerCase();
+					const showUploaded = key === "uploaded";
+					const showChats = key === "chats";
+					const showGroups = key === "groups";
+
+					if (paneUploadedEl) paneUploadedEl.hidden = !showUploaded;
+					if (paneChatsEl) paneChatsEl.hidden = !showChats;
+					if (paneGroupsEl) paneGroupsEl.hidden = !showGroups;
+					if (uploadedHeaderEl) uploadedHeaderEl.hidden = !showUploaded;
+					if (uploadedControlsEl) uploadedControlsEl.hidden = !showUploaded;
+					if (messengerEl) messengerEl.classList.add("is-single");
+
+					const setTab = (btn, active) => {
+						if (!btn) return;
+						btn.classList.toggle("is-active", !!active);
+						btn.setAttribute("aria-selected", active ? "true" : "false");
+					};
+					setTab(tabUploadedBtnEl, showUploaded);
+					setTab(tabChatsBtnEl, showChats);
+					setTab(tabGroupsBtnEl, showGroups);
+
+					try {
+						localStorage.setItem("homeActiveSection", key);
+					} catch {
+						// ignore
+					}
+				}
 
 				const selectedUploadedIds = new Set();
 				const selectedReceivedShareIds = new Set();
 				let receivedItemsCache = [];
+				let sentItemsCache = [];
+				let conversationsCache = [];
+				let selectedChatEmail = null;
+				let chatDeviceFile = null;
+				let uploadedDeviceFile = null;
+				let groupDeviceFile = null;
+				let chatPickedValue = "";
+				let uploadedPickedValue = "";
+				let groupPickedValue = "";
+				let groupsCache = [];
+				let groupInvitesCache = [];
+				let selectedGroupId = null;
+				let selectedGroupDetails = null;
+				let groupConversationsCache = [];
+				let groupOptionsOpen = false;
+				let groupOptionsSaving = false;
+				let groupOptionsDirty = false;
+				let groupOptionsOriginal = null;
+				let groupOptionsDraft = null;
+				let groupOptionsForGroupId = null;
 
 				/** @type {File[]} */
 				let pending = [];
@@ -1423,6 +2142,168 @@
 					cb.addEventListener("change", () => onChange?.(cb.checked));
 					wrap.appendChild(cb);
 					return { wrap, cb };
+				}
+
+				function roleRank(role) {
+					switch (String(role || "")) {
+						case "owner":
+							return 4;
+						case "admin":
+							return 3;
+						case "editor":
+							return 2;
+						case "member":
+							return 1;
+						case "viewer":
+						default:
+							return 0;
+					}
+				}
+
+				function canEditGroup(details) {
+					return roleRank(details?.myRole) >= roleRank("admin");
+				}
+
+				function pickGroupOptions(details) {
+					return {
+						name: String(details?.name || "").trim(),
+						description: String(details?.description || ""),
+						expiresAt: details?.expiresAt ? new Date(details.expiresAt).toISOString() : null
+					};
+				}
+
+				function getKnownEmails() {
+					const out = new Set();
+					for (const it of Array.isArray(receivedItemsCache) ? receivedItemsCache : []) {
+						const e = normalizeEmailInput(it?.senderEmail || "");
+						if (e) out.add(e);
+					}
+					for (const it of Array.isArray(sentItemsCache) ? sentItemsCache : []) {
+						const e = normalizeEmailInput(it?.recipientEmail || "");
+						if (e) out.add(e);
+					}
+					for (const c of Array.isArray(conversationsCache) ? conversationsCache : []) {
+						const e = normalizeEmailInput(c?.email || "");
+						if (e) out.add(e);
+					}
+					try {
+						const me = normalizeEmailInput(window.__auth?.currentUser?.email || "");
+						if (me) out.delete(me);
+					} catch {
+						// ignore
+					}
+					return Array.from(out).sort();
+				}
+
+				function datetimeLocalFromIso(iso) {
+					if (!iso) return "";
+					try {
+						const d = new Date(iso);
+						if (Number.isNaN(d.getTime())) return "";
+						const pad = (n) => String(n).padStart(2, "0");
+						return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+					} catch {
+						return "";
+					}
+				}
+
+				function isoFromDatetimeLocal(value) {
+					const v = String(value || "").trim();
+					if (!v) return null;
+					try {
+						const d = new Date(v);
+						if (Number.isNaN(d.getTime())) return null;
+						return d.toISOString();
+					} catch {
+						return null;
+					}
+				}
+
+				function computeGroupOptionsDirty() {
+					try {
+						if (!groupOptionsOriginal || !groupOptionsDraft) return false;
+						const keys = Object.keys(groupOptionsOriginal);
+						for (const k of keys) {
+							if (String(groupOptionsOriginal[k] ?? "") !== String(groupOptionsDraft[k] ?? "")) return true;
+						}
+						return false;
+					} catch {
+						return false;
+					}
+				}
+
+				function updateGroupOptionsSaveButton() {
+					if (!groupOptionsSaveBtnEl) return;
+					groupOptionsDirty = computeGroupOptionsDirty();
+					const canEdit = canEditGroup(selectedGroupDetails);
+					groupOptionsSaveBtnEl.hidden = !canEdit || !groupOptionsDirty;
+					groupOptionsSaveBtnEl.disabled = !canEdit || !groupOptionsDirty || groupOptionsSaving;
+				}
+
+				function setGroupOptionsOpen(open) {
+					groupOptionsOpen = !!open;
+					if (groupOptionsPanelEl) groupOptionsPanelEl.hidden = !groupOptionsOpen;
+					if (groupOptionsBtnEl) {
+						groupOptionsBtnEl.disabled = !String(selectedGroupId || "").trim();
+						groupOptionsBtnEl.classList.toggle("is-active", groupOptionsOpen);
+						groupOptionsBtnEl.setAttribute("aria-expanded", groupOptionsOpen ? "true" : "false");
+					}
+				}
+
+				function discardGroupOptionsDraft() {
+					try {
+						if (!selectedGroupDetails) return;
+						renderGroupDetails(selectedGroupDetails);
+						updateGroupOptionsSaveButton();
+					} catch {
+						// ignore
+					}
+				}
+
+				function confirmDiscardGroupOptionsIfDirty() {
+					if (!groupOptionsDirty) return true;
+					return confirm("Discard unsaved group option changes?");
+				}
+
+				async function saveGroupOptions() {
+					const gid = String(selectedGroupId || "").trim();
+					if (!gid) return;
+					if (!canEditGroup(selectedGroupDetails)) {
+						setMessage("Only group admins can edit options.");
+						return;
+					}
+					if (!groupOptionsOriginal || !groupOptionsDraft) return;
+					const patch = {};
+					for (const [k, v] of Object.entries(groupOptionsDraft)) {
+						if (String(groupOptionsOriginal[k] ?? "") !== String(v ?? "")) {
+							patch[k] = v;
+						}
+					}
+					if (Object.keys(patch).length === 0) {
+						updateGroupOptionsSaveButton();
+						return;
+					}
+					groupOptionsSaving = true;
+					updateGroupOptionsSaveButton();
+					setMessage("Saving…");
+					try {
+						const r = await apiFetch(`/api/groups/${encodeURIComponent(gid)}`, {
+							method: "PATCH",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify(patch)
+						});
+						const j = await r.json().catch(() => null);
+						if (!r.ok) throw new Error(j?.error || "Save failed");
+						setMessage("Saved.");
+						await loadGroupDetails(gid);
+						await loadGroups();
+						setGroupOptionsOpen(true);
+					} catch (e) {
+						setMessage(e?.message || "Save failed.");
+					} finally {
+						groupOptionsSaving = false;
+						updateGroupOptionsSaveButton();
+					}
 				}
 
 				function renderSelectedFiles() {
@@ -1546,6 +2427,588 @@
 
 				function normalizeEmailInput(value) {
 					return String(value || "").trim().toLowerCase();
+				}
+
+				const DEVICE_PICK_VALUE = "__device__";
+				function deviceOptionLabel(fileName) {
+					return fileName ? `Choose from device: ${fileName}` : "Choose from device…";
+				}
+
+				function createCollapsiblePicker({ wrapEl, btnEl, menuEl, deviceBtnEl, uploadedToggleEl, uploadedListEl, getDeviceFile, setDeviceFile, onChange }) {
+					if (!wrapEl || !btnEl || !menuEl || !deviceBtnEl || !uploadedToggleEl || !uploadedListEl) {
+						return {
+							getValue: () => "",
+							setValue: () => {},
+							setUploadedItems: () => {},
+							setDeviceLabel: () => {},
+							close: () => {}
+						};
+					}
+
+					function close() {
+						menuEl.hidden = true;
+						btnEl.setAttribute("aria-expanded", "false");
+						uploadedListEl.hidden = true;
+						uploadedToggleEl.setAttribute("aria-expanded", "false");
+						uploadedToggleEl.textContent = "From uploaded ▸";
+					}
+
+					function toggleMenu() {
+						const willOpen = !!menuEl.hidden;
+						if (willOpen) {
+							menuEl.hidden = false;
+							btnEl.setAttribute("aria-expanded", "true");
+							// keep uploaded list collapsed by default
+							uploadedListEl.hidden = true;
+							uploadedToggleEl.setAttribute("aria-expanded", "false");
+							uploadedToggleEl.textContent = "From uploaded ▸";
+						} else {
+							close();
+						}
+					}
+
+					btnEl.addEventListener("click", (e) => {
+						e.preventDefault();
+						toggleMenu();
+					});
+
+					document.addEventListener("click", (event) => {
+						const target = event.target;
+						if (!(target instanceof Node)) return;
+						if (!wrapEl.contains(target)) close();
+					});
+
+					document.addEventListener("keydown", (event) => {
+						if (event.key === "Escape") close();
+					});
+
+					deviceBtnEl.addEventListener("click", () => {
+						onChange?.(DEVICE_PICK_VALUE, deviceOptionLabel(getDeviceFile()?.name || ""));
+						close();
+					});
+
+					uploadedToggleEl.addEventListener("click", () => {
+						const willOpen = !!uploadedListEl.hidden;
+						uploadedListEl.hidden = !willOpen;
+						uploadedToggleEl.setAttribute("aria-expanded", willOpen ? "true" : "false");
+						uploadedToggleEl.textContent = willOpen ? "From uploaded ▾" : "From uploaded ▸";
+					});
+
+					function setDeviceLabel(fileName) {
+						deviceBtnEl.textContent = deviceOptionLabel(fileName);
+					}
+
+					function setUploadedItems(items, currentValue) {
+						uploadedListEl.innerHTML = "";
+						const arr = Array.isArray(items) ? items : [];
+						if (arr.length === 0) {
+							const empty = document.createElement("div");
+							empty.className = "upload__meta";
+							empty.textContent = "No uploaded files";
+							empty.style.padding = "6px 4px 0";
+							uploadedListEl.appendChild(empty);
+							return;
+						}
+						for (const it of arr) {
+							const id = String(it?.id || "");
+							if (!id) continue;
+							const label = String(it?.originalName || id);
+							const b = document.createElement("button");
+							b.type = "button";
+							b.className = "filepicker__item";
+							b.textContent = label;
+							b.addEventListener("click", () => {
+								setDeviceFile(null);
+								onChange?.(id, label);
+								close();
+							});
+							uploadedListEl.appendChild(b);
+						}
+						// if selection is an uploaded id, ensure it still exists
+						if (currentValue && currentValue !== DEVICE_PICK_VALUE) {
+							const exists = arr.some((it) => String(it?.id || "") === String(currentValue));
+							if (!exists) onChange?.("", "Select file…");
+						}
+					}
+
+					return { close, setUploadedItems, setDeviceLabel };
+				}
+
+				function updateUploadedSendEnabled() {
+					if (!uploadedSendBtnEl) return;
+					const picked = String(uploadedPickedValue || "").trim();
+					if (picked === DEVICE_PICK_VALUE) {
+						uploadedSendBtnEl.disabled = !uploadedDeviceFile;
+						return;
+					}
+					uploadedSendBtnEl.disabled = !picked;
+				}
+
+				function updateChatSendEnabled() {
+					if (!chatSendBtnEl) return;
+					const email = normalizeEmailInput(selectedChatEmail);
+					if (!email) {
+						chatSendBtnEl.disabled = true;
+						return;
+					}
+					const picked = String(chatPickedValue || "").trim();
+					if (picked === DEVICE_PICK_VALUE) {
+						chatSendBtnEl.disabled = !chatDeviceFile;
+						return;
+					}
+					chatSendBtnEl.disabled = !picked;
+				}
+
+				function setChatHeader(email) {
+					const e = normalizeEmailInput(email || "");
+					if (chatHeaderNameEl) chatHeaderNameEl.textContent = e ? usernameFromEmail(e) : "Select a user";
+					if (chatHeaderMetaEl) chatHeaderMetaEl.textContent = e ? e : "";
+					if (chatShareBtnEl) chatShareBtnEl.disabled = !e;
+					updateChatSendEnabled();
+				}
+
+				function updateGroupSendEnabled() {
+					if (!groupSendBtnEl) return;
+					const gid = String(selectedGroupId || "").trim();
+					if (!gid) {
+						groupSendBtnEl.disabled = true;
+						return;
+					}
+					const picked = String(groupPickedValue || "").trim();
+					if (picked === DEVICE_PICK_VALUE) {
+						groupSendBtnEl.disabled = !groupDeviceFile;
+						return;
+					}
+					groupSendBtnEl.disabled = !picked;
+				}
+
+				function setGroupHeader(details) {
+					const gid = String(selectedGroupId || "").trim();
+					if (groupHeaderNameEl) groupHeaderNameEl.textContent = details?.name || (gid ? "Group" : "Select a group");
+					const bits = [];
+					if (details?.myRole) bits.push(`Role: ${details.myRole}`);
+					if (Number.isFinite(details?.memberCount)) bits.push(`${details.memberCount} member(s)`);
+					if (details?.isDisabled) bits.push("Disabled");
+					else if (details?.isExpired) bits.push("Expired");
+					if (groupHeaderMetaEl) groupHeaderMetaEl.textContent = gid ? bits.join(" • ") : "";
+					if (refreshGroupThreadBtnEl) refreshGroupThreadBtnEl.disabled = !gid;
+					updateGroupSendEnabled();
+				}
+
+				function buildGroupConversations({ incoming, outgoing, groups }) {
+					const groupById = new Map((Array.isArray(groups) ? groups : []).map((g) => [String(g.id), g]));
+					const map = new Map();
+					const push = (groupId, msg) => {
+						const key = String(groupId || "").trim();
+						if (!key) return;
+						if (!map.has(key)) map.set(key, []);
+						map.get(key).push(msg);
+					};
+
+					for (const item of Array.isArray(incoming) ? incoming : []) {
+						const gid = String(item?.groupId || "").trim();
+						if (!gid) continue;
+						push(gid, { ...item, direction: "in" });
+					}
+
+					// Outgoing group shares create one ShareRecord per recipient.
+					// Collapse them into a single outgoing message per (file/comment/permission/time bucket).
+					const outBuckets = new Map();
+					for (const item of Array.isArray(outgoing) ? outgoing : []) {
+						const gid = String(item?.groupId || "").trim();
+						if (!gid) continue;
+						let bucket = 0;
+						try {
+							bucket = Math.floor(new Date(item.sharedAt).getTime() / 5000);
+						} catch {
+							bucket = 0;
+						}
+						const k = [gid, String(item.id || ""), String(item.permission || ""), String(item.comment || "").trim(), String(bucket)].join("|");
+						if (!outBuckets.has(k)) {
+							outBuckets.set(k, {
+								groupId: gid,
+								message: { ...item, direction: "out", shareIds: [], recipients: [] }
+							});
+						}
+						const entry = outBuckets.get(k);
+						if (item?.shareId) entry.message.shareIds.push(String(item.shareId));
+						if (item?.recipientEmail) entry.message.recipients.push(normalizeEmailInput(item.recipientEmail));
+					}
+					for (const entry of outBuckets.values()) {
+						entry.message.recipients = Array.from(new Set(entry.message.recipients.filter(Boolean)));
+						push(entry.groupId, entry.message);
+					}
+
+					const conversations = [];
+					for (const [gid, msgs] of map.entries()) {
+						msgs.sort((a, b) => new Date(a.sharedAt).getTime() - new Date(b.sharedAt).getTime());
+						const latest = msgs[msgs.length - 1];
+						conversations.push({
+							groupId: gid,
+							name: groupById.get(gid)?.name || "Group",
+							latestAt: latest?.sharedAt || null,
+							latestName: latest?.originalName || "",
+							latestComment: String(latest?.comment || "").trim(),
+							latestDirection: String(latest?.direction || ""),
+							messages: msgs
+						});
+					}
+					conversations.sort((a, b) => new Date(b.latestAt || 0).getTime() - new Date(a.latestAt || 0).getTime());
+					return conversations;
+				}
+
+				function rebuildGroupConversationsCache() {
+					groupConversationsCache = buildGroupConversations({
+						incoming: receivedItemsCache,
+						outgoing: sentItemsCache,
+						groups: groupsCache
+					});
+				}
+
+				function renderGroupThreadForSelected() {
+					if (!groupThreadListEl) return;
+					groupThreadListEl.innerHTML = "";
+					const gid = String(selectedGroupId || "").trim();
+					groupThreadListEl.classList.toggle("is-active", !!gid);
+					if (!gid) {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Select a group from the list.";
+						groupThreadListEl.appendChild(empty);
+						return;
+					}
+					const conv = (groupConversationsCache || []).find((c) => String(c.groupId) === gid);
+					const msgs = conv?.messages || [];
+					if (msgs.length === 0) {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "No messages.";
+						groupThreadListEl.appendChild(empty);
+						return;
+					}
+
+					for (const item of msgs) {
+						const row = document.createElement("div");
+						row.className = `chat__bubble ${item.direction === "out" ? "chat__bubble--out" : "chat__bubble--in"}`;
+						row.classList.add(item.direction === "out" ? "chatmsg--out" : "chatmsg--in");
+
+						const left = document.createElement("div");
+						left.style.minWidth = "0";
+
+						const header = document.createElement("div");
+						header.className = "upload__meta";
+						let who = "";
+						if (item.direction === "out") {
+							const n = Array.isArray(item.recipients) ? item.recipients.length : 0;
+							who = n > 0 ? `You → ${conv?.name || "Group"} (${n})` : `You → ${conv?.name || "Group"}`;
+						} else {
+							const sender = normalizeEmailInput(item.senderEmail || "");
+							who = sender ? `${usernameFromEmail(sender)} → ${conv?.name || "Group"}` : `Member → ${conv?.name || "Group"}`;
+						}
+						header.textContent = who;
+
+						const name = document.createElement("div");
+						name.className = "upload__name";
+						name.textContent = item.originalName || "(unnamed)";
+
+						const text = document.createElement("div");
+						text.className = "chat__text";
+						text.textContent = String(item.comment || "").trim();
+
+						const when = document.createElement("div");
+						when.className = "upload__meta";
+						const bits = [];
+						bits.push(`Shared ${formatRelativeTime(item.sharedAt)}`);
+						if (String(item.permission || "download").toLowerCase() === "view_only") bits.push("View-only");
+						when.textContent = bits.join(" • ");
+
+						left.appendChild(header);
+						if (text.textContent) left.appendChild(text);
+						left.appendChild(name);
+						left.appendChild(when);
+
+						const actions = document.createElement("div");
+						actions.style.display = "flex";
+						actions.style.alignItems = "center";
+						actions.style.gap = "10px";
+
+						const canDownload = String(item.permission || "download").toLowerCase() !== "view_only";
+						const btnDownload = document.createElement("button");
+						btnDownload.type = "button";
+						btnDownload.className = "btn btn--sm";
+						btnDownload.textContent = "Download";
+						btnDownload.disabled = !canDownload;
+
+						const btnDecrypt = document.createElement("button");
+						btnDecrypt.type = "button";
+						btnDecrypt.className = "btn btn--primary btn--sm";
+						btnDecrypt.textContent = "Decrypt & Download";
+						btnDecrypt.disabled = !canDownload;
+
+						if (item.direction === "in") {
+							btnDownload.addEventListener("click", () => void downloadReceivedEncrypted(item));
+							btnDecrypt.addEventListener("click", () => void downloadReceivedDecrypted(item));
+							const btnDelete = document.createElement("button");
+							btnDelete.type = "button";
+							btnDelete.className = "btn btn--sm";
+							btnDelete.textContent = "Delete";
+							btnDelete.addEventListener("click", async () => {
+								try {
+									await deleteReceivedShare(item);
+									setMessage("Deleted.");
+									await loadShares();
+									rebuildGroupConversationsCache();
+									renderGroups(groupsCache);
+									renderGroupThreadForSelected();
+								} catch (e) {
+									setMessage(e?.message || "Delete failed.");
+								}
+							});
+							actions.appendChild(btnDownload);
+							actions.appendChild(btnDecrypt);
+							actions.appendChild(btnDelete);
+						} else {
+							btnDownload.addEventListener("click", () => void downloadUploadedEncryptedCipher(item));
+							btnDecrypt.addEventListener("click", () => void downloadUploadedDecryptedOrPlain(item));
+							const shareIds = Array.isArray(item.shareIds) ? item.shareIds : item.shareId ? [String(item.shareId)] : [];
+							const btnRevoke = document.createElement("button");
+							btnRevoke.type = "button";
+							btnRevoke.className = "btn btn--sm";
+							btnRevoke.textContent = shareIds.length > 1 ? "Revoke all" : "Revoke";
+							btnRevoke.addEventListener("click", async () => {
+								const ok = confirm(
+									shareIds.length > 1
+										? `Revoke access for ${shareIds.length} recipients?`
+										: "Revoke access for this recipient?"
+								);
+								if (!ok) return;
+								try {
+									for (const sid of shareIds) {
+										if (!sid) continue;
+										const r = await apiFetch(`/api/files/shares/${encodeURIComponent(String(sid))}`, { method: "DELETE" });
+										const j = await r.json().catch(() => null);
+										if (!r.ok) throw new Error(j?.error || "Revoke failed");
+									}
+									setMessage("Revoked.");
+									await loadShares();
+									rebuildGroupConversationsCache();
+									renderGroups(groupsCache);
+									renderGroupThreadForSelected();
+								} catch (e) {
+									setMessage(e?.message || "Revoke failed.");
+								}
+							});
+							actions.appendChild(btnDownload);
+							actions.appendChild(btnDecrypt);
+							actions.appendChild(btnRevoke);
+						}
+
+						row.appendChild(left);
+						row.appendChild(actions);
+						groupThreadListEl.appendChild(row);
+					}
+				}
+
+				function buildConversations({ incoming, outgoing }) {
+					const map = new Map();
+					const push = (otherEmail, msg) => {
+						const key = normalizeEmailInput(otherEmail);
+						if (!key) return;
+						if (!map.has(key)) map.set(key, []);
+						map.get(key).push(msg);
+					};
+					for (const item of Array.isArray(incoming) ? incoming : []) {
+						const other = normalizeEmailInput(item?.senderEmail || "");
+						push(other, { ...item, direction: "in", otherEmail: other });
+					}
+					for (const item of Array.isArray(outgoing) ? outgoing : []) {
+						const other = normalizeEmailInput(item?.recipientEmail || "");
+						push(other, { ...item, direction: "out", otherEmail: other });
+					}
+					const conversations = [];
+					for (const [email, msgs] of map.entries()) {
+						msgs.sort((a, b) => new Date(a.sharedAt).getTime() - new Date(b.sharedAt).getTime());
+						const latest = msgs[msgs.length - 1];
+						const latestComment = String(latest?.comment || "").trim();
+						const latestDirection = String(latest?.direction || "");
+						conversations.push({
+							email,
+							latestAt: latest?.sharedAt || null,
+							latestName: latest?.originalName || "",
+							latestComment,
+							latestDirection,
+							messages: msgs
+						});
+					}
+					conversations.sort((a, b) => new Date(b.latestAt || 0).getTime() - new Date(a.latestAt || 0).getTime());
+					return conversations;
+				}
+
+				function renderConversationList(conversations) {
+					if (!chatUsersListEl) return;
+					chatUsersListEl.innerHTML = "";
+					const items = Array.isArray(conversations) ? conversations : [];
+					if (items.length === 0) {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "No chats yet.";
+						chatUsersListEl.appendChild(empty);
+						return;
+					}
+					for (const c of items) {
+						const row = document.createElement("div");
+						row.className = "upload__item";
+						row.style.cursor = "pointer";
+						if (normalizeEmailInput(selectedChatEmail) === c.email) row.classList.add("is-selected");
+						row.addEventListener("click", () => {
+							selectedChatEmail = c.email;
+							setChatHeader(selectedChatEmail);
+							renderConversationList(conversationsCache);
+							renderThreadForSelected();
+						});
+
+						const left = document.createElement("div");
+						const name = document.createElement("div");
+						name.className = "upload__name";
+						name.textContent = usernameFromEmail(c.email);
+
+						const meta1 = document.createElement("div");
+						meta1.className = "upload__meta";
+						meta1.textContent = c.latestName ? String(c.latestName) : "";
+
+						const meta2 = document.createElement("div");
+						meta2.className = "upload__meta";
+						const when = c.latestAt ? formatRelativeTime(c.latestAt) : "";
+						const directionLabel = c.latestDirection === "in" ? "Received" : c.latestDirection === "out" ? "Sent" : "";
+						const commentPreview = c.latestDirection === "in" && c.latestComment ? c.latestComment : "";
+						meta2.textContent = [commentPreview || directionLabel, when].filter(Boolean).join(" • ");
+						left.appendChild(name);
+						left.appendChild(meta1);
+						left.appendChild(meta2);
+						row.appendChild(left);
+						chatUsersListEl.appendChild(row);
+					}
+				}
+
+				function renderThreadForSelected() {
+					if (!chatThreadListEl) return;
+					chatThreadListEl.innerHTML = "";
+					const key = normalizeEmailInput(selectedChatEmail);
+					chatThreadListEl.classList.toggle("is-active", !!key);
+					if (!key) {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Select a user from the list.";
+						chatThreadListEl.appendChild(empty);
+						return;
+					}
+					const conv = (conversationsCache || []).find((c) => c.email === key);
+					const msgs = conv?.messages || [];
+					if (msgs.length === 0) {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "No messages.";
+						chatThreadListEl.appendChild(empty);
+						return;
+					}
+
+					for (const item of msgs) {
+						const row = document.createElement("div");
+						row.className = `chat__bubble ${item.direction === "out" ? "chat__bubble--out" : "chat__bubble--in"}`;
+						row.classList.add(item.direction === "out" ? "chatmsg--out" : "chatmsg--in");
+
+						const left = document.createElement("div");
+						left.style.minWidth = "0";
+						const header = document.createElement("div");
+						header.className = "upload__meta";
+						const who = item.direction === "out" ? `You → ${usernameFromEmail(key)}` : `${usernameFromEmail(key)} → You`;
+						const src = item.sourceType && item.sourceType !== "direct" ? ` (${item.sourceType})` : "";
+						header.textContent = `${who}${src}`;
+
+						const name = document.createElement("div");
+						name.className = "upload__name";
+						name.textContent = item.originalName || "(unnamed)";
+
+						const text = document.createElement("div");
+						text.className = "chat__text";
+						text.textContent = String(item.comment || "").trim();
+
+						const when = document.createElement("div");
+						when.className = "upload__meta";
+						const bits = [];
+						bits.push(`Shared ${formatRelativeTime(item.sharedAt)}`);
+						if (String(item.permission || "download").toLowerCase() === "view_only") bits.push("View-only");
+						when.textContent = bits.join(" • ");
+
+						left.appendChild(header);
+						if (text.textContent) left.appendChild(text);
+						left.appendChild(name);
+						left.appendChild(when);
+
+						const actions = document.createElement("div");
+						actions.style.display = "flex";
+						actions.style.alignItems = "center";
+						actions.style.gap = "10px";
+
+						const canDownload = String(item.permission || "download").toLowerCase() !== "view_only";
+						const btnDownload = document.createElement("button");
+						btnDownload.type = "button";
+						btnDownload.className = "btn btn--sm";
+						btnDownload.textContent = "Download";
+						btnDownload.disabled = !canDownload;
+
+						const btnDecrypt = document.createElement("button");
+						btnDecrypt.type = "button";
+						btnDecrypt.className = "btn btn--primary btn--sm";
+						btnDecrypt.textContent = "Decrypt & Download";
+						btnDecrypt.disabled = !canDownload;
+
+						if (item.direction === "in") {
+							btnDownload.addEventListener("click", () => void downloadReceivedEncrypted(item));
+							btnDecrypt.addEventListener("click", () => void downloadReceivedDecrypted(item));
+							const btnDelete = document.createElement("button");
+							btnDelete.type = "button";
+							btnDelete.className = "btn btn--sm";
+							btnDelete.textContent = "Delete";
+							btnDelete.addEventListener("click", async () => {
+								try {
+									await deleteReceivedShare(item);
+									setMessage("Deleted.");
+									await loadChat();
+								} catch (e) {
+									setMessage(e?.message || "Delete failed.");
+								}
+							});
+							actions.appendChild(btnDownload);
+							actions.appendChild(btnDecrypt);
+							actions.appendChild(btnDelete);
+						} else {
+							btnDownload.addEventListener("click", () => void downloadUploadedEncryptedCipher(item));
+							btnDecrypt.addEventListener("click", () => void downloadUploadedDecryptedOrPlain(item));
+							const btnDelete = document.createElement("button");
+							btnDelete.type = "button";
+							btnDelete.className = "btn btn--sm";
+							btnDelete.textContent = "Delete";
+							btnDelete.addEventListener("click", async () => {
+								const ok = confirm("Delete this sent share? This will remove access for the recipient.");
+								if (!ok) return;
+								try {
+									await deleteReceivedShare(item);
+									setMessage("Deleted.");
+									await loadChat();
+								} catch (e) {
+									setMessage(e?.message || "Delete failed.");
+								}
+							});
+							actions.appendChild(btnDownload);
+							actions.appendChild(btnDecrypt);
+							actions.appendChild(btnDelete);
+						}
+
+						row.appendChild(left);
+						row.appendChild(actions);
+						chatThreadListEl.appendChild(row);
+					}
 				}
 
 				async function saveBlobAs(blob, filename) {
@@ -1750,15 +3213,505 @@
 					}
 				}
 
-				async function shareUploadedFile({ fileId, recipientEmail }) {
+				async function shareUploadedFile({ fileId, recipientEmail, comment }) {
 					setMessage("Sending…");
 					const r = await apiFetch(`/api/files/${encodeURIComponent(fileId)}/share`, {
 						method: "POST",
 						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ recipientEmail })
+						body: JSON.stringify({ recipientEmail, comment: String(comment || "").trim() })
 					});
 					const j = await r.json().catch(() => null);
 					if (!r.ok) throw new Error(j?.error || "Send failed");
+				}
+
+				async function shareUploadedFileToGroup({ fileId, groupId, permission, comment }) {
+					setMessage("Sharing to group…");
+					const r = await apiFetch(`/api/files/${encodeURIComponent(fileId)}/share-group`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ groupId, permission, comment: String(comment || "").trim() })
+					});
+					const j = await r.json().catch(() => null);
+					if (!r.ok) throw new Error(j?.error || "Group share failed");
+					return j;
+				}
+
+				function renderGroups(groups) {
+					if (!groupsListEl) return;
+					groupsListEl.innerHTML = "";
+					const items = Array.isArray(groups) ? groups : [];
+
+					// Pending invitations (accept/decline).
+					if (Array.isArray(groupInvitesCache) && groupInvitesCache.length > 0) {
+						const wrap = document.createElement("div");
+						wrap.className = "upload__item";
+						wrap.style.cursor = "default";
+						const left = document.createElement("div");
+						const title = document.createElement("div");
+						title.className = "upload__name";
+						title.textContent = `Pending invitations (${groupInvitesCache.length})`;
+						const meta = document.createElement("div");
+						meta.className = "upload__meta";
+						meta.textContent = "Accept to join the group.";
+						left.appendChild(title);
+						left.appendChild(meta);
+
+						const actions = document.createElement("div");
+						actions.style.display = "inline-flex";
+						actions.style.gap = "10px";
+						actions.style.flexWrap = "wrap";
+						actions.style.justifyContent = "flex-end";
+						const refreshBtn = document.createElement("button");
+						refreshBtn.type = "button";
+						refreshBtn.className = "btn btn--sm";
+						refreshBtn.textContent = "Refresh";
+						refreshBtn.addEventListener("click", async (e) => {
+							e.stopPropagation();
+							await loadGroupInvites();
+							renderGroups(groupsCache);
+						});
+						actions.appendChild(refreshBtn);
+						wrap.appendChild(left);
+						wrap.appendChild(actions);
+						groupsListEl.appendChild(wrap);
+
+						for (const inv of groupInvitesCache) {
+							const row = document.createElement("div");
+							row.className = "upload__item";
+							row.style.cursor = "default";
+							const l = document.createElement("div");
+							const n = document.createElement("div");
+							n.className = "upload__name";
+							n.textContent = String(inv.groupName || "Group");
+							const m = document.createElement("div");
+							m.className = "upload__meta";
+							m.textContent = [inv.inviterEmail ? `From: ${inv.inviterEmail}` : null, inv.role ? `Role: ${inv.role}` : null]
+								.filter(Boolean)
+								.join(" • ");
+							l.appendChild(n);
+							l.appendChild(m);
+
+							const a = document.createElement("div");
+							a.style.display = "inline-flex";
+							a.style.gap = "10px";
+							a.style.flexWrap = "wrap";
+							a.style.justifyContent = "flex-end";
+							const acceptBtn = document.createElement("button");
+							acceptBtn.type = "button";
+							acceptBtn.className = "btn btn--primary btn--sm";
+							acceptBtn.textContent = "Accept";
+							acceptBtn.addEventListener("click", async () => {
+								try {
+									setMessage("Accepting invite…");
+									const r = await apiFetch(`/api/groups/invites/${encodeURIComponent(String(inv.id))}/accept`, { method: "POST" });
+									const j = await r.json().catch(() => null);
+									if (!r.ok) throw new Error(j?.error || "Accept failed");
+									setMessage("Joined group.");
+									await loadGroupInvites();
+									await loadGroups();
+								} catch (e) {
+									setMessage(e?.message || "Accept failed.");
+								}
+							});
+							const declineBtn = document.createElement("button");
+							declineBtn.type = "button";
+							declineBtn.className = "btn btn--sm";
+							declineBtn.textContent = "Decline";
+							declineBtn.addEventListener("click", async () => {
+								try {
+									setMessage("Declining…");
+									const r = await apiFetch(`/api/groups/invites/${encodeURIComponent(String(inv.id))}/decline`, { method: "POST" });
+									const j = await r.json().catch(() => null);
+									if (!r.ok) throw new Error(j?.error || "Decline failed");
+									setMessage("Declined.");
+									await loadGroupInvites();
+									renderGroups(groupsCache);
+								} catch (e) {
+									setMessage(e?.message || "Decline failed.");
+								}
+							});
+							a.appendChild(acceptBtn);
+							a.appendChild(declineBtn);
+							row.appendChild(l);
+							row.appendChild(a);
+							groupsListEl.appendChild(row);
+						}
+
+						const divider = document.createElement("div");
+						divider.className = "groups__divider";
+						groupsListEl.appendChild(divider);
+					}
+
+					if (items.length === 0) {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "No groups yet. Click Create group.";
+						groupsListEl.appendChild(empty);
+						return;
+					}
+
+					for (const g of items) {
+						const row = document.createElement("div");
+						row.className = "upload__item";
+						row.style.cursor = "pointer";
+						const id = String(g.id);
+						const isSel = selectedGroupId && String(selectedGroupId) === id;
+						if (isSel) row.classList.add("is-selected");
+						if (g.isExpired || g.isDisabled) row.style.opacity = "0.65";
+						row.addEventListener("click", () => {
+							const current = String(selectedGroupId || "").trim();
+							if (current && current !== id && groupOptionsDirty) {
+								if (!confirmDiscardGroupOptionsIfDirty()) return;
+								discardGroupOptionsDraft();
+								setGroupOptionsOpen(false);
+							}
+							selectedGroupId = id;
+							void loadGroupDetails(id);
+							renderGroups(groupsCache);
+						});
+
+						const left = document.createElement("div");
+						const name = document.createElement("div");
+						name.className = "upload__name";
+						name.textContent = g.name || "(unnamed group)";
+
+						const meta = document.createElement("div");
+						meta.className = "upload__meta";
+						const parts = [];
+						if (g.myRole) parts.push(`Role: ${g.myRole}`);
+						if (Number.isFinite(g.memberCount)) parts.push(`${g.memberCount} member(s)`);
+						if (g.isDisabled) parts.push("Disabled");
+						else if (g.isExpired) parts.push("Expired");
+						meta.textContent = parts.join(" • ");
+
+						const conv = (groupConversationsCache || []).find((c) => String(c.groupId) === id);
+						const meta1 = document.createElement("div");
+						meta1.className = "upload__meta";
+						meta1.textContent = conv?.latestName ? String(conv.latestName) : "";
+						if (!meta1.textContent) meta1.style.display = "none";
+
+						const meta2 = document.createElement("div");
+						meta2.className = "upload__meta";
+						const when = conv?.latestAt ? formatRelativeTime(conv.latestAt) : "";
+						const directionLabel = conv?.latestDirection === "in" ? "Received" : conv?.latestDirection === "out" ? "Sent" : "";
+						const commentPreview = conv?.latestDirection === "in" && conv?.latestComment ? conv.latestComment : "";
+						meta2.textContent = [commentPreview || directionLabel, when].filter(Boolean).join(" • ");
+						if (!meta2.textContent) meta2.style.display = "none";
+
+						left.appendChild(name);
+						left.appendChild(meta);
+						left.appendChild(meta1);
+						left.appendChild(meta2);
+
+						const actions = document.createElement("div");
+						actions.style.display = "flex";
+						actions.style.alignItems = "center";
+						actions.style.gap = "10px";
+
+						const optsBtn = document.createElement("button");
+						optsBtn.type = "button";
+						optsBtn.className = "iconbtn";
+						optsBtn.setAttribute("aria-label", "Options");
+						optsBtn.title = "Options";
+						optsBtn.innerHTML = '<span aria-hidden="true">⚙</span>';
+						optsBtn.addEventListener("click", (e) => {
+							e.stopPropagation();
+							const current = String(selectedGroupId || "").trim();
+							if (current && current !== id && groupOptionsDirty) {
+								if (!confirmDiscardGroupOptionsIfDirty()) return;
+								discardGroupOptionsDraft();
+								setGroupOptionsOpen(false);
+							}
+							selectedGroupId = id;
+							void loadGroupDetails(id).then(() => {
+								setGroupOptionsOpen(true);
+							});
+							renderGroups(groupsCache);
+						});
+
+						actions.appendChild(optsBtn);
+						row.appendChild(left);
+						row.appendChild(actions);
+						groupsListEl.appendChild(row);
+					}
+				}
+
+				function renderGroupDetails(details) {
+					if (!groupDetailsEl) return;
+					groupDetailsEl.innerHTML = "";
+					if (!details) {
+						const empty = document.createElement("div");
+						empty.className = "upload__meta";
+						empty.textContent = "Select a group to see details.";
+						groupDetailsEl.appendChild(empty);
+						return;
+					}
+
+					groupOptionsOriginal = pickGroupOptions(details);
+					groupOptionsDraft = { ...groupOptionsOriginal };
+					groupOptionsDirty = false;
+
+					const canEdit = canEditGroup(details);
+					if (!canEdit) {
+						const hint = document.createElement("div");
+						hint.className = "upload__meta";
+						hint.textContent = "Options are read-only unless you are a group admin.";
+						groupDetailsEl.appendChild(hint);
+					}
+
+					const grid = document.createElement("div");
+					grid.className = "groupopts__grid";
+
+					function fieldWrap(span2 = false) {
+						const w = document.createElement("div");
+						if (span2) w.classList.add("span2");
+						return w;
+					}
+					function addLabeled(w, labelText, inputEl) {
+						const lab = document.createElement("div");
+						lab.className = "groupopts__label";
+						lab.textContent = labelText;
+						w.appendChild(lab);
+						w.appendChild(inputEl);
+					}
+
+					const nameW = fieldWrap(true);
+					const nameInput = document.createElement("input");
+					nameInput.type = "text";
+					nameInput.className = "groupopts__input";
+					nameInput.value = groupOptionsDraft.name;
+					nameInput.placeholder = "Group name";
+					nameInput.maxLength = 64;
+					nameInput.disabled = !canEdit;
+					nameInput.addEventListener("input", () => {
+						groupOptionsDraft.name = String(nameInput.value || "").trim();
+						updateGroupOptionsSaveButton();
+					});
+					addLabeled(nameW, "Name", nameInput);
+
+					const descW = fieldWrap(true);
+					const descInput = document.createElement("textarea");
+					descInput.className = "groupopts__input";
+					descInput.value = groupOptionsDraft.description;
+					descInput.placeholder = "Description";
+					descInput.rows = 3;
+					descInput.disabled = !canEdit;
+					descInput.addEventListener("input", () => {
+						groupOptionsDraft.description = String(descInput.value || "");
+						updateGroupOptionsSaveButton();
+					});
+					addLabeled(descW, "Description", descInput);
+
+					const expW = fieldWrap(false);
+					const expInput = document.createElement("input");
+					expInput.type = "datetime-local";
+					expInput.className = "groupopts__input";
+					expInput.value = datetimeLocalFromIso(groupOptionsDraft.expiresAt);
+					expInput.disabled = !canEdit;
+					expInput.addEventListener("change", () => {
+						groupOptionsDraft.expiresAt = isoFromDatetimeLocal(expInput.value);
+						updateGroupOptionsSaveButton();
+					});
+					addLabeled(expW, "Expires at", expInput);
+
+					grid.appendChild(nameW);
+					grid.appendChild(descW);
+					grid.appendChild(expW);
+					groupDetailsEl.appendChild(grid);
+
+					const actionsRow = document.createElement("div");
+					actionsRow.className = "upload__metaRow";
+					actionsRow.style.justifyContent = "space-between";
+					actionsRow.style.marginTop = "10px";
+
+					const left = document.createElement("div");
+					left.className = "upload__meta";
+					left.textContent = `Members: ${Number.isFinite(details.memberCount) ? details.memberCount : "—"}`;
+
+					const right = document.createElement("div");
+					right.style.display = "inline-flex";
+					right.style.gap = "10px";
+					right.style.flexWrap = "wrap";
+					right.style.justifyContent = "flex-end";
+
+					const addBtn = document.createElement("button");
+					addBtn.type = "button";
+					addBtn.className = "btn btn--sm";
+					addBtn.textContent = "Invite member";
+					addBtn.disabled = !selectedGroupId;
+					addBtn.addEventListener("click", async () => {
+						try {
+							if (!selectedGroupId) throw new Error("Select a group first");
+							if (typeof window.showGroupAddMemberPopup !== "function") throw new Error("Group member popup not available");
+							const result = await window.showGroupAddMemberPopup({ suggestedEmails: getKnownEmails() });
+							if (!result) return;
+							setMessage("Sending invite…");
+							const r = await apiFetch(`/api/groups/${encodeURIComponent(selectedGroupId)}/invites`, {
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify(result)
+							});
+							const j = await r.json().catch(() => null);
+							if (!r.ok) throw new Error(j?.error || "Failed to invite member");
+							setMessage("Invitation sent. The user must accept it to join.");
+							await loadGroupDetails(selectedGroupId);
+							await loadGroups();
+						} catch (e) {
+							setMessage(e?.message || "Failed to invite member.");
+						}
+					});
+
+					right.appendChild(addBtn);
+					actionsRow.appendChild(left);
+					actionsRow.appendChild(right);
+
+					groupDetailsEl.appendChild(actionsRow);
+					updateGroupOptionsSaveButton();
+
+					if (!details.members) {
+						const hint = document.createElement("div");
+						hint.className = "upload__meta";
+						hint.style.marginTop = "8px";
+						hint.textContent = "Member list is visible to group admins only.";
+						groupDetailsEl.appendChild(hint);
+						return;
+					}
+
+					const membersHeader = document.createElement("div");
+					membersHeader.className = "upload__meta";
+					membersHeader.style.marginTop = "10px";
+					membersHeader.textContent = "Members";
+					groupDetailsEl.appendChild(membersHeader);
+
+					for (const m of details.members || []) {
+						const row = document.createElement("div");
+						row.className = "upload__item";
+						const left = document.createElement("div");
+						const email = document.createElement("div");
+						email.className = "upload__name";
+						email.textContent = String(m.email || m.uid || "member");
+						const role = document.createElement("div");
+						role.className = "upload__meta";
+						role.textContent = `Role: ${String(m.role || "member")}`;
+						left.appendChild(email);
+						left.appendChild(role);
+
+						const actions = document.createElement("div");
+						actions.style.display = "flex";
+						actions.style.alignItems = "center";
+						actions.style.gap = "10px";
+
+						const removeBtn = document.createElement("button");
+						removeBtn.type = "button";
+						removeBtn.className = "btn btn--sm";
+						removeBtn.textContent = "Remove";
+						removeBtn.disabled = String(m.role || "") === "owner";
+						removeBtn.addEventListener("click", async () => {
+							try {
+								if (!selectedGroupId) return;
+								const ok = confirm(`Remove ${String(m.email || "member")}?`);
+								if (!ok) return;
+								setMessage("Removing member…");
+								const r = await apiFetch(
+									`/api/groups/${encodeURIComponent(selectedGroupId)}/members/${encodeURIComponent(String(m.uid))}`,
+									{ method: "DELETE" }
+								);
+								const j = await r.json().catch(() => null);
+								if (!r.ok) throw new Error(j?.error || "Failed to remove member");
+								setMessage("Member removed.");
+								await loadGroupDetails(selectedGroupId);
+								await loadGroups();
+							} catch (e) {
+								setMessage(e?.message || "Failed to remove member.");
+							}
+						});
+
+						actions.appendChild(removeBtn);
+						row.appendChild(left);
+						row.appendChild(actions);
+						groupDetailsEl.appendChild(row);
+					}
+				}
+
+				async function loadGroups() {
+					if (!groupsListEl) return;
+					try {
+						const r = await apiFetch("/api/groups");
+						if (!r.ok) {
+							const j = await r.json().catch(() => null);
+							throw new Error(j?.error || "Failed to load groups");
+						}
+						groupsCache = (await r.json().catch(() => [])) || [];
+						rebuildGroupConversationsCache();
+						renderGroups(groupsCache);
+					} catch (e) {
+						groupsCache = [];
+						rebuildGroupConversationsCache();
+						renderGroups([]);
+						const msg = String(e?.message || "Failed to load groups").trim();
+						if (msg) setMessage(msg);
+					}
+				}
+
+				async function loadGroupInvites() {
+					try {
+						const r = await apiFetch("/api/groups/invites");
+						if (!r.ok) {
+							groupInvitesCache = [];
+							return;
+						}
+						groupInvitesCache = (await r.json().catch(() => [])) || [];
+					} catch {
+						groupInvitesCache = [];
+					}
+				}
+
+				async function loadGroupDetails(groupId) {
+					if (!groupDetailsEl) return;
+					groupDetailsEl.innerHTML = "";
+					try {
+						if (!groupId) {
+							selectedGroupId = null;
+							selectedGroupDetails = null;
+							groupOptionsForGroupId = null;
+							groupOptionsOriginal = null;
+							groupOptionsDraft = null;
+							if (groupRightPaneEl) groupRightPaneEl.hidden = true;
+							if (groupTopbarEl) groupTopbarEl.hidden = true;
+							setGroupOptionsOpen(false);
+							if (groupThreadListEl) groupThreadListEl.innerHTML = "";
+							setGroupHeader(null);
+							updateGroupSendEnabled();
+							renderGroupDetails(null);
+							return;
+						}
+						selectedGroupId = String(groupId);
+						if (groupOptionsForGroupId !== String(groupId)) {
+							groupOptionsForGroupId = String(groupId);
+							groupOptionsOriginal = null;
+							groupOptionsDraft = null;
+							setGroupOptionsOpen(false);
+						}
+						if (groupRightPaneEl) groupRightPaneEl.hidden = false;
+						if (groupTopbarEl) groupTopbarEl.hidden = false;
+						if (groupOptionsBtnEl) groupOptionsBtnEl.disabled = false;
+						const r = await apiFetch(`/api/groups/${encodeURIComponent(String(groupId))}`);
+						if (!r.ok) {
+							const j = await r.json().catch(() => null);
+							throw new Error(j?.error || "Failed to load group");
+						}
+						selectedGroupDetails = await r.json().catch(() => null);
+						setGroupHeader(selectedGroupDetails);
+						renderGroupDetails(selectedGroupDetails);
+						renderGroupThreadForSelected();
+						updateGroupOptionsSaveButton();
+					} catch (e) {
+						selectedGroupDetails = null;
+						setGroupOptionsOpen(false);
+						renderGroupDetails(null);
+						setGroupHeader(null);
+						setMessage(e?.message || "Failed to load group.");
+					}
 				}
 
 				async function deleteUploadedFile(item) {
@@ -2044,6 +3997,51 @@
 						}
 					});
 
+					const btnShareGroup = document.createElement("button");
+					btnShareGroup.type = "button";
+					btnShareGroup.className = "btn btn--sm";
+					btnShareGroup.textContent = "Share to Group";
+					btnShareGroup.disabled = selectedUploadedIds.size === 0;
+					btnShareGroup.addEventListener("click", async () => {
+						try {
+							if (typeof window.showGroupSharePopup !== "function") throw new Error("Group share popup not available");
+							if (!Array.isArray(groupsCache) || groupsCache.length === 0) {
+								await loadGroups();
+							}
+							if (!Array.isArray(groupsCache) || groupsCache.length === 0) {
+								const ok = confirm("No groups found. Create a group now?");
+								if (!ok) return;
+								if (typeof window.showGroupCreatePopup !== "function") throw new Error("Group create popup not available");
+								const payload = await window.showGroupCreatePopup();
+								if (!payload) return;
+								setMessage("Creating group…");
+								const r = await apiFetch("/api/groups", {
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify(payload)
+								});
+								const j = await r.json().catch(() => null);
+								if (!r.ok) throw new Error(j?.error || "Failed to create group");
+								await loadGroups();
+								if (j?.id) {
+									selectedGroupId = String(j.id);
+									await loadGroupDetails(selectedGroupId);
+									renderGroups(groupsCache);
+								}
+							}
+							const choice = await window.showGroupSharePopup({ groups: groupsCache });
+							if (!choice) return;
+							const selected = items.filter((it) => selectedUploadedIds.has(String(it.id)));
+							for (const it of selected) {
+								await shareUploadedFileToGroup({ fileId: String(it.id), groupId: choice.groupId, permission: choice.permission });
+							}
+							setMessage("Shared to group.");
+							await loadChat();
+						} catch (e) {
+							setMessage(e?.message || "Group share failed.");
+						}
+					});
+
 					const btnDelete = document.createElement("button");
 					btnDelete.type = "button";
 					btnDelete.className = "btn btn--sm";
@@ -2064,6 +4062,7 @@
 					actions.appendChild(btnDownload);
 					actions.appendChild(btnDecrypt);
 					actions.appendChild(btnShare);
+					actions.appendChild(btnShareGroup);
 					actions.appendChild(btnDelete);
 
 					uploadedBulkbarEl.appendChild(left);
@@ -2152,149 +4151,131 @@
 					receivedBulkbarEl.appendChild(actions);
 				}
 
-				async function loadChat() {
-					if (!sharedListEl) return;
-					sharedListEl.innerHTML = "";
+				async function loadShares() {
 					try {
-						const incomingRes = await apiFetch("/api/files/shared/with-me");
-						if (!incomingRes.ok) {
-							const j = await incomingRes.json().catch(() => null);
-							throw new Error(j?.error || j?.message || `Failed to load shared files (${incomingRes.status})`);
-						}
-						const incoming = await incomingRes.json();
-
-						const messages = [];
-						if (Array.isArray(incoming)) {
-							for (const item of incoming) messages.push({ ...item, direction: "in" });
-						}
-
-						messages.sort((a, b) => new Date(a.sharedAt).getTime() - new Date(b.sharedAt).getTime());
-						receivedItemsCache = messages;
-
-						if (messages.length === 0) {
-							receivedItemsCache = [];
-							renderReceivedBulkbar([]);
-							const empty = document.createElement("div");
-							empty.className = "upload__meta";
-							empty.textContent = "No shared files yet.";
-							sharedListEl.appendChild(empty);
-							return;
-						}
-
-						clearSelectionForMissing(new Set(messages.map((m) => String(m.shareId || "")).filter(Boolean)), selectedReceivedShareIds);
-						renderReceivedBulkbar(messages);
-
-						const auth = window.__auth;
-						const user = auth?.currentUser;
-						const myEmail = normalizeEmailInput(user?.email || "");
-
-						for (const item of messages) {
-							const row = document.createElement("div");
-							row.className = "chat__bubble chat__bubble--in";
-							const shareIdForSel = String(item.shareId || "").trim();
-							const isSelected = shareIdForSel && selectedReceivedShareIds.has(shareIdForSel);
-							if (isSelected) row.classList.add("is-selected");
-
-							let selWrap = null;
-							if (shareIdForSel) {
-								const { wrap, cb } = createItemSelectControl({
-									ariaLabel: `Select received ${item.originalName || "file"}`,
-									checked: isSelected,
-									onChange(checked) {
-										if (checked) selectedReceivedShareIds.add(shareIdForSel);
-										else selectedReceivedShareIds.delete(shareIdForSel);
-										void loadChat();
-									}
-								});
-								selWrap = wrap;
-								cb.addEventListener("click", (e) => e.stopPropagation());
-							}
-
-							const left = document.createElement("div");
-							left.style.minWidth = "0";
-
-							const header = document.createElement("div");
-							header.className = "upload__meta";
-							const sender = usernameFromEmail(item.senderEmail);
-							header.textContent = `${sender} → You`;
-
-							const name = document.createElement("div");
-							name.className = "upload__name";
-							name.textContent = item.originalName || "(unnamed)";
-
-							const when = document.createElement("div");
-							when.className = "upload__meta";
-							when.textContent = `Shared ${formatRelativeTime(item.sharedAt)}`;
-
-							left.appendChild(header);
-							left.appendChild(name);
-							left.appendChild(when);
-
-							const actions = document.createElement("div");
-							actions.style.display = "flex";
-							actions.style.alignItems = "center";
-							actions.style.gap = "10px";
-
-							const downloadEncryptedBtn = document.createElement("button");
-							downloadEncryptedBtn.type = "button";
-							downloadEncryptedBtn.className = "btn btn--sm";
-							downloadEncryptedBtn.textContent = "Download";
-							downloadEncryptedBtn.setAttribute("aria-label", `Download encrypted ${item.originalName || "file"}`);
-							downloadEncryptedBtn.addEventListener("click", () => void downloadReceivedEncrypted(item));
-
-							const deleteBtn = document.createElement("button");
-							deleteBtn.type = "button";
-							deleteBtn.className = "btn btn--sm";
-							deleteBtn.textContent = "Delete";
-							deleteBtn.setAttribute("aria-label", `Delete received ${item.originalName || "file"}`);
-							deleteBtn.addEventListener("click", async () => {
-								try {
-									await deleteReceivedShare(item);
-									setMessage("Deleted.");
-									selectedReceivedShareIds.delete(String(item.shareId || ""));
-									await loadChat();
-								} catch (e) {
-									setMessage(e?.message || "Delete failed.");
-								}
-							});
-
-							const decryptBtn = document.createElement("button");
-							decryptBtn.type = "button";
-							decryptBtn.className = "btn btn--primary btn--sm";
-							decryptBtn.textContent = "Decrypt & Download";
-							decryptBtn.setAttribute("aria-label", `Decrypt and download ${item.originalName || "file"}`);
-							decryptBtn.addEventListener("click", () => void downloadReceivedDecrypted(item));
-
-							actions.appendChild(downloadEncryptedBtn);
-							actions.appendChild(decryptBtn);
-							actions.appendChild(deleteBtn);
-							if (selWrap) row.appendChild(selWrap);
-							else {
-								const spacer = document.createElement("div");
-								spacer.style.width = "36px";
-								spacer.style.height = "36px";
-								row.appendChild(spacer);
-							}
-							row.appendChild(left);
-							row.appendChild(actions);
-							sharedListEl.appendChild(row);
-						}
+						const [incomingRes, outgoingRes] = await Promise.all([
+							apiFetch("/api/files/shared/with-me"),
+							apiFetch("/api/files/shared/by-me")
+						]);
+						if (!incomingRes.ok) throw new Error(await responseErrorMessage(incomingRes));
+						if (!outgoingRes.ok) throw new Error(await responseErrorMessage(outgoingRes));
+						const incoming = (await incomingRes.json().catch(() => [])) || [];
+						const outgoing = (await outgoingRes.json().catch(() => [])) || [];
+						receivedItemsCache = Array.isArray(incoming) ? incoming : [];
+						sentItemsCache = Array.isArray(outgoing) ? outgoing : [];
+						rebuildGroupConversationsCache();
+						return { incoming: receivedItemsCache, outgoing: sentItemsCache };
 					} catch (e) {
 						receivedItemsCache = [];
-						renderReceivedBulkbar([]);
-						const msg = String(e?.message || "Backend not available.").trim();
-						if (msg) setMessage(msg);
-						const empty = document.createElement("div");
-						empty.className = "upload__meta";
-						empty.textContent = msg || "Backend not available.";
-						sharedListEl.appendChild(empty);
+						sentItemsCache = [];
+						rebuildGroupConversationsCache();
+						throw e;
+					}
+				}
+
+				async function loadChat() {
+					setChatHeader(selectedChatEmail);
+					if (chatUsersListEl) chatUsersListEl.innerHTML = "";
+					if (chatThreadListEl) chatThreadListEl.innerHTML = "";
+					try {
+						await loadShares();
+						conversationsCache = buildConversations({ incoming: receivedItemsCache, outgoing: sentItemsCache });
+						if (!selectedChatEmail || !conversationsCache.some((c) => c.email === normalizeEmailInput(selectedChatEmail))) {
+							selectedChatEmail = conversationsCache[0]?.email || null;
+						}
+						setChatHeader(selectedChatEmail);
+						renderConversationList(conversationsCache);
+						renderThreadForSelected();
+						renderGroups(groupsCache);
+						renderGroupThreadForSelected();
+					} catch (e) {
+						conversationsCache = [];
+						renderConversationList([]);
+						renderThreadForSelected();
+						renderGroups(groupsCache);
+						renderGroupThreadForSelected();
+						setMessage(e?.message || "Failed to load chats.");
 					}
 				}
 
 				let uploadedItemsCache = [];
 
+				const uploadedPicker = createCollapsiblePicker({
+					wrapEl: uploadedFilePickerWrapEl,
+					btnEl: uploadedFilePickerBtnEl,
+					menuEl: uploadedFilePickerMenuEl,
+					deviceBtnEl: uploadedPickerDeviceBtnEl,
+					uploadedToggleEl: uploadedPickerUploadedToggleEl,
+					uploadedListEl: uploadedPickerUploadedListEl,
+					getDeviceFile: () => uploadedDeviceFile,
+					setDeviceFile: (f) => {
+						uploadedDeviceFile = f;
+						if (uploadedDeviceFileInputEl) uploadedDeviceFileInputEl.value = "";
+					},
+					onChange: (value, label) => {
+						uploadedPickedValue = String(value || "");
+						if (uploadedFilePickerBtnEl) uploadedFilePickerBtnEl.textContent = label || "Select file…";
+						if (uploadedPickedValue === DEVICE_PICK_VALUE) uploadedDeviceFileInputEl?.click();
+						updateUploadedSendEnabled();
+					}
+				});
+
+				const chatPicker = createCollapsiblePicker({
+					wrapEl: chatFilePickerWrapEl,
+					btnEl: chatFilePickerBtnEl,
+					menuEl: chatFilePickerMenuEl,
+					deviceBtnEl: chatPickerDeviceBtnEl,
+					uploadedToggleEl: chatPickerUploadedToggleEl,
+					uploadedListEl: chatPickerUploadedListEl,
+					getDeviceFile: () => chatDeviceFile,
+					setDeviceFile: (f) => {
+						chatDeviceFile = f;
+						if (chatDeviceFileInputEl) chatDeviceFileInputEl.value = "";
+					},
+					onChange: (value, label) => {
+						chatPickedValue = String(value || "");
+						if (chatFilePickerBtnEl) chatFilePickerBtnEl.textContent = label || "Select file…";
+						if (chatPickedValue === DEVICE_PICK_VALUE) chatDeviceFileInputEl?.click();
+						updateChatSendEnabled();
+					}
+				});
+
+				const groupPicker = createCollapsiblePicker({
+					wrapEl: groupFilePickerWrapEl,
+					btnEl: groupFilePickerBtnEl,
+					menuEl: groupFilePickerMenuEl,
+					deviceBtnEl: groupPickerDeviceBtnEl,
+					uploadedToggleEl: groupPickerUploadedToggleEl,
+					uploadedListEl: groupPickerUploadedListEl,
+					getDeviceFile: () => groupDeviceFile,
+					setDeviceFile: (f) => {
+						groupDeviceFile = f;
+						if (groupDeviceFileInputEl) groupDeviceFileInputEl.value = "";
+					},
+					onChange: (value, label) => {
+						groupPickedValue = String(value || "");
+						if (groupFilePickerBtnEl) groupFilePickerBtnEl.textContent = label || "Select file…";
+						if (groupPickedValue === DEVICE_PICK_VALUE) groupDeviceFileInputEl?.click();
+						updateGroupSendEnabled();
+					}
+				});
+
 				function refreshShareFileSelect() {
-					// Removed from page; sending is handled by popup.
+					uploadedPicker.setUploadedItems(uploadedItemsCache, uploadedPickedValue);
+					chatPicker.setUploadedItems(uploadedItemsCache, chatPickedValue);
+					groupPicker.setUploadedItems(uploadedItemsCache, groupPickedValue);
+					uploadedPicker.setDeviceLabel(uploadedDeviceFile ? uploadedDeviceFile.name : "");
+					chatPicker.setDeviceLabel(chatDeviceFile ? chatDeviceFile.name : "");
+					groupPicker.setDeviceLabel(groupDeviceFile ? groupDeviceFile.name : "");
+					if (uploadedPickerDeviceBtnEl) uploadedPickerDeviceBtnEl.textContent = deviceOptionLabel(uploadedDeviceFile ? uploadedDeviceFile.name : "");
+					if (chatPickerDeviceBtnEl) chatPickerDeviceBtnEl.textContent = deviceOptionLabel(chatDeviceFile ? chatDeviceFile.name : "");
+					if (groupPickerDeviceBtnEl) groupPickerDeviceBtnEl.textContent = deviceOptionLabel(groupDeviceFile ? groupDeviceFile.name : "");
+					if (uploadedPickedValue === DEVICE_PICK_VALUE && uploadedFilePickerBtnEl) uploadedFilePickerBtnEl.textContent = deviceOptionLabel(uploadedDeviceFile ? uploadedDeviceFile.name : "");
+					if (chatPickedValue === DEVICE_PICK_VALUE && chatFilePickerBtnEl) chatFilePickerBtnEl.textContent = deviceOptionLabel(chatDeviceFile ? chatDeviceFile.name : "");
+					if (groupPickedValue === DEVICE_PICK_VALUE && groupFilePickerBtnEl) groupFilePickerBtnEl.textContent = deviceOptionLabel(groupDeviceFile ? groupDeviceFile.name : "");
+					updateUploadedSendEnabled();
+					updateChatSendEnabled();
+					updateGroupSendEnabled();
 				}
 
 				async function loadList() {
@@ -2493,9 +4474,13 @@
 							shareBtn.addEventListener("click", async () => {
 								try {
 									if (typeof window.showSharePopup !== "function") throw new Error("Share popup not available");
-									const result = await window.showSharePopup({ uploaded: uploadedItemsCache, defaultFileId: item.id });
+									const result = await window.showSharePopup({
+										uploaded: uploadedItemsCache,
+										defaultFileId: item.id,
+										suggestedEmails: getKnownEmails()
+									});
 									if (!result) return;
-									await shareUploadedFile({ fileId: result.fileId, recipientEmail: result.recipientEmail });
+											await shareUploadedFile({ fileId: result.fileId, recipientEmail: result.recipientEmail, comment: result.comment });
 									setMessage("Sent.");
 									await loadChat();
 								} catch (e) {
@@ -2632,6 +4617,43 @@
 					}
 				}
 
+				async function uploadOneEncryptedFileToServer(file, encryptionKeyText) {
+					const f = file;
+					if (!f) throw new Error("No file selected");
+					const keyText = String(encryptionKeyText || "").trim();
+					if (!keyText) throw new Error("Encryption key is required");
+					const auth = window.__auth;
+					const user = auth?.currentUser;
+					if (!user) throw new Error("Not logged in");
+
+					const derivedKeyB64 = await ensureSessionClientKeyB64(keyText);
+					const key = await importAesKeyFromB64(derivedKeyB64);
+					const iv = new Uint8Array(12);
+					crypto.getRandomValues(iv);
+					const plaintext = await f.arrayBuffer();
+					const originalSha256Hex = await sha256HexFromArrayBuffer(plaintext);
+					const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+					const cipherBlob = new Blob([ciphertext], { type: "application/octet-stream" });
+					const ivB64 = bytesToB64(iv);
+
+					const form = new FormData();
+					form.append("file", cipherBlob, `${f.name}.cipher`);
+					form.append("encMode", "client");
+					form.append("clientIvB64", ivB64);
+					form.append("originalName", f.name);
+					form.append("mimeType", f.type || "application/octet-stream");
+					form.append("originalSize", String(f.size));
+					form.append("originalSha256Hex", originalSha256Hex);
+					const res = await apiFetch("/api/files", { method: "POST", body: form });
+					const j = await res.json().catch(() => null);
+					if (!res.ok) throw new Error(j?.error || (await responseErrorMessage(res)) || "Upload failed");
+					const id = String(j?.id || "").trim();
+					if (!id) throw new Error("Upload failed: missing file id");
+					setStoredFileEncKeyB64(user.uid, id, derivedKeyB64);
+					sessionClientKeyB64 = derivedKeyB64;
+					return id;
+				}
+
 				chooseBtn?.addEventListener("click", () => input?.click());
 				input?.addEventListener("change", () => {
 					addPending(input.files);
@@ -2689,10 +4711,291 @@
 				document.addEventListener("drop", (e) => e.preventDefault());
 
 				updateUploadButton();
+				setActiveSection((() => {
+					try {
+						return localStorage.getItem("homeActiveSection") || "uploaded";
+					} catch {
+						return "uploaded";
+					}
+				})());
+
+				tabUploadedBtnEl?.addEventListener("click", () => setActiveSection("uploaded"));
+				tabChatsBtnEl?.addEventListener("click", () => setActiveSection("chats"));
+				tabGroupsBtnEl?.addEventListener("click", () => setActiveSection("groups"));
+
+				createGroupBtnEl?.addEventListener("click", async () => {
+					try {
+						if (typeof window.showGroupCreatePopup !== "function") throw new Error("Group create popup not available");
+						const payload = await window.showGroupCreatePopup();
+						if (!payload) return;
+						setMessage("Creating group…");
+						const r = await apiFetch("/api/groups", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify(payload)
+						});
+						const j = await r.json().catch(() => null);
+						if (!r.ok) throw new Error(j?.error || "Failed to create group");
+						await loadGroups();
+						if (j?.id) {
+							selectedGroupId = String(j.id);
+							await loadGroupDetails(selectedGroupId);
+							renderGroups(groupsCache);
+						}
+						setMessage("Group created.");
+					} catch (e) {
+						setMessage(e?.message || "Failed to create group.");
+					}
+				});
+
+				refreshGroupsBtnEl?.addEventListener("click", async () => {
+					await loadGroupInvites();
+					await loadGroups();
+				});
+				refreshChatsBtnEl?.addEventListener("click", () => void loadChat());
+				groupOptionsBtnEl?.addEventListener("click", () => {
+					if (!String(selectedGroupId || "").trim()) return;
+					if (groupOptionsOpen) {
+						if (!confirmDiscardGroupOptionsIfDirty()) return;
+						discardGroupOptionsDraft();
+						setGroupOptionsOpen(false);
+						return;
+					}
+					setGroupOptionsOpen(true);
+				});
+				groupOptionsCloseBtnEl?.addEventListener("click", () => {
+					if (!confirmDiscardGroupOptionsIfDirty()) return;
+					discardGroupOptionsDraft();
+					setGroupOptionsOpen(false);
+				});
+				groupOptionsSaveBtnEl?.addEventListener("click", () => void saveGroupOptions());
+				refreshGroupThreadBtnEl?.addEventListener("click", async () => {
+					try {
+						if (!selectedGroupId) throw new Error("Select a group first");
+						await loadShares();
+						rebuildGroupConversationsCache();
+						renderGroups(groupsCache);
+						renderGroupThreadForSelected();
+					} catch (e) {
+						setMessage(e?.message || "Failed to refresh.");
+					}
+				});
+
+				chatShareBtnEl?.addEventListener("click", async () => {
+					try {
+						const email = normalizeEmailInput(selectedChatEmail);
+						if (!email) throw new Error("Select a user first");
+						if (typeof window.showSharePopup !== "function") throw new Error("Share popup not available");
+						const result = await window.showSharePopup({
+							uploaded: uploadedItemsCache,
+							defaultRecipientEmail: email,
+							lockRecipient: true,
+							defaultComment: String(chatMessageInputEl?.value || ""),
+							suggestedEmails: getKnownEmails()
+						});
+						if (!result) return;
+						await shareUploadedFile({ fileId: result.fileId, recipientEmail: email, comment: result.comment });
+						setMessage("Sent.");
+						await loadChat();
+					} catch (e) {
+						setMessage(e?.message || "Send failed.");
+					}
+				});
+
+				chatDeviceFileInputEl?.addEventListener("change", () => {
+					chatDeviceFile = chatDeviceFileInputEl.files && chatDeviceFileInputEl.files[0] ? chatDeviceFileInputEl.files[0] : null;
+					if (!chatDeviceFile && chatPickedValue === DEVICE_PICK_VALUE) chatPickedValue = "";
+					if (chatPickedValue === DEVICE_PICK_VALUE && chatFilePickerBtnEl) chatFilePickerBtnEl.textContent = deviceOptionLabel(chatDeviceFile ? chatDeviceFile.name : "");
+					if (chatPickerDeviceBtnEl) chatPickerDeviceBtnEl.textContent = deviceOptionLabel(chatDeviceFile ? chatDeviceFile.name : "");
+					updateChatSendEnabled();
+				});
+
+				uploadedDeviceFileInputEl?.addEventListener("change", () => {
+					uploadedDeviceFile = uploadedDeviceFileInputEl.files && uploadedDeviceFileInputEl.files[0] ? uploadedDeviceFileInputEl.files[0] : null;
+					if (!uploadedDeviceFile && uploadedPickedValue === DEVICE_PICK_VALUE) uploadedPickedValue = "";
+					if (uploadedPickedValue === DEVICE_PICK_VALUE && uploadedFilePickerBtnEl) uploadedFilePickerBtnEl.textContent = deviceOptionLabel(uploadedDeviceFile ? uploadedDeviceFile.name : "");
+					if (uploadedPickerDeviceBtnEl) uploadedPickerDeviceBtnEl.textContent = deviceOptionLabel(uploadedDeviceFile ? uploadedDeviceFile.name : "");
+					updateUploadedSendEnabled();
+				});
+
+				groupDeviceFileInputEl?.addEventListener("change", () => {
+					groupDeviceFile = groupDeviceFileInputEl.files && groupDeviceFileInputEl.files[0] ? groupDeviceFileInputEl.files[0] : null;
+					if (!groupDeviceFile && groupPickedValue === DEVICE_PICK_VALUE) groupPickedValue = "";
+					if (groupPickedValue === DEVICE_PICK_VALUE && groupFilePickerBtnEl) groupFilePickerBtnEl.textContent = deviceOptionLabel(groupDeviceFile ? groupDeviceFile.name : "");
+					if (groupPickerDeviceBtnEl) groupPickerDeviceBtnEl.textContent = deviceOptionLabel(groupDeviceFile ? groupDeviceFile.name : "");
+					updateGroupSendEnabled();
+				});
+
+				async function sendUploadedComposer() {
+					try {
+						let fileId = "";
+						const picked = String(uploadedPickedValue || "").trim();
+						if (picked === DEVICE_PICK_VALUE) {
+							if (!uploadedDeviceFile) throw new Error("Choose a file from device");
+							if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+							const keyText = await window.showKeyPopup({
+								title: "Upload & Share",
+								description: "Enter encryption key",
+								primaryText: "Continue",
+								placeholder: "Encryption key"
+							});
+							if (!keyText) {
+								setMessage("Cancelled.");
+								return;
+							}
+							setMessage("Encrypting & uploading…");
+							fileId = await uploadOneEncryptedFileToServer(uploadedDeviceFile, keyText);
+							await loadList();
+						} else {
+							fileId = picked;
+							if (!fileId) throw new Error("Select a file to share");
+						}
+						if (typeof window.showSharePopup !== "function") throw new Error("Share popup not available");
+						const result = await window.showSharePopup({
+							uploaded: uploadedItemsCache,
+							defaultFileId: fileId,
+							defaultComment: String(uploadedMessageInputEl?.value || ""),
+							suggestedEmails: getKnownEmails()
+						});
+						if (!result) return;
+						await shareUploadedFile({ fileId: result.fileId, recipientEmail: result.recipientEmail, comment: result.comment });
+						if (uploadedMessageInputEl) uploadedMessageInputEl.value = "";
+						uploadedPickedValue = "";
+						if (uploadedFilePickerBtnEl) uploadedFilePickerBtnEl.textContent = "Select file…";
+						uploadedDeviceFile = null;
+						if (uploadedDeviceFileInputEl) uploadedDeviceFileInputEl.value = "";
+						if (uploadedPickerDeviceBtnEl) uploadedPickerDeviceBtnEl.textContent = deviceOptionLabel("");
+						updateUploadedSendEnabled();
+						setMessage("Sent.");
+						await loadChat();
+					} catch (e) {
+						setMessage(e?.message || "Send failed.");
+					}
+				}
+
+				uploadedSendBtnEl?.addEventListener("click", () => void sendUploadedComposer());
+				uploadedMessageInputEl?.addEventListener("keydown", (e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						void sendUploadedComposer();
+					}
+				});
+
+				async function sendChatComposer() {
+					try {
+						const email = normalizeEmailInput(selectedChatEmail);
+						if (!email) throw new Error("Select a user first");
+						let fileId = "";
+						const picked = String(chatPickedValue || "").trim();
+						if (picked === DEVICE_PICK_VALUE) {
+							if (!chatDeviceFile) throw new Error("Choose a file from device");
+							if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+							const keyText = await window.showKeyPopup({
+								title: "Upload & Send",
+								description: "Enter encryption key",
+								primaryText: "Continue",
+								placeholder: "Encryption key"
+							});
+							if (!keyText) {
+								setMessage("Cancelled.");
+								return;
+							}
+							setMessage("Encrypting & uploading…");
+							fileId = await uploadOneEncryptedFileToServer(chatDeviceFile, keyText);
+							await loadList();
+						} else {
+							fileId = picked;
+							if (!fileId) throw new Error("Select a file to send");
+						}
+						const comment = String(chatMessageInputEl?.value || "").trim();
+						await shareUploadedFile({ fileId, recipientEmail: email, comment });
+						if (chatMessageInputEl) chatMessageInputEl.value = "";
+						chatPickedValue = "";
+						if (chatFilePickerBtnEl) chatFilePickerBtnEl.textContent = "Select file…";
+						chatDeviceFile = null;
+						if (chatDeviceFileInputEl) chatDeviceFileInputEl.value = "";
+						if (chatPickerDeviceBtnEl) chatPickerDeviceBtnEl.textContent = deviceOptionLabel("");
+						updateChatSendEnabled();
+						setMessage("Sent.");
+						await loadChat();
+					} catch (e) {
+						setMessage(e?.message || "Send failed.");
+					}
+				}
+
+				chatSendBtnEl?.addEventListener("click", () => void sendChatComposer());
+				chatMessageInputEl?.addEventListener("keydown", (e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						void sendChatComposer();
+					}
+				});
+
+				async function sendGroupComposer() {
+					try {
+						const gid = String(selectedGroupId || "").trim();
+						if (!gid) throw new Error("Select a group first");
+						let fileId = "";
+						const picked = String(groupPickedValue || "").trim();
+						if (picked === DEVICE_PICK_VALUE) {
+							if (!groupDeviceFile) throw new Error("Choose a file from device");
+							if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+							const keyText = await window.showKeyPopup({
+								title: "Upload & Share to Group",
+								description: "Enter encryption key",
+								primaryText: "Continue",
+								placeholder: "Encryption key"
+							});
+							if (!keyText) {
+								setMessage("Cancelled.");
+								return;
+							}
+							setMessage("Encrypting & uploading…");
+							fileId = await uploadOneEncryptedFileToServer(groupDeviceFile, keyText);
+							await loadList();
+						} else {
+							fileId = picked;
+							if (!fileId) throw new Error("Select a file to share");
+						}
+						const permission = String(groupPermissionSelectEl?.value || "download");
+						const comment = String(groupMessageInputEl?.value || "").trim();
+						const result = await shareUploadedFileToGroup({ fileId, groupId: gid, permission, comment });
+						if (groupMessageInputEl) groupMessageInputEl.value = "";
+						groupPickedValue = "";
+						if (groupFilePickerBtnEl) groupFilePickerBtnEl.textContent = "Select file…";
+						groupDeviceFile = null;
+						if (groupDeviceFileInputEl) groupDeviceFileInputEl.value = "";
+						if (groupPickerDeviceBtnEl) groupPickerDeviceBtnEl.textContent = deviceOptionLabel("");
+						updateGroupSendEnabled();
+						await loadShares();
+						rebuildGroupConversationsCache();
+						renderGroups(groupsCache);
+						renderGroupThreadForSelected();
+						if (result?.created != null) setMessage(`Shared to ${Number(result.created) || 0} member(s).`);
+						else setMessage("Shared.");
+					} catch (e) {
+						setMessage(e?.message || "Send failed.");
+					}
+				}
+
+				groupSendBtnEl?.addEventListener("click", () => void sendGroupComposer());
+				groupMessageInputEl?.addEventListener("keydown", (e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						void sendGroupComposer();
+					}
+				});
+
+				// Populate the unified pickers right away so "Choose from device" is available
+				// even before /api/files has loaded.
+				refreshShareFileSelect();
+
 				// Wait a tick so auth state has time to populate.
 				setTimeout(() => {
 					void loadList();
 					void loadChat();
+					void loadGroups();
+					void loadGroupDetails(null);
 				}, 700);
 			})();
 		</script>

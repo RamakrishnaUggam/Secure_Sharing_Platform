@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Admin • Secure File Sharing</title>
+		<script>
+			(function () {
+				try {
+					const stored = localStorage.getItem("theme");
+					const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+					const theme = stored || (prefersLight ? "light" : "dark");
+					document.documentElement.setAttribute("data-theme", theme);
+				} catch {
+					// ignore
+				}
+			})();
+		</script>
+		<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet" />
+		<style>
+			:root {
+				--bg-1: #05060b;
+				--bg-2: #0a1222;
+				--card: rgba(255, 255, 255, 0.075);
+				--card-2: rgba(255, 255, 255, 0.045);
+				--card-border: rgba(255, 255, 255, 0.14);
+				--text: rgba(255, 255, 255, 0.92);
+				--muted: rgba(255, 255, 255, 0.7);
+				--primary-1: #a78bfa;
+				--primary-2: #22d3ee;
+				--danger: #fb7185;
+				--danger-bg: rgba(251, 113, 133, 0.12);
+				--ok: #34d399;
+				--ok-bg: rgba(52, 211, 153, 0.12);
+				--focus: rgba(34, 211, 238, 0.26);
+				--shadow: 0 38px 110px rgba(0, 0, 0, 0.62);
+			}
+
+			html[data-theme="light"] {
+				--bg-1: #f6f7fb;
+				--bg-2: #e9effa;
+				--card: rgba(255, 255, 255, 0.78);
+				--card-2: rgba(255, 255, 255, 0.62);
+				--card-border: rgba(15, 23, 42, 0.1);
+				--text: rgba(15, 23, 42, 0.92);
+				--muted: rgba(15, 23, 42, 0.68);
+				--shadow: 0 24px 70px rgba(2, 6, 23, 0.14);
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				font-family: "Poppins", sans-serif;
+				color: var(--text);
+				background: radial-gradient(900px circle at 15% 20%, rgba(167, 139, 250, 0.22), transparent 48%),
+					radial-gradient(900px circle at 80% 12%, rgba(34, 211, 238, 0.18), transparent 42%),
+					linear-gradient(180deg, var(--bg-1), var(--bg-2));
+				min-height: 100vh;
+				-webkit-font-smoothing: antialiased;
+				-moz-osx-font-smoothing: grayscale;
+			}
+
+			a {
+				color: inherit;
+				text-decoration: none;
+			}
+
+			.container {
+				width: min(1100px, 92vw);
+				margin: 0 auto;
+			}
+
+			.nav {
+				position: sticky;
+				top: 0;
+				z-index: 20;
+				background: rgba(10, 18, 34, 0.72);
+				backdrop-filter: blur(12px);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+			}
+
+			html[data-theme="light"] .nav {
+				background: rgba(255, 255, 255, 0.72);
+				border-bottom-color: rgba(15, 23, 42, 0.1);
+			}
+
+			.nav__inner {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 14px 0;
+				gap: 14px;
+			}
+
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				font-weight: 600;
+			}
+
+			.brand__mark {
+				width: 34px;
+				height: 34px;
+				border-radius: 10px;
+				object-fit: contain;
+			}
+
+			.nav__right {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.nav__link {
+				color: var(--muted);
+				font-size: 13px;
+				padding: 6px 8px;
+				border-radius: 10px;
+			}
+
+			.nav__link:hover {
+				color: var(--text);
+				background: rgba(255, 255, 255, 0.06);
+			}
+
+			html[data-theme="light"] .nav__link {
+				color: rgba(15, 23, 42, 0.72);
+			}
+
+			html[data-theme="light"] .nav__link:hover {
+				color: rgba(15, 23, 42, 0.92);
+				background: rgba(15, 23, 42, 0.06);
+			}
+
+			.panel {
+				margin: 22px 0;
+				padding: 18px;
+				border-radius: 14px;
+				background: linear-gradient(180deg, var(--card), var(--card-2));
+				border: 1px solid var(--card-border);
+				box-shadow: var(--shadow);
+			}
+
+			.h1 {
+				font-size: 20px;
+				font-weight: 600;
+				margin-bottom: 10px;
+			}
+
+			.sub {
+				color: var(--muted);
+				font-size: 13px;
+				line-height: 1.7;
+			}
+
+			.grid {
+				display: grid;
+				grid-template-columns: repeat(4, minmax(0, 1fr));
+				gap: 12px;
+				margin-top: 14px;
+			}
+
+			@media (max-width: 980px) {
+				.grid {
+					grid-template-columns: repeat(2, minmax(0, 1fr));
+				}
+			}
+
+			@media (max-width: 560px) {
+				.grid {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			.card {
+				border-radius: 14px;
+				padding: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			html[data-theme="light"] .card {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.k {
+				font-size: 12px;
+				color: var(--muted);
+				margin-bottom: 6px;
+			}
+
+			.v {
+				font-size: 18px;
+				font-weight: 600;
+			}
+
+			.small {
+				margin-top: 6px;
+				font-size: 12px;
+				color: var(--muted);
+				line-height: 1.5;
+				word-break: break-word;
+			}
+
+			.table {
+				width: 100%;
+				border-collapse: collapse;
+				margin-top: 14px;
+				font-size: 13px;
+			}
+
+			.tableWrap {
+				margin-top: 14px;
+				border-radius: 14px;
+				border: 1px solid rgba(255, 255, 255, 0.12);
+				background: rgba(255, 255, 255, 0.03);
+				overflow-x: auto;
+			}
+
+			html[data-theme="light"] .tableWrap {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.02);
+			}
+
+			.table th,
+			.table td {
+				padding: 10px 10px;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+				text-align: left;
+			}
+			.row--muted td {
+				color: var(--muted);
+				font-style: italic;
+				text-align: center;
+				padding: 14px;
+			}
+
+			.table th {
+				position: sticky;
+				top: 0;
+				background: rgba(10, 18, 34, 0.92);
+				backdrop-filter: blur(10px);
+				z-index: 2;
+			}
+
+			html[data-theme="light"] .table th {
+				background: rgba(255, 255, 255, 0.92);
+			}
+
+			.table tr:hover td {
+				background: rgba(255, 255, 255, 0.03);
+			}
+
+			.tabs {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+				margin-top: 14px;
+				position: sticky;
+				top: 64px;
+				z-index: 10;
+				padding: 10px 0;
+				background: transparent;
+			}
+
+			.tab {
+				height: 40px;
+				padding: 0 12px;
+				border-radius: 12px;
+				cursor: pointer;
+				border: 1px solid var(--card-border);
+				background: rgba(255, 255, 255, 0.04);
+				color: var(--text);
+				font-weight: 600;
+				font-size: 13px;
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.tab[aria-selected="true"] {
+				background: rgba(255, 255, 255, 0.10);
+			}
+
+			.view {
+				margin-top: 14px;
+				display: none;
+			}
+
+			.view.is-active {
+				display: block;
+			}
+
+			.row {
+				margin-top: 12px;
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+				align-items: center;
+			}
+
+			.badge {
+				font-size: 12px;
+				padding: 2px 8px;
+				border-radius: 999px;
+				border: 1px solid var(--card-border);
+				color: var(--muted);
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			.badge--ok {
+				border-color: rgba(52, 211, 153, 0.35);
+				background: var(--ok-bg);
+				color: var(--text);
+			}
+
+			.badge--danger {
+				border-color: rgba(251, 113, 133, 0.35);
+				background: var(--danger-bg);
+				color: var(--text);
+			}
+
+			.sectionTitle {
+				margin-top: 14px;
+				font-size: 14px;
+				font-weight: 600;
+				color: var(--text);
+			}
+
+			.input {
+				height: 40px;
+				padding: 0 12px;
+				border-radius: 12px;
+				border: 1px solid var(--card-border);
+				background: rgba(255, 255, 255, 0.04);
+				color: var(--text);
+				min-width: 260px;
+			}
+
+			html[data-theme="light"] .table th,
+			html[data-theme="light"] .table td {
+				border-bottom-color: rgba(15, 23, 42, 0.12);
+			}
+
+			.btn {
+				height: 40px;
+				padding: 0 12px;
+				border-radius: 12px;
+				cursor: pointer;
+				border: 1px solid var(--card-border);
+				background: rgba(255, 255, 255, 0.06);
+				color: var(--text);
+				font-weight: 600;
+				font-size: 13px;
+			}
+
+			.btn--sm {
+				height: 34px;
+				padding: 0 10px;
+				border-radius: 12px;
+				font-size: 12px;
+			}
+
+			.btn--danger {
+				border-color: rgba(251, 113, 133, 0.45);
+				background: var(--danger-bg);
+			}
+
+			.btn--ghost {
+				background: rgba(255, 255, 255, 0.03);
+			}
+
+			.btn:focus {
+				outline: none;
+				box-shadow: 0 0 0 4px var(--focus);
+			}
+
+			.theme-toggle {
+				width: 42px;
+				height: 42px;
+				border-radius: 14px;
+				display: grid;
+				place-items: center;
+				cursor: pointer;
+				border: 1px solid var(--card-border);
+				background: linear-gradient(180deg, var(--card), var(--card-2));
+				color: var(--text);
+			}
+
+			.theme-toggle svg {
+				width: 18px;
+				height: 18px;
+			}
+
+			html[data-theme="dark"] .theme-toggle .icon-moon {
+				display: none;
+			}
+
+			html[data-theme="light"] .theme-toggle .icon-sun {
+				display: none;
+			}
+		</style>
+		<script type="module" src="admin.js" defer></script>
+	</head>
+	<body>
+		<header class="nav" aria-label="Primary">
+			<div class="container nav__inner">
+				<a class="brand" href="home.html" aria-label="Secure File Sharing Platform">
+					<img class="brand__mark" src="secure%20share%20logo.png" alt="Secure Share" />
+					<span>Admin</span>
+				</a>
+				<div class="nav__right">
+					<a class="nav__link" href="home.html">Back to dashboard</a>
+					<button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+						<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<circle cx="12" cy="12" r="4"></circle>
+							<path d="M12 2v2"></path>
+							<path d="M12 20v2"></path>
+							<path d="M4.93 4.93l1.41 1.41"></path>
+							<path d="M17.66 17.66l1.41 1.41"></path>
+							<path d="M2 12h2"></path>
+							<path d="M20 12h2"></path>
+							<path d="M4.93 19.07l1.41-1.41"></path>
+							<path d="M17.66 6.34l1.41-1.41"></path>
+						</svg>
+						<svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path>
+						</svg>
+					</button>
+				</div>
+			</div>
+		</header>
+
+		<main class="container">
+			<section class="panel" aria-label="Admin overview">
+				<div class="h1">Admin Overview</div>
+				<div class="sub" id="subtitle">Loading…</div>
+				<div style="margin-top: 12px; display:flex; gap:10px; flex-wrap:wrap;">
+					<button class="btn" id="refreshBtn" type="button">Refresh</button>
+				</div>
+
+				<div class="grid" id="cards" aria-label="Admin metrics"></div>
+
+				<table class="table" aria-label="Traffic breakdown">
+					<thead>
+						<tr><th>Group</th><th>Requests</th></tr>
+					</thead>
+					<tbody id="trafficRows"></tbody>
+				</table>
+
+				<div class="tabs" role="tablist" aria-label="Admin sections">
+					<button class="tab" id="tabUsers" type="button" role="tab" aria-selected="false">Users <span class="badge" id="usersCount">—</span></button>
+					<button class="tab" id="tabFiles" type="button" role="tab" aria-selected="false">Files <span class="badge" id="filesCount">—</span></button>
+					<button class="tab" id="tabShares" type="button" role="tab" aria-selected="false">Shares <span class="badge" id="sharesCount">—</span></button>
+				</div>
+
+				<div class="view" id="viewUsers" role="tabpanel" aria-label="Users">
+					<div class="sectionTitle">User management</div>
+					<div class="sub" id="usersStatus">Loading…</div>
+					<div class="row">
+						<input class="input" id="userEmail" placeholder="Lookup user by email (exact)" />
+						<button class="btn" id="userLookupBtn" type="button">Lookup</button>
+						<button class="btn" id="usersLoadBtn" type="button">Load users</button>
+						<button class="btn" id="usersMoreBtn" type="button" disabled>Load more</button>
+					</div>
+					<div class="tableWrap" aria-label="Users table wrapper">
+						<table class="table" aria-label="Users table">
+							<thead>
+								<tr>
+									<th>Email</th>
+									<th>UID</th>
+									<th>Verified</th>
+									<th>Disabled</th>
+									<th>Actions</th>
+									<th>Created</th>
+									<th>Last sign-in</th>
+								</tr>
+							</thead>
+							<tbody id="usersRows"></tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="view" id="viewFiles" role="tabpanel" aria-label="Files">
+					<div class="sectionTitle">Stored files</div>
+					<div class="sub" id="filesStatus">Loading…</div>
+					<div class="row">
+						<input class="input" id="filesQuery" placeholder="Search files (name or ownerUid)" />
+						<button class="btn" id="filesLoadBtn" type="button">Load files</button>
+					</div>
+					<div class="tableWrap" aria-label="Files table wrapper">
+						<table class="table" aria-label="Files table">
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Owner UID</th>
+									<th>Size</th>
+									<th>Enc</th>
+									<th>Deleted</th>
+									<th>Actions</th>
+									<th>Created</th>
+								</tr>
+							</thead>
+							<tbody id="filesRows"></tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="view" id="viewShares" role="tabpanel" aria-label="Shares">
+					<div class="sectionTitle">Share records</div>
+					<div class="sub" id="sharesStatus">Loading…</div>
+					<div class="row">
+						<input class="input" id="sharesQuery" placeholder="Search shares (recipient/sender/ownerUid)" />
+						<button class="btn" id="sharesLoadBtn" type="button">Load shares</button>
+					</div>
+					<div class="tableWrap" aria-label="Shares table wrapper">
+						<table class="table" aria-label="Shares table">
+							<thead>
+								<tr>
+									<th>Recipient</th>
+									<th>Sender</th>
+									<th>File ID</th>
+									<th>Owner UID</th>
+									<th>Actions</th>
+									<th>Created</th>
+								</tr>
+							</thead>
+							<tbody id="sharesRows"></tbody>
+						</table>
+					</div>
+				</div>
+			</section>
+		</main>
+	</body>
+</html>

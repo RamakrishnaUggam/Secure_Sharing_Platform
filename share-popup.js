@@ -188,6 +188,35 @@
 		return String(value || "").trim().toLowerCase();
 	}
 
+	let emailDatalistSeq = 0;
+	function attachEmailSuggestions(inputEl, suggestedEmails) {
+		if (!inputEl) return;
+		const raw = Array.isArray(suggestedEmails) ? suggestedEmails : [];
+		const emails = Array.from(
+			new Set(
+				raw
+					.map((e) => normalizeEmail(e))
+					.filter((e) => e && e.includes("@") && e.length <= 254)
+			)
+		).slice(0, 50);
+		if (!emails.length) return;
+		emailDatalistSeq += 1;
+		const listId = `share-popup__emails_${emailDatalistSeq}`;
+		const dl = document.createElement("datalist");
+		dl.id = listId;
+		for (const email of emails) {
+			const opt = document.createElement("option");
+			opt.value = email;
+			dl.appendChild(opt);
+		}
+		inputEl.setAttribute("list", listId);
+		try {
+			inputEl.parentElement?.appendChild?.(dl);
+		} catch {
+			// ignore
+		}
+	}
+
 	function createButton(className, text) {
 		const btn = document.createElement("button");
 		btn.type = "button";
@@ -380,12 +409,16 @@
 
 	/**
 	 * Share popup: recipient email + select file + send.
-	 * @param {{ uploaded?: Array<{id: string, originalName?: string}>, defaultFileId?: string }} opts
-	 * @returns {Promise<null | { recipientEmail: string, fileId: string }>} 
+	 * @param {{ uploaded?: Array<{id: string, originalName?: string}>, defaultFileId?: string, defaultRecipientEmail?: string, lockRecipient?: boolean, defaultComment?: string, suggestedEmails?: string[] }} opts
+	 * @returns {Promise<null | { recipientEmail: string, fileId: string, comment?: string }>}
 	 */
 	window.showSharePopup = function showSharePopup(opts = {}) {
 		const uploaded = Array.isArray(opts.uploaded) ? opts.uploaded : [];
 		const defaultFileId = String(opts.defaultFileId || "").trim();
+		const defaultRecipientEmail = normalizeEmail(opts.defaultRecipientEmail);
+		const lockRecipient = Boolean(opts.lockRecipient);
+		const defaultComment = String(opts.defaultComment || "");
+		const suggestedEmails = Array.isArray(opts.suggestedEmails) ? opts.suggestedEmails : [];
 
 		const stack = document.createElement("div");
 		stack.className = "share-popup__stack";
@@ -398,12 +431,17 @@
 		const emailInput = createInput({
 			type: "email",
 			placeholder: "recipient@email.com",
-			value: "",
+			value: defaultRecipientEmail || "",
 			ariaLabel: "Recipient email"
 		});
 		emailInput.autocomplete = "email";
 		emailInput.inputMode = "email";
 		emailInput.spellcheck = false;
+		attachEmailSuggestions(emailInput, suggestedEmails);
+		if (lockRecipient && defaultRecipientEmail) {
+			emailInput.disabled = true;
+			emailInput.title = "Recipient is locked";
+		}
 		emailField.appendChild(emailLabel);
 		emailField.appendChild(emailInput);
 
@@ -434,17 +472,35 @@
 		stack.appendChild(emailField);
 		stack.appendChild(fileField);
 
+		const commentField = document.createElement("div");
+		commentField.className = "share-popup__field";
+		const commentLabel = document.createElement("div");
+		commentLabel.className = "share-popup__label";
+		commentLabel.textContent = "Message (optional)";
+		const commentInput = createInput({
+			type: "text",
+			placeholder: "Add a message for the recipient",
+			value: defaultComment,
+			ariaLabel: "Message"
+		});
+		commentInput.autocomplete = "off";
+		commentField.appendChild(commentLabel);
+		commentField.appendChild(commentInput);
+		stack.appendChild(commentField);
+
 		return showPopup({
 			title: "Share file",
 			description: "Enter recipient mail, select file and send.",
 			primaryText: "Send",
 			bodyEl: stack,
-			initialFocusEl: emailInput,
+			initialFocusEl: lockRecipient && defaultRecipientEmail ? select : emailInput,
 			onSubmit() {
 				const recipientEmail = normalizeEmail(emailInput.value);
 				if (!recipientEmail || !recipientEmail.includes("@")) {
-					emailInput.focus();
-					emailInput.select();
+					if (!emailInput.disabled) {
+						emailInput.focus();
+						emailInput.select();
+					}
 					return null;
 				}
 				const fileId = String(select.value || "").trim();
@@ -452,7 +508,202 @@
 					select.focus();
 					return null;
 				}
-				return { recipientEmail, fileId };
+					const comment = String(commentInput.value || "").trim();
+					return { recipientEmail, fileId, comment };
+			}
+		});
+	};
+
+	/**
+	 * Create-group popup.
+	 * @returns {Promise<null | { name: string, description: string, expiresAt: string|null }>}
+	 */
+	window.showGroupCreatePopup = function showGroupCreatePopup() {
+		injectStylesOnce();
+		const stack = document.createElement("div");
+		stack.className = "share-popup__stack";
+
+		function field(labelText, inputEl) {
+			const wrap = document.createElement("div");
+			wrap.className = "share-popup__field";
+			const lab = document.createElement("div");
+			lab.className = "share-popup__label";
+			lab.textContent = labelText;
+			wrap.appendChild(lab);
+			wrap.appendChild(inputEl);
+			return wrap;
+		}
+
+		const nameInput = createInput({ type: "text", placeholder: "Group name (e.g., Marketing_Team)", value: "", ariaLabel: "Group name" });
+		nameInput.autocomplete = "off";
+		const descInput = createInput({ type: "text", placeholder: "Description (optional)", value: "", ariaLabel: "Group description" });
+
+		const expiresInput = createInput({ type: "datetime-local", placeholder: "", value: "", ariaLabel: "Expiration date" });
+
+		stack.appendChild(field("Group name", nameInput));
+		stack.appendChild(field("Description", descInput));
+		stack.appendChild(field("Expiration (optional)", expiresInput));
+
+		return showPopup({
+			title: "Create group",
+			description: "Create a group to share files with multiple users.",
+			primaryText: "Create",
+			bodyEl: stack,
+			initialFocusEl: nameInput,
+			onSubmit() {
+				const name = String(nameInput.value || "").trim();
+				if (!name) {
+					nameInput.focus();
+					return null;
+				}
+				const expiresRaw = String(expiresInput.value || "").trim();
+				return {
+					name,
+					description: String(descInput.value || "").trim(),
+					expiresAt: expiresRaw ? new Date(expiresRaw).toISOString() : null
+				};
+			}
+		});
+	};
+
+	/**
+	 * Share-to-group popup.
+	 * @param {{ groups: Array<{id: string, name: string, groupType?: string, isExpired?: boolean, isDisabled?: boolean}> }} opts
+	 * @returns {Promise<null | { groupId: string, permission: string }>}
+	 */
+	window.showGroupSharePopup = function showGroupSharePopup(opts = {}) {
+		injectStylesOnce();
+		const groups = Array.isArray(opts.groups) ? opts.groups : [];
+		const stack = document.createElement("div");
+		stack.className = "share-popup__stack";
+
+		const groupField = document.createElement("div");
+		groupField.className = "share-popup__field";
+		const groupLabel = document.createElement("div");
+		groupLabel.className = "share-popup__label";
+		groupLabel.textContent = "Select group";
+		const groupSelect = document.createElement("select");
+		groupSelect.className = "share-popup__input";
+		groupSelect.setAttribute("aria-label", "Select group");
+		const g0 = document.createElement("option");
+		g0.value = "";
+		g0.textContent = groups.length ? "Select a group" : "No groups";
+		groupSelect.appendChild(g0);
+		for (const g of groups) {
+			if (g?.isExpired || g?.isDisabled) continue;
+			const opt = document.createElement("option");
+			opt.value = String(g.id);
+			opt.textContent = `${String(g.name || g.id)}${g.groupType ? ` (${g.groupType})` : ""}`;
+			groupSelect.appendChild(opt);
+		}
+		groupField.appendChild(groupLabel);
+		groupField.appendChild(groupSelect);
+
+		const permField = document.createElement("div");
+		permField.className = "share-popup__field";
+		const permLabel = document.createElement("div");
+		permLabel.className = "share-popup__label";
+		permLabel.textContent = "Permission";
+		const permSelect = document.createElement("select");
+		permSelect.className = "share-popup__input";
+		permSelect.setAttribute("aria-label", "Permission");
+		for (const p of [
+			{ v: "view_only", t: "View-only (no download)" },
+			{ v: "download", t: "Download" }
+		]) {
+			const opt = document.createElement("option");
+			opt.value = p.v;
+			opt.textContent = p.t;
+			permSelect.appendChild(opt);
+		}
+		permSelect.value = "view_only";
+		permField.appendChild(permLabel);
+		permField.appendChild(permSelect);
+
+		stack.appendChild(groupField);
+		stack.appendChild(permField);
+
+		return showPopup({
+			title: "Share to group",
+			description: "This will share the selected file(s) with all current group members.",
+			primaryText: "Share",
+			bodyEl: stack,
+			initialFocusEl: groupSelect,
+			onSubmit() {
+				const groupId = String(groupSelect.value || "").trim();
+				if (!groupId) {
+					groupSelect.focus();
+					return null;
+				}
+				return { groupId, permission: String(permSelect.value || "view_only") };
+			}
+		});
+	};
+
+	/**
+	 * Invite-member popup.
+	 * @param {{ suggestedEmails?: string[] }} [opts]
+	 * @returns {Promise<null | { email: string, role: string }>}
+	 */
+	window.showGroupAddMemberPopup = function showGroupAddMemberPopup(opts = {}) {
+		injectStylesOnce();
+		const suggestedEmails = Array.isArray(opts?.suggestedEmails) ? opts.suggestedEmails : [];
+		const stack = document.createElement("div");
+		stack.className = "share-popup__stack";
+
+		const emailField = document.createElement("div");
+		emailField.className = "share-popup__field";
+		const emailLabel = document.createElement("div");
+		emailLabel.className = "share-popup__label";
+		emailLabel.textContent = "Member email";
+		const emailInput = createInput({ type: "email", placeholder: "user@email.com", value: "", ariaLabel: "Member email" });
+		emailInput.autocomplete = "email";
+		emailInput.inputMode = "email";
+		emailInput.spellcheck = false;
+		attachEmailSuggestions(emailInput, suggestedEmails);
+		emailField.appendChild(emailLabel);
+		emailField.appendChild(emailInput);
+
+		const roleField = document.createElement("div");
+		roleField.className = "share-popup__field";
+		const roleLabel = document.createElement("div");
+		roleLabel.className = "share-popup__label";
+		roleLabel.textContent = "Role";
+		const roleSelect = document.createElement("select");
+		roleSelect.className = "share-popup__input";
+		roleSelect.setAttribute("aria-label", "Role");
+		for (const r of [
+			{ v: "viewer", t: "Viewer" },
+			{ v: "member", t: "Member" },
+			{ v: "editor", t: "Editor" },
+			{ v: "admin", t: "Admin" }
+		]) {
+			const opt = document.createElement("option");
+			opt.value = r.v;
+			opt.textContent = r.t;
+			roleSelect.appendChild(opt);
+		}
+		roleSelect.value = "member";
+		roleField.appendChild(roleLabel);
+		roleField.appendChild(roleSelect);
+
+		stack.appendChild(emailField);
+		stack.appendChild(roleField);
+
+		return showPopup({
+			title: "Invite member",
+			description: "An invitation will be created. The user joins after accepting.",
+			primaryText: "Invite",
+			bodyEl: stack,
+			initialFocusEl: emailInput,
+			onSubmit() {
+				const email = normalizeEmail(emailInput.value);
+				if (!email || !email.includes("@")) {
+					emailInput.focus();
+					emailInput.select();
+					return null;
+				}
+				return { email, role: String(roleSelect.value || "member") };
 			}
 		});
 	};

@@ -7,7 +7,7 @@ import {
   signOut,
   reload,
   setPersistence,
-  browserSessionPersistence
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 // Your web app's Firebase configuration
@@ -28,9 +28,18 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 
 // Require login again after the tab/browser is closed.
-setPersistence(auth, browserSessionPersistence).catch(() => {
+setPersistence(auth, browserLocalPersistence).catch(() => {
   // ignore
 });
+
+function withTimeout(promise, ms) {
+  const timeoutMs = Number(ms);
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return promise;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("Timed out")), timeoutMs))
+  ]);
+}
 
 const form = document.getElementById("loginForm") || document.querySelector("form");
 const messageEl = document.getElementById("formMessage");
@@ -202,18 +211,18 @@ form.addEventListener("submit", (event) => {
   showMessage("Signing in…");
   setForgotVisible(false);
 
-  setPersistence(auth, browserSessionPersistence)
-    .catch(() => {
-      // ignore
-    })
-    .then(() => signInWithEmailAndPassword(auth, email, password))
-    .then(async () => {
-      const user = auth.currentUser;
+  const submitBtn = form.querySelector("button[type='submit']") || form.querySelector("button");
+  if (submitBtn) submitBtn.disabled = true;
+
+  signInWithEmailAndPassword(auth, email, password)
+    .then(async (cred) => {
+      showMessage("Checking account…");
+      const user = cred?.user || auth.currentUser;
       if (!user) throw new Error("No authenticated user");
 
       // Ensure we have fresh emailVerified state.
       try {
-        await reload(user);
+        await withTimeout(reload(user), 8000);
       } catch {
         // ignore
       }
@@ -222,7 +231,7 @@ form.addEventListener("submit", (event) => {
         // Optionally send verification email again (throttled).
         try {
           if (!shouldThrottleVerificationSend(user.uid)) {
-            await sendVerificationEmailBestEffort(user);
+            await withTimeout(sendVerificationEmailBestEffort(user), 8000);
             markVerificationEmailSent(user.uid);
           }
         } catch (e) {
@@ -255,6 +264,9 @@ form.addEventListener("submit", (event) => {
         code === "auth/wrong-password" || code === "auth/invalid-login-credentials";
       setForgotVisible(shouldShowForgot);
       showMessage(friendlyAuthError(error));
+    })
+    .finally(() => {
+      if (submitBtn) submitBtn.disabled = false;
     });
 });
 

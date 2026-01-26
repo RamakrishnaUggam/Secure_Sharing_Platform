@@ -7,7 +7,7 @@ import {
   sendEmailVerification,
   signOut,
   setPersistence,
-  browserSessionPersistence
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 // Your web app's Firebase configuration
@@ -28,7 +28,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 
 // Require login again after the tab/browser is closed.
-setPersistence(auth, browserSessionPersistence).catch(() => {
+setPersistence(auth, browserLocalPersistence).catch(() => {
   // ignore
 });
 
