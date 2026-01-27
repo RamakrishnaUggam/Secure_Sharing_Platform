@@ -1001,9 +1001,7 @@
 		groupSelect.setAttribute("aria-label", "Select group");
 		const g0 = document.createElement("option");
 		g0.value = "";
-		g0.textContent = groups.length ? "Select a group" : "No groups";
-		groupSelect.appendChild(g0);
-		for (const g of groups) {
+			{ v: "downloader", t: "Downloader" }
 			if (g?.isExpired || g?.isDisabled) continue;
 			const opt = document.createElement("option");
 			opt.value = String(g.id);
@@ -1055,7 +1053,7 @@
 	};
 
 	/**
-	 * Invite-member popup.
+	 * Add-member popup.
 	 * @param {{ suggestedEmails?: string[] }} [opts]
 	 * @returns {Promise<null | { email: string, role: string }>}
 	 */
@@ -1088,16 +1086,14 @@
 		roleSelect.setAttribute("aria-label", "Role");
 		for (const r of [
 			{ v: "viewer", t: "Viewer" },
-			{ v: "member", t: "Member" },
-			{ v: "editor", t: "Editor" },
-			{ v: "admin", t: "Admin" }
+			{ v: "downloader", t: "Downloader" }
 		]) {
 			const opt = document.createElement("option");
 			opt.value = r.v;
 			opt.textContent = r.t;
 			roleSelect.appendChild(opt);
 		}
-		roleSelect.value = "member";
+		roleSelect.value = "downloader";
 		roleField.appendChild(roleLabel);
 		roleField.appendChild(roleSelect);
 
@@ -1105,9 +1101,9 @@
 		stack.appendChild(roleField);
 
 		return showPopup({
-			title: "Invite member",
+			title: "Add member",
 			description: "An invitation will be created. The user joins after accepting.",
-			primaryText: "Invite",
+			primaryText: "Add",
 			bodyEl: stack,
 			initialFocusEl: emailInput,
 			onSubmit() {
@@ -1117,7 +1113,7 @@
 					emailInput.select();
 					return null;
 				}
-				return { email, role: String(roleSelect.value || "member") };
+				return { email, role: String(roleSelect.value || "downloader") };
 			}
 		});
 	};

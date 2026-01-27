@@ -71,7 +71,7 @@ This document defines the Software Development Life Cycle (SDLC) process for the
 **Goal:** Verify the system meets SRS requirements and is safe to deploy.
 
 **Key activities**
-- Functional testing: upload/share/download/delete, group invites, admin overview.
+- Functional testing: upload/share/download/delete, group add member (invite/accept), admin overview.
 - Security testing:
   - Auth required on `/api/*`
   - Authorization checks (owner/recipient)

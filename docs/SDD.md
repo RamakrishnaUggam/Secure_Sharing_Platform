@@ -110,7 +110,7 @@ Key helpers:
 Responsibilities:
 - Group CRUD (create/list)
 - Membership and role checks (`owner/admin/editor/member/viewer`)
-- Invite workflow (pending → accepted/declined)
+- Add member workflow (pending acceptance; backend uses invite/accept)
 - Policy fields: default permission, security level, data residency rule, expiry.
 
 #### 4.1.4 Admin (`server/src/routes.admin.js`)

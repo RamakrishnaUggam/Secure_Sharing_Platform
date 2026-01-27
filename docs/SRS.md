@@ -13,7 +13,7 @@ This SRS defines the functional and non-functional requirements for the **Secure
 - Upload of files where **encryption occurs client-side** (browser) using AES-GCM; server stores ciphertext.
 - File listing, download, optional client-side decryption.
 - Sharing to recipients via email and to groups (role/permission based).
-- Group membership via invites (accept/decline).
+- Group membership via Add member (pending acceptance; backend uses invite/accept).
 - Admin read-only visibility and metrics; RBAC enforcement for admin endpoints.
 - Integrity and confidentiality flags, including “missing bytes” handling.
 - UI: legacy static pages (root) and legacy pages hosted under `client/public/legacy/` (React wrapper uses iframe).

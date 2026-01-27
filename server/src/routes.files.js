@@ -84,6 +84,15 @@ function normalizeEmail(value) {
 		.toLowerCase();
 }
 
+function normalizeGroupRole(role) {
+	const r = String(role || "").toLowerCase();
+	if (r === "viewer") return "viewer";
+	if (r === "downloader") return "downloader";
+	// Backward compat: treat all legacy elevated roles as downloader.
+	if (["owner", "admin", "editor", "member"].includes(r)) return "downloader";
+	return "viewer";
+}
+
 function shareIsActive(share) {
 	if (!share) return false;
 	if (share.revokedAt) return false;
@@ -132,6 +141,25 @@ async function canAccessFile({ fileId, uid, email }) {
 	const share = await ShareRecord.findOne({ fileId: record._id, recipientEmail: norm }).lean();
 	if (!share) return { ok: false, record };
 	if (!shareIsActive(share)) return { ok: false, record };
+
+	// Extra enforcement for group shares: user must still be in the group,
+	// group must be active, and only downloaders can download.
+	if (String(share.sourceType || "direct") === "group" && share.groupId) {
+		const group = await Group.findById(String(share.groupId)).lean();
+		if (!group) return { ok: false, record };
+		if (group.isDisabled) return { ok: false, record };
+		if (group.expiresAt) {
+			try {
+				if (new Date(group.expiresAt).getTime() <= Date.now()) return { ok: false, record };
+			} catch {
+				return { ok: false, record };
+			}
+		}
+		const member = (group.members || []).find((m) => String(m.uid) === String(uid));
+		if (!member) return { ok: false, record };
+		if (normalizeGroupRole(member.role) !== "downloader") return { ok: false, record };
+	}
+
 	if (!canDownloadFromShare(share)) return { ok: false, record };
 	return { ok: true, record };
 }
@@ -405,8 +433,8 @@ export function filesRouter() {
 		}
 		const myMember = (group.members || []).find((m) => String(m.uid) === String(req.user.uid));
 		if (!myMember) return res.status(403).json({ error: "Not a group member" });
-		const myRole = String(myMember.role || "viewer");
-		if (!["owner", "admin", "editor", "member"].includes(myRole)) {
+		const myRole = normalizeGroupRole(myMember.role);
+		if (myRole !== "downloader") {
 			return res.status(403).json({ error: "Insufficient group role" });
 		}
 

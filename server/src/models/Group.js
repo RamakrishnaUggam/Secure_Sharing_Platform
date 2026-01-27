@@ -6,9 +6,9 @@ const groupMemberSchema = new mongoose.Schema(
 		email: { type: String, required: true, index: true },
 		role: {
 			type: String,
-			enum: ["owner", "admin", "editor", "member", "viewer"],
+			enum: ["viewer", "downloader"],
 			required: true,
-			default: "member"
+			default: "viewer"
 		},
 		addedByUid: { type: String, required: false },
 		addedAt: { type: Date, required: true, default: Date.now }

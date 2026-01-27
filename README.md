@@ -7,7 +7,7 @@ A secure file sharing web application where files are encrypted in the **browser
 - Client-side encryption using Web Crypto (AES-GCM)
 - File upload/download with integrity verification (SHA-256 of stored ciphertext)
 - Direct sharing to verified recipient emails
-- Groups with roles (owner/admin/editor/member/viewer) and invite flow
+- Groups with roles (viewer/downloader) and add member flow (pending acceptance)
 - Admin endpoints for overview metrics and user/file/share listing
 - Profile: fullscreen “Storage details” popup (per-account)
 

@@ -31,15 +31,25 @@ function isExpired(group) {
 	}
 }
 
+function normalizeGroupRole(role) {
+	const r = String(role || "").toLowerCase();
+	if (r === "viewer") return "viewer";
+	if (r === "downloader") return "downloader";
+	// Backward compat: treat all legacy elevated roles as downloader.
+	if (["owner", "admin", "editor", "member"].includes(r)) return "downloader";
+	return "viewer";
+}
+
+function normalizeMemberRolesInPlace(group) {
+	const members = Array.isArray(group?.members) ? group.members : [];
+	for (const m of members) {
+		if (m) m.role = normalizeGroupRole(m.role);
+	}
+}
+
 function roleRank(role) {
-	switch (String(role || "")) {
-		case "owner":
-			return 4;
-		case "admin":
-			return 3;
-		case "editor":
-			return 2;
-		case "member":
+	switch (normalizeGroupRole(role)) {
+		case "downloader":
 			return 1;
 		case "viewer":
 		default:
@@ -120,7 +130,7 @@ export function groupsRouter() {
 				id: String(i._id),
 				groupId: String(i.groupId),
 				groupName: i.groupName,
-				role: i.role,
+				role: normalizeGroupRole(i.role),
 				inviterEmail: i.inviterEmail || "",
 				createdAt: i.createdAt
 			}))
@@ -138,6 +148,9 @@ export function groupsRouter() {
 		if (invite.status !== "pending") return res.status(400).json({ error: "Invite is not pending" });
 		if (normalizeEmail(invite.inviteeEmail) !== email) return res.status(403).json({ error: "Not your invite" });
 
+		// Normalize to new two-role model (also fixes legacy invites with old roles).
+		invite.role = normalizeGroupRole(invite.role);
+
 		const group = await Group.findById(invite.groupId);
 		if (!group) return res.status(404).json({ error: "Group not found" });
 		if (group.isDisabled) return res.status(403).json({ error: "Group disabled" });
@@ -148,11 +161,12 @@ export function groupsRouter() {
 			members.push({
 				uid: String(req.user.uid),
 				email,
-				role: String(invite.role || "member"),
+				role: normalizeGroupRole(invite.role),
 				addedByUid: String(invite.inviterUid || ""),
 				addedAt: nowUtc()
 			});
 			group.members = members;
+			normalizeMemberRolesInPlace(group);
 			await group.save();
 		}
 
@@ -180,6 +194,7 @@ export function groupsRouter() {
 		if (!invite) return res.status(404).json({ error: "Invite not found" });
 		if (invite.status !== "pending") return res.status(400).json({ error: "Invite is not pending" });
 		if (normalizeEmail(invite.inviteeEmail) !== email) return res.status(403).json({ error: "Not your invite" });
+		invite.role = normalizeGroupRole(invite.role);
 		invite.status = "declined";
 		invite.respondedAt = nowUtc();
 		await invite.save();
@@ -213,7 +228,7 @@ export function groupsRouter() {
 					isExpired: isExpired(g),
 					isDisabled: Boolean(g.isDisabled),
 					memberCount: Array.isArray(g.members) ? g.members.length : 0,
-					myRole: member?.role || "viewer",
+					myRole: normalizeGroupRole(member?.role),
 					createdAt: g.createdAt,
 					updatedAt: g.updatedAt
 				};
@@ -258,7 +273,7 @@ export function groupsRouter() {
 				{
 					uid: ownerUid,
 					email: ownerEmail || "unknown",
-					role: "owner",
+					role: "downloader",
 					addedByUid: ownerUid
 				}
 			]
@@ -280,13 +295,14 @@ export function groupsRouter() {
 		if (!group) return res.status(404).json({ error: "Group not found" });
 		const member = (group.members || []).find((m) => String(m.uid) === String(req.user.uid));
 		if (!member) return res.status(403).json({ error: "Not a group member" });
-
-		const includeMembers = roleRank(member.role) >= roleRank("admin");
+		const includeMembers = roleRank(member.role) >= roleRank("downloader");
+		const isOwner = String(group.ownerUid) === String(req.user.uid);
 		return res.json({
 			id: String(group._id),
 			name: group.name,
 			description: group.description || "",
 			ownerUid: group.ownerUid,
+			isOwner,
 			groupType: group.groupType,
 			defaultPermission: group.defaultPermission,
 			policySecurityLevel: group.policySecurityLevel,
@@ -295,9 +311,9 @@ export function groupsRouter() {
 			isExpired: isExpired(group),
 			isDisabled: Boolean(group.isDisabled),
 			memberCount: Array.isArray(group.members) ? group.members.length : 0,
-			myRole: member.role,
+			myRole: normalizeGroupRole(member.role),
 			members: includeMembers
-				? (group.members || []).map((m) => ({ uid: m.uid, email: m.email, role: m.role, addedAt: m.addedAt }))
+				? (group.members || []).map((m) => ({ uid: m.uid, email: m.email, role: normalizeGroupRole(m.role), addedAt: m.addedAt }))
 				: null,
 			createdAt: group.createdAt,
 			updatedAt: group.updatedAt
@@ -305,7 +321,7 @@ export function groupsRouter() {
 	});
 
 	// Update group metadata (admin+).
-	router.patch("/:id", auth, requireGroupRole("admin"), async (req, res) => {
+	router.patch("/:id", auth, requireGroupRole("downloader"), async (req, res) => {
 		const group = req.group;
 		const patch = {};
 
@@ -343,12 +359,12 @@ export function groupsRouter() {
 	});
 
 	// Invite member by email (admin+). Invitation must be accepted by the invitee.
-	router.post("/:id/invites", auth, requireGroupRole("admin"), async (req, res) => {
+	router.post("/:id/invites", auth, requireGroupRole("downloader"), async (req, res) => {
 		const group = req.group;
 		const email = normalizeEmail(req.body?.email);
-		const role = String(req.body?.role || "member").toLowerCase();
+		const role = normalizeGroupRole(req.body?.role || "downloader");
 		if (!isValidEmail(email)) return res.status(400).json({ error: "Missing email" });
-		if (!['admin', 'editor', 'member', 'viewer'].includes(role)) return res.status(400).json({ error: "Invalid role" });
+		if (!["viewer", "downloader"].includes(role)) return res.status(400).json({ error: "Invalid role" });
 
 		// If already a member, no invite needed.
 		const members = Array.isArray(group.members) ? group.members : [];
@@ -382,7 +398,7 @@ export function groupsRouter() {
 	});
 
 	// Revoke an invite (admin+).
-	router.delete("/:id/invites/:inviteId", auth, requireGroupRole("admin"), async (req, res) => {
+	router.delete("/:id/invites/:inviteId", auth, requireGroupRole("downloader"), async (req, res) => {
 		const group = req.group;
 		const inviteId = String(req.params.inviteId || "").trim();
 		if (!inviteId) return res.status(400).json({ error: "Missing inviteId" });
@@ -390,6 +406,7 @@ export function groupsRouter() {
 		if (!invite) return res.status(404).json({ error: "Invite not found" });
 		if (String(invite.groupId) !== String(group._id)) return res.status(404).json({ error: "Invite not found" });
 		if (invite.status !== "pending") return res.status(400).json({ error: "Invite is not pending" });
+		invite.role = normalizeGroupRole(invite.role);
 		invite.status = "revoked";
 		invite.respondedAt = nowUtc();
 		await invite.save();
@@ -405,7 +422,7 @@ export function groupsRouter() {
 	});
 
 	// Add member by email (admin+)
-	router.post("/:id/members", auth, requireGroupRole("admin"), async (req, res) => {
+	router.post("/:id/members", auth, requireGroupRole("downloader"), async (req, res) => {
 		const isDev = String(process.env.NODE_ENV || "").toLowerCase() !== "production";
 		if (!isFirebaseAdminConfigured()) {
 			return res.status(isDev ? 501 : 500).json({
@@ -416,9 +433,9 @@ export function groupsRouter() {
 
 		const group = req.group;
 		const email = normalizeEmail(req.body?.email);
-		const role = String(req.body?.role || "member").toLowerCase();
+		const role = normalizeGroupRole(req.body?.role || "downloader");
 		if (!email) return res.status(400).json({ error: "Missing email" });
-		if (!["admin", "editor", "member", "viewer"].includes(role)) return res.status(400).json({ error: "Invalid role" });
+		if (!["viewer", "downloader"].includes(role)) return res.status(400).json({ error: "Invalid role" });
 
 		let target;
 		try {
@@ -448,6 +465,7 @@ export function groupsRouter() {
 			addedAt: nowUtc()
 		});
 		group.members = members;
+		normalizeMemberRolesInPlace(group);
 		await group.save();
 
 		await writeAudit(req, {
@@ -461,17 +479,18 @@ export function groupsRouter() {
 	});
 
 	// Update member role (admin+)
-	router.patch("/:id/members/:uid", auth, requireGroupRole("admin"), async (req, res) => {
+	router.patch("/:id/members/:uid", auth, requireGroupRole("downloader"), async (req, res) => {
 		const group = req.group;
 		const targetUid = String(req.params.uid || "").trim();
-		const role = String(req.body?.role || "").toLowerCase();
+		const role = normalizeGroupRole(req.body?.role || "");
 		if (!targetUid) return res.status(400).json({ error: "Missing uid" });
-		if (!["admin", "editor", "member", "viewer"].includes(role)) return res.status(400).json({ error: "Invalid role" });
+		if (!["viewer", "downloader"].includes(role)) return res.status(400).json({ error: "Invalid role" });
 		if (String(targetUid) === String(group.ownerUid)) return res.status(400).json({ error: "Cannot change owner role" });
 		const members = Array.isArray(group.members) ? group.members : [];
 		const m = members.find((x) => String(x.uid) === targetUid);
 		if (!m) return res.status(404).json({ error: "Member not found" });
 		m.role = role;
+		normalizeMemberRolesInPlace(group);
 		await group.save();
 
 		await writeAudit(req, {
@@ -485,7 +504,7 @@ export function groupsRouter() {
 	});
 
 	// Remove member (admin+)
-	router.delete("/:id/members/:uid", auth, requireGroupRole("admin"), async (req, res) => {
+	router.delete("/:id/members/:uid", auth, requireGroupRole("downloader"), async (req, res) => {
 		const group = req.group;
 		const targetUid = String(req.params.uid || "").trim();
 		if (!targetUid) return res.status(400).json({ error: "Missing uid" });
@@ -496,6 +515,7 @@ export function groupsRouter() {
 		const after = before.filter((m) => String(m.uid) !== targetUid);
 		if (after.length === before.length) return res.status(404).json({ error: "Member not found" });
 		group.members = after;
+		normalizeMemberRolesInPlace(group);
 		await group.save();
 
 		// Revoke any group-sourced shares for this member.
@@ -533,6 +553,7 @@ export function groupsRouter() {
 		const removed = before.find((m) => String(m.uid) === uid) || null;
 		const after = before.filter((m) => String(m.uid) !== uid);
 		group.members = after;
+		normalizeMemberRolesInPlace(group);
 		await group.save();
 
 		// Revoke any group-sourced shares for this member.
@@ -559,7 +580,7 @@ export function groupsRouter() {
 	});
 
 	// Delete group (owner only). Implemented as a soft delete (disable).
-	router.delete("/:id", auth, requireGroupRole("admin"), async (req, res) => {
+	router.delete("/:id", auth, requireGroupRole("downloader"), async (req, res) => {
 		const group = req.group;
 		const uid = String(req.user.uid);
 		if (String(group.ownerUid) !== uid) {
@@ -567,6 +588,7 @@ export function groupsRouter() {
 		}
 
 		group.isDisabled = true;
+		normalizeMemberRolesInPlace(group);
 		await group.save();
 
 		// Revoke all group-sourced shares.

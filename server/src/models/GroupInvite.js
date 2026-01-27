@@ -11,9 +11,9 @@ const groupInviteSchema = new mongoose.Schema(
 		inviteeEmail: { type: String, required: true, index: true },
 		role: {
 			type: String,
-			enum: ["admin", "editor", "member", "viewer"],
+			enum: ["viewer", "downloader"],
 			required: true,
-			default: "member"
+			default: "viewer"
 		},
 		status: {
 			type: String,
