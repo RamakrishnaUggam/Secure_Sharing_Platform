@@ -138,6 +138,173 @@
 			.share-popup__input:focus {
 				box-shadow: 0 0 0 4px var(--focus, rgba(34, 211, 238, 0.26));
 			}
+
+			.share-popup__card--fullscreen {
+				width: min(1100px, 98vw);
+				height: min(760px, 94vh);
+				max-width: 98vw;
+				max-height: 94vh;
+				padding: 0;
+				overflow: hidden;
+			}
+
+			.share-popup__fsHeader {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12px;
+				padding: 14px 14px;
+				border-bottom: 1px solid rgba(255,255,255,0.12);
+				background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(34, 211, 238, 0.10));
+			}
+
+			html[data-theme="light"] .share-popup__fsHeader {
+				border-bottom-color: rgba(15, 23, 42, 0.10);
+				background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(34, 211, 238, 0.10));
+			}
+
+			.share-popup__fsTitle {
+				font-weight: 700;
+				letter-spacing: 0.2px;
+			}
+
+			.share-popup__fsSub {
+				font-size: 12px;
+				opacity: 0.78;
+				margin-top: 2px;
+			}
+
+			.share-popup__fsClose {
+				width: 38px;
+				height: 38px;
+				border-radius: 12px;
+				border: 1px solid rgba(255,255,255,0.14);
+				background: rgba(255,255,255,0.06);
+				color: inherit;
+				cursor: pointer;
+			}
+
+			.share-popup__fsClose:hover {
+				background: rgba(255,255,255,0.10);
+			}
+
+			.share-popup__fsBody {
+				padding: 14px;
+				height: calc(100% - 64px);
+				overflow: auto;
+			}
+
+			.share-popup__stats {
+				display: grid;
+				grid-template-columns: repeat(3, minmax(0, 1fr));
+				gap: 12px;
+				margin-bottom: 12px;
+			}
+
+			@media (max-width: 720px) {
+				.share-popup__stats { grid-template-columns: 1fr; }
+			}
+
+			.share-popup__stat {
+				border-radius: 14px;
+				border: 1px solid var(--card-border, rgba(255,255,255,0.14));
+				background: linear-gradient(180deg, var(--card, rgba(255,255,255,0.08)), var(--card-2, rgba(255,255,255,0.045)));
+				padding: 12px;
+			}
+
+			.share-popup__statLabel {
+				font-size: 12px;
+				opacity: 0.8;
+			}
+
+			.share-popup__statValue {
+				margin-top: 6px;
+				font-size: 18px;
+				font-weight: 700;
+			}
+
+			.share-popup__section {
+				margin-top: 12px;
+			}
+
+			.share-popup__sectionTitle {
+				font-weight: 700;
+				margin-bottom: 8px;
+			}
+
+			.share-popup__list {
+				border-radius: 14px;
+				border: 1px solid rgba(255,255,255,0.14);
+				background: rgba(255,255,255,0.04);
+				overflow: hidden;
+			}
+
+			html[data-theme="light"] .share-popup__list {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(15, 23, 42, 0.03);
+			}
+
+			.share-popup__listItem {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 10px;
+				padding: 10px 12px;
+				border-top: 1px solid rgba(255,255,255,0.10);
+				font-size: 13px;
+			}
+
+			.share-popup__listItem:first-child { border-top: 0; }
+
+			.share-popup__pill {
+				font-size: 11px;
+				padding: 6px 10px;
+				border-radius: 999px;
+				border: 1px solid rgba(255,255,255,0.14);
+				background: rgba(255,255,255,0.06);
+				opacity: 0.92;
+			}
+
+			.share-popup__suggestions {
+				border-radius: 12px;
+				border: 1px solid rgba(255,255,255,0.14);
+				background: rgba(6, 8, 20, 0.62);
+				box-shadow: var(--shadow-sm, 0 12px 30px rgba(0,0,0,0.22));
+				overflow: hidden;
+				max-height: 240px;
+				overflow-y: auto;
+			}
+
+			html[data-theme="light"] .share-popup__suggestions {
+				border-color: rgba(15, 23, 42, 0.12);
+				background: rgba(255,255,255,0.92);
+			}
+
+			.share-popup__sugItem {
+				width: 100%;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 10px;
+				padding: 10px 12px;
+				border: 0;
+				background: transparent;
+				color: inherit;
+				text-align: left;
+				cursor: pointer;
+				font-size: 13px;
+				opacity: 0.96;
+			}
+
+			.share-popup__sugItem:hover,
+			.share-popup__sugItem.is-active {
+				background: rgba(255,255,255,0.08);
+			}
+
+			html[data-theme="light"] .share-popup__sugItem:hover,
+			html[data-theme="light"] .share-popup__sugItem.is-active {
+				background: rgba(15, 23, 42, 0.06);
+			}
 		`;
 		document.head.appendChild(style);
 	}
@@ -198,23 +365,118 @@
 					.map((e) => normalizeEmail(e))
 					.filter((e) => e && e.includes("@") && e.length <= 254)
 			)
-		).slice(0, 50);
+		).slice(0, 80);
 		if (!emails.length) return;
-		emailDatalistSeq += 1;
-		const listId = `share-popup__emails_${emailDatalistSeq}`;
-		const dl = document.createElement("datalist");
-		dl.id = listId;
-		for (const email of emails) {
-			const opt = document.createElement("option");
-			opt.value = email;
-			dl.appendChild(opt);
+
+		// Replace fragile <datalist> UX with an explicit suggestion list.
+		const wrap = document.createElement("div");
+		wrap.className = "share-popup__suggestions";
+		wrap.hidden = true;
+		wrap.setAttribute("role", "listbox");
+
+		let activeIndex = -1;
+		let blurTimer = null;
+
+		function render() {
+			const q = normalizeEmail(inputEl.value);
+			const list = emails
+				.filter((e) => (q ? e.includes(q) : true))
+				.slice(0, 10);
+			wrap.innerHTML = "";
+			activeIndex = -1;
+			if (!list.length || inputEl.disabled) {
+				wrap.hidden = true;
+				return;
+			}
+			for (const [idx, email] of list.entries()) {
+				const btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "share-popup__sugItem";
+				btn.textContent = email;
+				btn.dataset.email = email;
+				btn.setAttribute("role", "option");
+				btn.setAttribute("aria-selected", "false");
+				btn.addEventListener("mouseenter", () => {
+					activeIndex = idx;
+					updateActive();
+				});
+				wrap.appendChild(btn);
+			}
+			wrap.hidden = false;
 		}
-		inputEl.setAttribute("list", listId);
-		try {
-			inputEl.parentElement?.appendChild?.(dl);
-		} catch {
-			// ignore
+
+		function updateActive() {
+			const items = Array.from(wrap.querySelectorAll(".share-popup__sugItem"));
+			items.forEach((el, idx) => {
+				const isActive = idx === activeIndex;
+				el.classList.toggle("is-active", isActive);
+				el.setAttribute("aria-selected", isActive ? "true" : "false");
+			});
 		}
+
+		function pickActive() {
+			const items = Array.from(wrap.querySelectorAll(".share-popup__sugItem"));
+			const el = activeIndex >= 0 ? items[activeIndex] : null;
+			const email = el?.dataset?.email;
+			if (!email) return;
+			inputEl.value = email;
+			wrap.hidden = true;
+			try {
+				inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+			} catch {
+				// ignore
+			}
+		}
+
+		inputEl.insertAdjacentElement("afterend", wrap);
+
+		inputEl.addEventListener("focus", render);
+		inputEl.addEventListener("input", render);
+		inputEl.addEventListener("blur", () => {
+			clearTimeout(blurTimer);
+			blurTimer = setTimeout(() => {
+				wrap.hidden = true;
+			}, 120);
+		});
+		wrap.addEventListener("mousedown", (e) => {
+			// Keep focus so click works reliably.
+			e.preventDefault();
+			clearTimeout(blurTimer);
+		});
+		wrap.addEventListener("click", (e) => {
+			const btn = e.target?.closest?.(".share-popup__sugItem");
+			const email = btn?.dataset?.email;
+			if (!email) return;
+			inputEl.value = email;
+			wrap.hidden = true;
+			try {
+				inputEl.focus();
+			} catch {
+				// ignore
+			}
+			try {
+				inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+			} catch {
+				// ignore
+			}
+		});
+		inputEl.addEventListener("keydown", (e) => {
+			if (wrap.hidden) return;
+			const items = wrap.querySelectorAll(".share-popup__sugItem");
+			if (!items.length) return;
+			if (e.key === "ArrowDown") {
+				e.preventDefault();
+				activeIndex = Math.min(activeIndex + 1, items.length - 1);
+				updateActive();
+			} else if (e.key === "ArrowUp") {
+				e.preventDefault();
+				activeIndex = Math.max(activeIndex - 1, 0);
+				updateActive();
+			} else if (e.key === "Enter" && activeIndex >= 0) {
+				e.preventDefault();
+				pickActive();
+			}
+		});
 	}
 
 	function createButton(className, text) {
@@ -313,6 +575,156 @@
 		});
 	}
 
+	function formatBytes(bytes) {
+		const n = Number(bytes);
+		if (!Number.isFinite(n) || n < 0) return "—";
+		const units = ["B", "KB", "MB", "GB", "TB"];
+		let v = n;
+		let i = 0;
+		while (v >= 1024 && i < units.length - 1) {
+			v /= 1024;
+			i += 1;
+		}
+		const dp = i === 0 ? 0 : v >= 10 ? 1 : 2;
+		return `${v.toFixed(dp)} ${units[i]}`;
+	}
+
+	function showFullscreenDetails({ title, subtitle, bodyEl }) {
+		injectStylesOnce();
+		return new Promise((resolve) => {
+			const backdrop = document.createElement("div");
+			backdrop.className = "share-popup__backdrop";
+			backdrop.setAttribute("role", "dialog");
+			backdrop.setAttribute("aria-modal", "true");
+
+			const card = document.createElement("div");
+			card.className = "share-popup__card share-popup__card--fullscreen";
+
+			const header = document.createElement("div");
+			header.className = "share-popup__fsHeader";
+
+			const left = document.createElement("div");
+			const t = document.createElement("div");
+			t.className = "share-popup__fsTitle";
+			t.textContent = String(title || "Details");
+			const sub = document.createElement("div");
+			sub.className = "share-popup__fsSub";
+			sub.textContent = String(subtitle || "");
+			left.appendChild(t);
+			if (subtitle) left.appendChild(sub);
+
+			const closeBtn = document.createElement("button");
+			closeBtn.type = "button";
+			closeBtn.className = "share-popup__fsClose";
+			closeBtn.setAttribute("aria-label", "Close");
+			closeBtn.textContent = "✕";
+
+			const body = document.createElement("div");
+			body.className = "share-popup__fsBody";
+			if (bodyEl) body.appendChild(bodyEl);
+
+			function cleanup() {
+				document.removeEventListener("keydown", onKeyDown, true);
+				backdrop.remove();
+				resolve(null);
+			}
+
+			function onKeyDown(e) {
+				if (e.key === "Escape") {
+					e.preventDefault();
+					cleanup();
+				}
+			}
+
+			closeBtn.addEventListener("click", cleanup);
+			document.addEventListener("keydown", onKeyDown, true);
+			backdrop.addEventListener("click", (e) => {
+				if (e.target === backdrop) cleanup();
+			});
+
+			header.appendChild(left);
+			header.appendChild(closeBtn);
+			card.appendChild(header);
+			card.appendChild(body);
+			backdrop.appendChild(card);
+			document.body.appendChild(backdrop);
+		});
+	}
+
+	/**
+	 * Fullscreen storage details popup.
+	 * @param {{ userEmail?: string, files?: Array<{id?: string, originalName?: string, size?: number}>, contacts?: string[] }} [opts]
+	 */
+	window.showStorageDetailsPopup = function showStorageDetailsPopup(opts = {}) {
+		const userEmail = String(opts.userEmail || "").trim();
+		const files = Array.isArray(opts.files) ? opts.files : [];
+		const contacts = Array.isArray(opts.contacts) ? opts.contacts : [];
+
+		let totalBytes = 0;
+		for (const f of files) {
+			const n = Number(f?.size);
+			if (Number.isFinite(n) && n >= 0) totalBytes += n;
+		}
+
+		const uniqueContacts = Array.from(
+			new Set(contacts.map((c) => normalizeEmail(c)).filter((c) => c && c.includes("@")))
+		);
+
+		const stats = document.createElement("div");
+		stats.className = "share-popup__stats";
+		const stat1 = document.createElement("div");
+		stat1.className = "share-popup__stat";
+		stat1.innerHTML = `<div class="share-popup__statLabel">Storage used (uploads)</div><div class="share-popup__statValue">${formatBytes(totalBytes)}</div>`;
+		const stat2 = document.createElement("div");
+		stat2.className = "share-popup__stat";
+		stat2.innerHTML = `<div class="share-popup__statLabel">Files uploaded</div><div class="share-popup__statValue">${files.length}</div>`;
+		const stat3 = document.createElement("div");
+		stat3.className = "share-popup__stat";
+		stat3.innerHTML = `<div class="share-popup__statLabel">Emails contacted</div><div class="share-popup__statValue">${uniqueContacts.length}</div>`;
+		stats.appendChild(stat1);
+		stats.appendChild(stat2);
+		stats.appendChild(stat3);
+
+		const contactsSection = document.createElement("div");
+		contactsSection.className = "share-popup__section";
+		const contactsTitle = document.createElement("div");
+		contactsTitle.className = "share-popup__sectionTitle";
+		contactsTitle.textContent = "Email list";
+		const list = document.createElement("div");
+		list.className = "share-popup__list";
+		if (uniqueContacts.length === 0) {
+			const empty = document.createElement("div");
+			empty.className = "share-popup__listItem";
+			empty.textContent = "No emails yet.";
+			list.appendChild(empty);
+		} else {
+			for (const email of uniqueContacts.sort()) {
+				const row = document.createElement("div");
+				row.className = "share-popup__listItem";
+				const left = document.createElement("div");
+				left.textContent = email;
+				const pill = document.createElement("div");
+				pill.className = "share-popup__pill";
+				pill.textContent = "contact";
+				row.appendChild(left);
+				row.appendChild(pill);
+				list.appendChild(row);
+			}
+		}
+		contactsSection.appendChild(contactsTitle);
+		contactsSection.appendChild(list);
+
+		const wrap = document.createElement("div");
+		wrap.appendChild(stats);
+		wrap.appendChild(contactsSection);
+
+		return showFullscreenDetails({
+			title: "Storage details",
+			subtitle: userEmail ? `Signed in as ${userEmail}` : "",
+			bodyEl: wrap
+		});
+	};
+
 	/**
 	 * Generic key popup used for encryption/decryption keys.
 	 * @param {{ title?: string, description?: string, primaryText?: string, placeholder?: string }} opts
@@ -353,7 +765,7 @@
 
 	/**
 	 * Generic visible-text popup (useful for email prompts).
-	 * @param {{ title?: string, description?: string, primaryText?: string, placeholder?: string, type?: string, ariaLabel?: string, value?: string }} opts
+	 * @param {{ title?: string, description?: string, primaryText?: string, placeholder?: string, type?: string, ariaLabel?: string, value?: string, suggestedEmails?: string[] }} opts
 	 * @returns {Promise<string|null>}
 	 */
 	window.showTextPopup = function showTextPopup(opts = {}) {
@@ -364,6 +776,7 @@
 		const type = String(opts.type || "text");
 		const ariaLabel = String(opts.ariaLabel || "Value");
 		const value = opts.value != null ? String(opts.value) : "";
+		const suggestedEmails = Array.isArray(opts.suggestedEmails) ? opts.suggestedEmails : [];
 
 		const stack = document.createElement("div");
 		stack.className = "share-popup__stack";
@@ -377,6 +790,7 @@
 			input.autocomplete = "email";
 			input.inputMode = "email";
 			input.spellcheck = false;
+			attachEmailSuggestions(input, suggestedEmails);
 		}
 		stack.appendChild(input);
 

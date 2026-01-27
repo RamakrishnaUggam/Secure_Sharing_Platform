@@ -48,11 +48,11 @@ function safeReadFileBuffer(filePath) {
 
 function resolveStoragePath(record) {
 	if (!record) return null;
+	const direct = String(record.storagePath || "");
+	if (direct && fs.existsSync(direct)) return direct;
 	if (record.storageKey) {
 		return path.join(storageDir(), String(record.storageKey));
 	}
-	const direct = String(record.storagePath || "");
-	if (direct && fs.existsSync(direct)) return direct;
 	if (direct) return path.join(storageDir(), path.basename(direct));
 	return null;
 }
@@ -247,7 +247,7 @@ export function filesRouter() {
 		const email = normalizeEmail(req.user.email);
 		if (!email) return res.status(400).json({ error: "No email on user" });
 
-		const shares = await ShareRecord.find({ recipientEmail: email }).sort({ createdAt: -1 }).lean();
+		const shares = await ShareRecord.find({ recipientEmail: email }).sort({ updatedAt: -1, createdAt: -1 }).lean();
 		if (shares.length === 0) return res.json([]);
 
 		const fileIds = shares.map((s) => s.fileId);
@@ -277,7 +277,7 @@ export function filesRouter() {
 				mimeType: f.mimeType,
 				size: f.size,
 				createdAt: f.createdAt,
-				sharedAt: share.createdAt
+				sharedAt: share.updatedAt || share.createdAt
 			});
 		}
 
@@ -286,7 +286,7 @@ export function filesRouter() {
 
 	// List files the signed-in user has shared with others.
 	router.get("/shared/by-me", auth, async (req, res) => {
-		const shares = await ShareRecord.find({ createdByUid: req.user.uid }).sort({ createdAt: -1 }).lean();
+		const shares = await ShareRecord.find({ createdByUid: req.user.uid }).sort({ updatedAt: -1, createdAt: -1 }).lean();
 		if (shares.length === 0) return res.json([]);
 
 		const fileIds = shares.map((s) => s.fileId);
@@ -298,9 +298,10 @@ export function filesRouter() {
 			if (!shareIsActive(share)) continue;
 			const f = fileById.get(String(share.fileId));
 			if (!f) continue;
-			// Only expose records for files the user still owns and hasn't deleted.
+			// Only expose records for files the user still owns.
+			// Note: We intentionally include ownerDeletedAt files so the sender can still
+			// see recent shares in Chats even after removing the file from their Uploads list.
 			if (String(f.ownerUid) !== String(req.user.uid)) continue;
-			if (f.ownerDeletedAt) continue;
 			out.push({
 				shareId: String(share._id),
 				id: String(f._id),
@@ -319,7 +320,7 @@ export function filesRouter() {
 				mimeType: f.mimeType,
 				size: f.size,
 				createdAt: f.createdAt,
-				sharedAt: share.createdAt
+				sharedAt: share.updatedAt || share.createdAt
 			});
 		}
 
@@ -420,6 +421,7 @@ export function filesRouter() {
 
 		let created = 0;
 		let alreadyShared = 0;
+		let updated = 0;
 		let skipped = 0;
 		const errors = [];
 
@@ -454,6 +456,24 @@ export function filesRouter() {
 			} catch (e) {
 				if (String(e?.code || "") === "11000") {
 					alreadyShared += 1;
+					try {
+						const existing = await ShareRecord.findOne({ fileId: record._id, recipientEmail: r.email });
+						if (existing) {
+							existing.senderEmail = senderEmail || existing.senderEmail;
+							existing.createdByUid = String(req.user.uid || existing.createdByUid);
+							existing.ownerUid = String(record.ownerUid || existing.ownerUid);
+							existing.sourceType = "group";
+							existing.groupId = group._id;
+							existing.permission = permission;
+							existing.comment = comment;
+							existing.expiresAt = group.expiresAt || null;
+							existing.revokedAt = null;
+							await existing.save();
+							updated += 1;
+						}
+					} catch {
+						// ignore
+					}
 					continue;
 				}
 				errors.push({ email: r.email, error: String(e?.message || e) });
@@ -470,12 +490,13 @@ export function filesRouter() {
 				commentLength: comment ? comment.length : 0,
 				created,
 				alreadyShared,
+				updated,
 				skipped,
 				errorsCount: errors.length
 			}
 		});
 
-		return res.json({ ok: true, created, alreadyShared, skipped, errors });
+		return res.json({ ok: true, created, alreadyShared, updated, skipped, errors });
 	});
 
 	router.post("/", auth, upload.single("file"), async (req, res) => {
@@ -559,7 +580,13 @@ export function filesRouter() {
 		void writeAudit(req, { action: "file.download", targetType: "file", targetId: String(req.params.id), meta: {} });
 		const record = access.record;
 		const p = resolveStoragePath(record);
-		if (!p || !fs.existsSync(p)) return res.status(404).json({ error: "Stored file missing" });
+		if (!p || !fs.existsSync(p)) {
+			return res.status(404).json({
+				error: "Stored file missing",
+				hint:
+					"The file record exists, but its stored bytes are missing from the server storage folder. If storage was moved/cleaned or STORAGE_DIR changed, restore the storage folder or re-upload the file."
+			});
+		}
 
 		if (record.encryptionMode === "client") {
 			// Client-encrypted: backend returns ciphertext. Recipients must decrypt client-side

@@ -160,11 +160,11 @@ function storageDir() {
 
 function resolveStoragePath(record) {
 	if (!record) return null;
+	const direct = String(record.storagePath || "");
+	if (direct && fs.existsSync(direct)) return direct;
 	if (record.storageKey) {
 		return path.join(storageDir(), String(record.storageKey));
 	}
-	const direct = String(record.storagePath || "");
-	if (direct && fs.existsSync(direct)) return direct;
 	if (direct) return path.join(storageDir(), path.basename(direct));
 	return null;
 }

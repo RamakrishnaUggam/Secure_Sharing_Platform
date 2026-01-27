@@ -197,7 +197,7 @@ export function groupsRouter() {
 	// List groups for current user.
 	router.get("/", auth, async (req, res) => {
 		const uid = String(req.user.uid);
-		const groups = await Group.find({ "members.uid": uid }).sort({ updatedAt: -1 }).lean();
+		const groups = await Group.find({ "members.uid": uid, isDisabled: false }).sort({ updatedAt: -1 }).lean();
 		return res.json(
 			(groups || []).map((g) => {
 				const member = (g.members || []).find((m) => String(m.uid) === uid);
@@ -516,6 +516,84 @@ export function groupsRouter() {
 			targetType: "group",
 			targetId: String(group._id),
 			meta: { uid: targetUid }
+		});
+
+		return res.json({ ok: true });
+	});
+
+	// Leave group (any non-owner member).
+	router.post("/:id/leave", auth, requireGroupRole("viewer"), async (req, res) => {
+		const group = req.group;
+		const uid = String(req.user.uid);
+		if (String(group.ownerUid) === uid) {
+			return res.status(400).json({ error: "Owner cannot leave the group. Delete the group instead." });
+		}
+
+		const before = Array.isArray(group.members) ? group.members : [];
+		const removed = before.find((m) => String(m.uid) === uid) || null;
+		const after = before.filter((m) => String(m.uid) !== uid);
+		group.members = after;
+		await group.save();
+
+		// Revoke any group-sourced shares for this member.
+		try {
+			const email = normalizeEmail(removed?.email || req.user?.email);
+			if (email) {
+				await ShareRecord.updateMany(
+					{ groupId: group._id, sourceType: "group", recipientEmail: email, revokedAt: null },
+					{ $set: { revokedAt: new Date() } }
+				);
+			}
+		} catch {
+			// ignore
+		}
+
+		await writeAudit(req, {
+			action: "group.leave",
+			targetType: "group",
+			targetId: String(group._id),
+			meta: { uid }
+		});
+
+		return res.json({ ok: true });
+	});
+
+	// Delete group (owner only). Implemented as a soft delete (disable).
+	router.delete("/:id", auth, requireGroupRole("admin"), async (req, res) => {
+		const group = req.group;
+		const uid = String(req.user.uid);
+		if (String(group.ownerUid) !== uid) {
+			return res.status(403).json({ error: "Only the group owner can delete the group" });
+		}
+
+		group.isDisabled = true;
+		await group.save();
+
+		// Revoke all group-sourced shares.
+		try {
+			await ShareRecord.updateMany(
+				{ groupId: group._id, sourceType: "group", revokedAt: null },
+				{ $set: { revokedAt: new Date() } }
+			);
+		} catch {
+			// ignore
+		}
+
+		// Revoke pending invites.
+		try {
+			await GroupInvite.updateMany(
+				{ groupId: group._id, status: "pending" },
+				{ $set: { status: "revoked", respondedAt: nowUtc() } }
+			);
+		} catch {
+			// ignore
+		}
+
+		await writeAudit(req, {
+			action: "group.delete",
+			targetType: "group",
+			targetId: String(group._id),
+			meta: { softDelete: true }
 		});
 
 		return res.json({ ok: true });
