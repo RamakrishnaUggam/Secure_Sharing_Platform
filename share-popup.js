@@ -1001,7 +1001,9 @@
 		groupSelect.setAttribute("aria-label", "Select group");
 		const g0 = document.createElement("option");
 		g0.value = "";
-			{ v: "downloader", t: "Downloader" }
+		g0.textContent = "Select a group";
+		groupSelect.appendChild(g0);
+		for (const g of groups) {
 			if (g?.isExpired || g?.isDisabled) continue;
 			const opt = document.createElement("option");
 			opt.value = String(g.id);

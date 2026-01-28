@@ -2214,10 +2214,6 @@
 													</div>
 												</div>
 												<input id="groupDeviceFileInput" type="file" hidden />
-												<select class="chatcomposer__select" id="groupPermissionSelect" aria-label="Permission">
-													<option value="download" selected>Download</option>
-													<option value="view_only">View-only</option>
-												</select>
 												<input class="chatcomposer__input" id="groupMessageInput" type="text" placeholder="Type a message…" aria-label="Message" />
 												<button class="btn btn--primary btn--sm" id="groupSendBtn" type="button" disabled>Share</button>
 											</div>
@@ -2352,47 +2348,8 @@
 					return v.replace(/\/+$/, "");
 				}
 
-				function resolveApiBase() {
-					// When the page is opened directly from disk (file://), there is no host to infer,
-					// but we still want local development to work.
-					try {
-						if (String(window.location.protocol || "").toLowerCase() === "file:") {
-							return "http://localhost:3001";
-						}
-					} catch {
-						// ignore
-					}
-
-					try {
-						const url = new URL(window.location.href);
-						const fromQuery = url.searchParams.get("apiBase") || url.searchParams.get("api");
-						if (fromQuery) {
-							const normalized = normalizeBaseUrl(fromQuery);
-							localStorage.setItem("apiBase", normalized);
-							return normalized;
-						}
-
-						// Local dev: prefer a stable, matching host. This prevents a stale apiBase
-						// in localStorage (e.g., localhost) from breaking when opening via 127.0.0.1.
-						if (location.hostname === "127.0.0.1") return "http://127.0.0.1:3001";
-						if (location.hostname === "localhost") return "http://localhost:3001";
-
-						const fromStorage = normalizeBaseUrl(localStorage.getItem("apiBase"));
-						if (fromStorage) return fromStorage;
-					} catch {
-						// ignore
-					}
-
-					// GitHub Pages cannot proxy /api to your backend, so default to your hosted API.
-					if (String(location.hostname || "").toLowerCase().endsWith(".github.io")) {
-						return "https://secure-sharing-platform.onrender.com";
-					}
-
-					// Hosted: use same-origin (your host can proxy /api/* -> your backend)
-					return "";
-				}
-
-				const API_BASE = resolveApiBase();
+				   // Force all API requests to use backend on 127.0.0.1:3001
+				   const API_BASE = "http://127.0.0.1:3001";
 
 				const chooseBtn = document.getElementById("chooseFilesBtn");
 				const uploadBtn = document.getElementById("uploadBtn");
@@ -3405,6 +3362,7 @@
 
 				function renderGroupThreadForSelected() {
 					if (!groupThreadListEl) return;
+					if (groupRightPaneEl) groupRightPaneEl.hidden = false;
 					groupThreadListEl.innerHTML = "";
 					const gid = String(selectedGroupId || "").trim();
 					groupThreadListEl.classList.toggle("is-active", !!gid);
@@ -3494,8 +3452,27 @@
 						btnDecrypt.disabled = !canDownload;
 
 						if (item.direction === "in") {
-							btnDownload.addEventListener("click", () => void downloadReceivedEncrypted(item));
-							btnDecrypt.addEventListener("click", () => void downloadReceivedDecrypted(item));
+							   btnDownload.addEventListener("click", async () => {
+								   void downloadReceivedEncrypted(item);
+							   });
+							   btnDecrypt.addEventListener("click", async () => {
+								   if (typeof window.showKeyPopup !== "function") {
+									   setMessage("Key popup not available");
+									   return;
+								   }
+								   const keyText = await window.showKeyPopup({
+									   title: "Decryption key",
+									   description: "Enter decryption key to decrypt & download",
+									   primaryText: "Decrypt & Download",
+									   placeholder: "Decryption key"
+								   });
+								   if (!keyText) {
+									   setMessage("Decrypt cancelled");
+									   return;
+								   }
+								   window.__lastDownloadKey = keyText;
+								   void downloadReceivedDecrypted(item);
+							   });
 							const btnDelete = document.createElement("button");
 							btnDelete.type = "button";
 							btnDelete.className = "btn btn--sm";
@@ -3516,8 +3493,27 @@
 							actions.appendChild(btnDecrypt);
 							actions.appendChild(btnDelete);
 						} else {
-							btnDownload.addEventListener("click", () => void downloadUploadedEncryptedCipher(item));
-							btnDecrypt.addEventListener("click", () => void downloadUploadedDecryptedOrPlain(item));
+							   btnDownload.addEventListener("click", async () => {
+								   void downloadUploadedEncryptedCipher(item);
+							   });
+							   btnDecrypt.addEventListener("click", async () => {
+								   if (typeof window.showKeyPopup !== "function") {
+									   setMessage("Key popup not available");
+									   return;
+								   }
+								   const keyText = await window.showKeyPopup({
+									   title: "Decryption key",
+									   description: "Enter decryption key to decrypt & download",
+									   primaryText: "Decrypt & Download",
+									   placeholder: "Decryption key"
+								   });
+								   if (!keyText) {
+									   setMessage("Decrypt cancelled");
+									   return;
+								   }
+								   window.__lastDownloadKey = keyText;
+								   void downloadUploadedDecryptedOrPlain(item);
+							   });
 							const shareIds = Array.isArray(item.shareIds) ? item.shareIds : item.shareId ? [String(item.shareId)] : [];
 							const btnRevoke = document.createElement("button");
 							btnRevoke.type = "button";
@@ -4167,14 +4163,14 @@
 							if (!result) return;
 							rememberEmail(result.email);
 							setMessage("Adding member…");
-							const r = await apiFetch(`/api/groups/${encodeURIComponent(selectedGroupId)}/invites`, {
+							const r = await apiFetch(`/api/groups/${encodeURIComponent(selectedGroupId)}/members`, {
 								method: "POST",
 								headers: { "Content-Type": "application/json" },
 								body: JSON.stringify(result)
 							});
 							const j = await r.json().catch(() => null);
 							if (!r.ok) throw new Error(j?.error || "Failed to add member");
-							setMessage("Invitation sent. The user must accept it to join.");
+							setMessage("Member added to group.");
 							await loadGroupDetails(selectedGroupId);
 							await loadGroups();
 						} catch (e) {
@@ -4434,17 +4430,10 @@
 							const j = await r.json().catch(() => null);
 							throw new Error(j?.error || (await responseErrorMessage(r)) || "Download failed");
 						}
-						const encModeHeader = String(item.encryptionMode || r.headers.get("x-enc-mode") || "server").toLowerCase();
 						const bytes = await r.arrayBuffer();
-						if (encModeHeader === "client") {
-							const blob = new Blob([bytes], { type: "application/octet-stream" });
-							await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
-							setMessage("Encrypted file saved.");
-							return;
-						}
-						const blob = new Blob([bytes], { type: item.mimeType || "application/octet-stream" });
-						await saveBlobAs(blob, item.originalName || "file");
-						setMessage("Saved.");
+						const blob = new Blob([bytes], { type: "application/octet-stream" });
+						await saveBlobAs(blob, `${item.originalName || "file"}.cipher`);
+						setMessage("Encrypted file saved.");
 					} catch (e) {
 						setMessage(e?.message || "Failed to download.");
 					}
@@ -4486,23 +4475,17 @@
 							const auth = window.__auth;
 							const user = auth?.currentUser;
 							if (!user) throw new Error("Not logged in");
-							const perFileKeyB64 = getStoredFileEncKeyB64(user.uid, String(item.id));
-							let key;
-							if (perFileKeyB64) {
-								key = await importAesKeyFromB64(perFileKeyB64);
-							} else {
-								if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
-								const passphrase = await window.showKeyPopup({
-									title: "Decryption key",
-									description: "Enter decryption key",
-									primaryText: "Decrypt & Download",
-									placeholder: "Decryption key"
-								});
-								if (!passphrase) throw new Error("Decrypt cancelled");
-								const derivedB64 = await keyB64FromUserInput(passphrase);
-								setStoredFileEncKeyB64(user.uid, String(item.id), derivedB64);
-								key = await importAesKeyFromB64(derivedB64);
-							}
+							if (typeof window.showKeyPopup !== "function") throw new Error("Key popup not available");
+							const passphrase = await window.showKeyPopup({
+								title: "Decryption key",
+								description: "Enter decryption key",
+								primaryText: "Decrypt & Download",
+								placeholder: "Decryption key"
+							});
+							if (!passphrase) throw new Error("Decrypt cancelled");
+							const derivedB64 = await keyB64FromUserInput(passphrase);
+							setStoredFileEncKeyB64(user.uid, String(item.id), derivedB64);
+							const key = await importAesKeyFromB64(derivedB64);
 							const ciphertext = await r.arrayBuffer();
 							if (storedShaExpected && /^[a-f0-9]{64}$/.test(storedShaExpected)) {
 								const computedStored = await sha256HexFromArrayBuffer(ciphertext);

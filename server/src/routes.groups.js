@@ -3,7 +3,7 @@ import admin from "firebase-admin";
 
 import { requireAuth, isFirebaseAdminConfigured } from "./auth.js";
 import { Group } from "./models/Group.js";
-import { GroupInvite } from "./models/GroupInvite.js";
+// import { GroupInvite } from "./models/GroupInvite.js";
 import { AuditLog } from "./models/AuditLog.js";
 import { ShareRecord } from "./models/ShareRecord.js";
 
@@ -117,25 +117,7 @@ export function groupsRouter() {
 	const router = express.Router();
 	const auth = requireAuth();
 
-	// List pending invites for current user (by email).
-	router.get("/invites", auth, async (req, res) => {
-		const email = normalizeEmail(req.user?.email);
-		if (!email) return res.status(400).json({ error: "Missing user email" });
-		const invites = await GroupInvite.find({ inviteeEmail: email, status: "pending" })
-			.sort({ createdAt: -1 })
-			.limit(50)
-			.lean();
-		return res.json(
-			(invites || []).map((i) => ({
-				id: String(i._id),
-				groupId: String(i.groupId),
-				groupName: i.groupName,
-				role: normalizeGroupRole(i.role),
-				inviterEmail: i.inviterEmail || "",
-				createdAt: i.createdAt
-			}))
-		);
-	});
+	// Invitation system removed. Members can now be added directly.
 
 	// Accept an invite: adds the current user to the group.
 	router.post("/invites/:inviteId/accept", auth, async (req, res) => {
@@ -358,44 +340,7 @@ export function groupsRouter() {
 		return res.json({ ok: true, group: updated ? { id: String(updated._id), name: updated.name } : null });
 	});
 
-	// Invite member by email (admin+). Invitation must be accepted by the invitee.
-	router.post("/:id/invites", auth, requireGroupRole("downloader"), async (req, res) => {
-		const group = req.group;
-		const email = normalizeEmail(req.body?.email);
-		const role = normalizeGroupRole(req.body?.role || "downloader");
-		if (!isValidEmail(email)) return res.status(400).json({ error: "Missing email" });
-		if (!["viewer", "downloader"].includes(role)) return res.status(400).json({ error: "Invalid role" });
-
-		// If already a member, no invite needed.
-		const members = Array.isArray(group.members) ? group.members : [];
-		if (members.some((m) => normalizeEmail(m.email) === email)) {
-			return res.json({ ok: true, alreadyMember: true });
-		}
-
-		// Reuse an existing pending invite if any.
-		const existing = await GroupInvite.findOne({ groupId: group._id, inviteeEmail: email, status: 'pending' }).lean();
-		if (existing) {
-			return res.status(201).json({ ok: true, inviteId: String(existing._id), existing: true });
-		}
-
-		const doc = await GroupInvite.create({
-			groupId: group._id,
-			groupName: group.name,
-			inviterUid: String(req.user.uid || "") || undefined,
-			inviterEmail: normalizeEmail(req.user.email) || undefined,
-			inviteeEmail: email,
-			role
-		});
-
-		await writeAudit(req, {
-			action: "group.invite.create",
-			targetType: "group",
-			targetId: String(group._id),
-			meta: { inviteId: String(doc._id), email, role }
-		});
-
-		return res.status(201).json({ ok: true, inviteId: String(doc._id) });
-	});
+// Invitation system removed. Members can now be added directly.
 
 	// Revoke an invite (admin+).
 	router.delete("/:id/invites/:inviteId", auth, requireGroupRole("downloader"), async (req, res) => {
@@ -439,13 +384,15 @@ export function groupsRouter() {
 
 		let target;
 		try {
-			target = await requireVerifiedFirebaseUserByEmail(email);
-		} catch (e) {
-			const code = String(e?.code || "");
-			if (code === "auth/user-not-found") return res.status(400).json({ error: "User is not registered" });
-			if (code === "not-verified") return res.status(400).json({ error: "User email is not verified" });
-			return res.status(400).json({ error: String(e?.message || "Invalid user") });
-		}
+			       // Only require that the user exists, not that their email is verified
+			       target = await admin.auth().getUserByEmail(email);
+			       if (!target) return res.status(400).json({ error: "User is not registered" });
+			       target = { uid: target.uid, email: normalizeEmail(target.email || email) };
+		       } catch (e) {
+			       const code = String(e?.code || "");
+			       if (code === "auth/user-not-found") return res.status(400).json({ error: "User is not registered" });
+			       return res.status(400).json({ error: String(e?.message || "Invalid user") });
+		       }
 
 		// Disallow adding yourself as non-owner in weird states.
 		if (String(target.uid) === String(group.ownerUid)) {

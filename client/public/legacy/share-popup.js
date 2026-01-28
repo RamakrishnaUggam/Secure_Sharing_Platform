@@ -933,51 +933,8 @@
 	 * @returns {Promise<null | { name: string, description: string, expiresAt: string|null }>}
 	 */
 	window.showGroupCreatePopup = function showGroupCreatePopup() {
-		injectStylesOnce();
-		const stack = document.createElement("div");
-		stack.className = "share-popup__stack";
-
-		function field(labelText, inputEl) {
-			const wrap = document.createElement("div");
-			wrap.className = "share-popup__field";
-			const lab = document.createElement("div");
-			lab.className = "share-popup__label";
-			lab.textContent = labelText;
-			wrap.appendChild(lab);
-			wrap.appendChild(inputEl);
-			return wrap;
-		}
-
-		const nameInput = createInput({ type: "text", placeholder: "Group name (e.g., Marketing_Team)", value: "", ariaLabel: "Group name" });
-		nameInput.autocomplete = "off";
-		const descInput = createInput({ type: "text", placeholder: "Description (optional)", value: "", ariaLabel: "Group description" });
-
-		const expiresInput = createInput({ type: "datetime-local", placeholder: "", value: "", ariaLabel: "Expiration date" });
-
-		stack.appendChild(field("Group name", nameInput));
-		stack.appendChild(field("Description", descInput));
-		stack.appendChild(field("Expiration (optional)", expiresInput));
-
-		return showPopup({
-			title: "Create group",
-			description: "Create a group to share files with multiple users.",
-			primaryText: "Create",
-			bodyEl: stack,
-			initialFocusEl: nameInput,
-			onSubmit() {
-				const name = String(nameInput.value || "").trim();
-				if (!name) {
-					nameInput.focus();
-					return null;
-				}
-				const expiresRaw = String(expiresInput.value || "").trim();
-				return {
-					name,
-					description: String(descInput.value || "").trim(),
-					expiresAt: expiresRaw ? new Date(expiresRaw).toISOString() : null
-				};
-			}
-		});
+		// Only allow the main create group popup to work. Remove custom popup.
+		return Promise.resolve(null);
 	};
 
 	/**
@@ -1001,7 +958,9 @@
 		groupSelect.setAttribute("aria-label", "Select group");
 		const g0 = document.createElement("option");
 		g0.value = "";
-			{ v: "downloader", t: "Downloader" }
+		g0.textContent = "Select a group";
+		groupSelect.appendChild(g0);
+		for (const g of groups) {
 			if (g?.isExpired || g?.isDisabled) continue;
 			const opt = document.createElement("option");
 			opt.value = String(g.id);
@@ -1011,45 +970,25 @@
 		groupField.appendChild(groupLabel);
 		groupField.appendChild(groupSelect);
 
-		const permField = document.createElement("div");
-		permField.className = "share-popup__field";
-		const permLabel = document.createElement("div");
-		permLabel.className = "share-popup__label";
-		permLabel.textContent = "Permission";
-		const permSelect = document.createElement("select");
-		permSelect.className = "share-popup__input";
-		permSelect.setAttribute("aria-label", "Permission");
-		for (const p of [
-			{ v: "view_only", t: "View-only (no download)" },
-			{ v: "download", t: "Download" }
-		]) {
-			const opt = document.createElement("option");
-			opt.value = p.v;
-			opt.textContent = p.t;
-			permSelect.appendChild(opt);
-		}
-		permSelect.value = "view_only";
-		permField.appendChild(permLabel);
-		permField.appendChild(permSelect);
 
-		stack.appendChild(groupField);
-		stack.appendChild(permField);
+		       stack.appendChild(groupField);
 
-		return showPopup({
-			title: "Share to group",
-			description: "This will share the selected file(s) with all current group members.",
-			primaryText: "Share",
-			bodyEl: stack,
-			initialFocusEl: groupSelect,
-			onSubmit() {
-				const groupId = String(groupSelect.value || "").trim();
-				if (!groupId) {
-					groupSelect.focus();
-					return null;
-				}
-				return { groupId, permission: String(permSelect.value || "view_only") };
-			}
-		});
+		       return showPopup({
+			       title: "Share to group",
+			       description: "This will share the selected file(s) with all current group members.",
+			       primaryText: "Share",
+			       bodyEl: stack,
+			       initialFocusEl: groupSelect,
+			       onSubmit() {
+				       const groupId = String(groupSelect.value || "").trim();
+				       if (!groupId) {
+					       groupSelect.focus();
+					       return null;
+				       }
+				       // Always use permission 'download' now
+				       return { groupId, permission: "download" };
+			       }
+		       });
 	};
 
 	/**

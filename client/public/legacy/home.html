@@ -2148,10 +2148,7 @@
 													</div>
 												</div>
 												<input id="groupDeviceFileInput" type="file" hidden />
-												<select class="chatcomposer__select" id="groupPermissionSelect" aria-label="Permission">
-													<option value="download" selected>Download</option>
-													<option value="view_only">View-only</option>
-												</select>
+
 												<input class="chatcomposer__input" id="groupMessageInput" type="text" placeholder="Type a message…" aria-label="Message" />
 												<button class="btn btn--primary btn--sm" id="groupSendBtn" type="button" disabled>Share</button>
 											</div>
@@ -2402,7 +2399,7 @@
 				const groupPickerUploadedToggleEl = document.getElementById("groupPickerUploadedToggle");
 				const groupPickerUploadedListEl = document.getElementById("groupPickerUploadedList");
 				const groupDeviceFileInputEl = document.getElementById("groupDeviceFileInput");
-				const groupPermissionSelectEl = document.getElementById("groupPermissionSelect");
+
 				const groupMessageInputEl = document.getElementById("groupMessageInput");
 				const groupSendBtnEl = document.getElementById("groupSendBtn");
 				const createGroupBtnEl = document.getElementById("createGroupBtn");
@@ -2411,7 +2408,7 @@
 				const chatFileInputEl = null;
 				const shareFileSelectEl = null;
 				const chatPassphraseEl = null;
-				const messageEl = null;
+				// const messageEl = null; // Removed duplicate declaration
 				const selectedFilesEl = document.getElementById("selectedFiles");
 				const uploadedHeaderEl = document.getElementById("uploadedHeader");
 				const uploadedControlsEl = document.getElementById("uploadedControls");
@@ -4644,33 +4641,14 @@
 					btnShareGroup.addEventListener("click", async () => {
 						try {
 							if (typeof window.showGroupSharePopup !== "function") throw new Error("Group share popup not available");
+							await loadGroups();
 							if (!Array.isArray(groupsCache) || groupsCache.length === 0) {
-								await loadGroups();
-							}
-							if (!Array.isArray(groupsCache) || groupsCache.length === 0) {
-								const ok = confirm("No groups found. Create a group now?");
-								if (!ok) return;
-								if (typeof window.showGroupCreatePopup !== "function") throw new Error("Group create popup not available");
-								const payload = await window.showGroupCreatePopup();
-								if (!payload) return;
-								setMessage("Creating group…");
-								const r = await apiFetch("/api/groups", {
-									method: "POST",
-									headers: { "Content-Type": "application/json" },
-									body: JSON.stringify(payload)
-								});
-								const j = await r.json().catch(() => null);
-								if (!r.ok) throw new Error(j?.error || "Failed to create group");
-								await loadGroups();
-								if (j?.id) {
-									selectedGroupId = String(j.id);
-									await loadGroupDetails(selectedGroupId);
-									renderGroups(groupsCache);
-								}
+								setMessage("No groups found. Please create a group first.");
+								return;
 							}
 							const choice = await window.showGroupSharePopup({ groups: groupsCache });
 							if (!choice) return;
-											const selected = getSelectedUploadedItems();
+							const selected = getSelectedUploadedItems();
 							for (const it of selected) {
 								await shareUploadedFileToGroup({ fileId: String(it.id), groupId: choice.groupId, permission: choice.permission });
 							}
@@ -5454,30 +5432,8 @@
 								})();
 							});
 
-				createGroupBtnEl?.addEventListener("click", async () => {
-					try {
-						if (typeof window.showGroupCreatePopup !== "function") throw new Error("Group create popup not available");
-						const payload = await window.showGroupCreatePopup();
-						if (!payload) return;
-						setMessage("Creating group…");
-						const r = await apiFetch("/api/groups", {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify(payload)
-						});
-						const j = await r.json().catch(() => null);
-						if (!r.ok) throw new Error(j?.error || "Failed to create group");
-						await loadGroups();
-						if (j?.id) {
-							selectedGroupId = String(j.id);
-							await loadGroupDetails(selectedGroupId);
-							renderGroups(groupsCache);
-						}
-						setMessage("Group created.");
-					} catch (e) {
-						setMessage(e?.message || "Failed to create group.");
-					}
-				});
+				// Only allow group creation popup from main button, not from share flow
+				// Removed duplicate/extra group creation popup event listener to prevent double popup issue.
 
 				backGroupsBtnEl?.addEventListener("click", async () => {
 					try {
@@ -5723,9 +5679,9 @@
 							fileId = picked;
 							if (!fileId) throw new Error("Select a file to share");
 						}
-						const permission = String(groupPermissionSelectEl?.value || "download").trim() || "download";
+						// Permission select removed; always use default permission
 						const comment = String(groupMessageInputEl?.value || "").trim();
-						await shareUploadedFileToGroup({ fileId, groupId: gid, permission, comment });
+						await shareUploadedFileToGroup({ fileId, groupId: gid, permission: "download", comment });
 
 						if (groupMessageInputEl) groupMessageInputEl.value = "";
 						groupPickedValue = "";
