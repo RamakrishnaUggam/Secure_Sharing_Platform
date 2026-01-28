@@ -2348,8 +2348,13 @@
 					return v.replace(/\/+$/, "");
 				}
 
-				   // Force all API requests to use backend on 127.0.0.1:3001
-				   const API_BASE = "http://127.0.0.1:3001";
+				   // Dynamically select API backend based on environment
+				   const API_BASE = (function() {
+					   const local = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+					   if (local) return "http://127.0.0.1:3001";
+					   // Use your Render backend URL here
+					   return "https://secure-sharing-platform.onrender.com";
+				   })();
 
 				const chooseBtn = document.getElementById("chooseFilesBtn");
 				const uploadBtn = document.getElementById("uploadBtn");
