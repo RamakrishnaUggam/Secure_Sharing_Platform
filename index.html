@@ -22,8 +22,8 @@
     />
     <style>
         :root {
-            --bg-1: #05060b;
-            --bg-2: #0a1222;
+            --bg-1: #05070f;
+            --bg-2: #1b0f13;
             --card: rgba(255, 255, 255, 0.075);
             --card-2: rgba(255, 255, 255, 0.045);
             --card-border: rgba(255, 255, 255, 0.14);
@@ -31,17 +31,17 @@
             --muted: rgba(255, 255, 255, 0.70);
             --input: rgba(255, 255, 255, 0.09);
             --input-border: rgba(255, 255, 255, 0.14);
-            --primary-1: #a78bfa;
-            --primary-2: #22d3ee;
-            --focus: rgba(34, 211, 238, 0.26);
+            --primary-1: #ef4444;
+            --primary-2: #f59e0b;
+            --focus: rgba(239, 68, 68, 0.28);
             --shadow: 0 38px 110px rgba(0, 0, 0, 0.62);
             --glow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 26px 80px rgba(0, 0, 0, 0.55);
             --placeholder: rgba(255, 255, 255, 0.55);
         }
 
         html[data-theme="light"] {
-            --bg-1: #f6f7fb;
-            --bg-2: #e9effa;
+            --bg-1: #ffffff;
+            --bg-2: #f3f4f6;
             --card: rgba(255, 255, 255, 0.78);
             --card-2: rgba(255, 255, 255, 0.62);
             --card-border: rgba(15, 23, 42, 0.10);
@@ -63,14 +63,15 @@
             font-family: "Poppins", sans-serif;
             width: 100vw;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(900px circle at 15% 20%, rgba(167, 139, 250, 0.22), transparent 48%),
-                radial-gradient(900px circle at 80% 12%, rgba(34, 211, 238, 0.18), transparent 42%),
+            display: grid;
+            grid-template-rows: auto 1fr;
+            justify-items: center;
+            align-items: start;
+            background: radial-gradient(900px circle at 15% 20%, rgba(239, 68, 68, 0.20), transparent 48%),
+                radial-gradient(900px circle at 80% 12%, rgba(245, 158, 11, 0.18), transparent 42%),
                 linear-gradient(180deg, var(--bg-1), var(--bg-2));
             color: var(--text);
-            padding: 24px;
+            padding: 24px 24px 24px;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
@@ -106,15 +107,37 @@
         }
 
         .app-title {
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
+            font-size: clamp(34px, 7.5vw, 56px);
+            line-height: 1.02;
+            font-weight: 700;
+            letter-spacing: -0.02em;
             text-align: center;
-            margin-bottom: 2px;
+            margin-bottom: 10px;
             background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            white-space: nowrap;
+            text-shadow: 0 14px 42px rgba(239, 68, 68, 0.22);
+        }
+
+        .app-title--top {
+            position: relative;
+            margin: 10px auto 18px;
+            pointer-events: none;
+            font-size: clamp(20px, 4.4vw, 54px);
+            line-height: 1.1;
+            max-width: calc(100vw - 180px);
+            padding: 0 12px;
+            text-align: center;
+        }
+
+        .main {
+            width: 100%;
+            min-height: calc(100vh - 150px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .form-message {
@@ -158,7 +181,7 @@
         }
 
         .toggle-btn:focus {
-            border-color: rgba(6, 182, 212, 0.55);
+            border-color: rgba(239, 68, 68, 0.55);
             box-shadow: 0 0 0 4px var(--focus);
             outline: none;
         }
@@ -184,7 +207,7 @@
         }
 
         input:focus {
-            border-color: rgba(6, 182, 212, 0.55);
+            border-color: rgba(239, 68, 68, 0.55);
             box-shadow: 0 0 0 4px var(--focus);
         }
 
@@ -201,7 +224,7 @@
             color: white;
             font-weight: 600;
             background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
-            box-shadow: 0 22px 70px rgba(167, 139, 250, 0.18);
+            box-shadow: 0 22px 70px rgba(239, 68, 68, 0.24);
         }
 
         .login:hover {
@@ -242,12 +265,12 @@
         }
 
         .meta-row a:hover {
-            border-bottom-color: rgba(6, 182, 212, 0.65);
-            color: #a5f3fc;
+            border-bottom-color: rgba(239, 68, 68, 0.65);
+            color: #f59e0b;
         }
 
         html[data-theme="light"] .meta-row a:hover {
-            color: rgba(2, 132, 199, 0.92);
+            color: rgba(180, 83, 9, 0.92);
         }
 
         .aboutHover {
@@ -335,12 +358,12 @@
         }
 
         .social a:hover {
-            border-bottom-color: rgba(6, 182, 212, 0.65);
-            color: #a5f3fc;
+            border-bottom-color: rgba(239, 68, 68, 0.65);
+            color: #f59e0b;
         }
 
         html[data-theme="light"] .social a:hover {
-            color: rgba(2, 132, 199, 0.92);
+            color: rgba(180, 83, 9, 0.92);
         }
 
         .theme-toggle {
@@ -368,6 +391,149 @@
         .theme-toggle svg {
             width: 18px;
             height: 18px;
+        }
+
+        .feedback-fab {
+            position: fixed;
+            right: 16px;
+            bottom: 84px;
+            z-index: 260;
+            height: 42px;
+            padding: 0 14px;
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+            color: rgba(255, 255, 255, 0.98);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            cursor: pointer;
+            box-shadow: 0 18px 56px rgba(0, 0, 0, 0.25);
+        }
+
+        .feedback-fab:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px var(--focus), 0 18px 56px rgba(0, 0, 0, 0.25);
+        }
+
+        .feedback {
+            position: fixed;
+            inset: 0;
+            z-index: 280;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+        }
+
+        .feedback.is-open {
+            display: flex;
+        }
+
+        .feedback__card {
+            width: min(520px, 96vw);
+            padding: 16px;
+            border-radius: 14px;
+            border: 1px solid var(--card-border);
+            background: linear-gradient(180deg, var(--card), var(--card-2));
+            box-shadow: var(--shadow);
+        }
+
+        .feedback__title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .feedback__desc {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .feedback__grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .feedback__rating {
+            display: grid;
+            gap: 6px;
+        }
+
+        .feedback__ratingLabel {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .feedback__ratingValue {
+            font-size: 12px;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .feedback__stars {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        .feedback__stars input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .feedback__stars label {
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+            color: rgba(148, 163, 184, 0.8);
+            user-select: none;
+        }
+
+        .feedback__stars label::before {
+            content: "\2605";
+        }
+
+        .feedback__stars label:hover,
+        .feedback__stars label:hover ~ label,
+        .feedback__stars input:checked ~ label {
+            color: #f59e0b;
+        }
+
+        .feedback__actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .feedback__btn {
+            height: 38px;
+            padding: 0 12px;
+            border-radius: 11px;
+            border: 1px solid var(--input-border);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .feedback__btn--primary {
+            border: 0;
+            background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+            color: rgba(255, 255, 255, 0.98);
+        }
+
+        .feedback textarea {
+            min-height: 120px;
+            resize: vertical;
         }
 
         html[data-theme="dark"] .theme-toggle .icon-moon {
@@ -413,13 +579,45 @@
                 </div>
             </div>
         </div>
+        <button id="feedbackFab" class="feedback-fab" type="button" aria-haspopup="dialog" aria-expanded="false">Feedback</button>
+        <div id="feedbackModal" class="feedback" role="dialog" aria-modal="true" aria-label="Send feedback">
+            <div class="feedback__card">
+                <div class="feedback__title">Share Your Feedback</div>
+                <div class="feedback__desc">Tell us what worked well and what we should improve.</div>
+                <form id="feedbackForm" class="feedback__grid">
+                    <input id="feedbackName" type="text" placeholder="Your name (optional)" />
+                    <input id="feedbackEmail" type="email" placeholder="Your email (optional)" />
+                    <div class="feedback__rating" role="group" aria-label="Rate your experience">
+                        <div class="feedback__ratingLabel">Rate your experience</div>
+                        <div class="feedback__stars">
+                            <input id="feedbackRate5" name="feedbackRating" type="radio" value="5" required />
+                            <label for="feedbackRate5" title="5 stars"></label>
+                            <input id="feedbackRate4" name="feedbackRating" type="radio" value="4" />
+                            <label for="feedbackRate4" title="4 stars"></label>
+                            <input id="feedbackRate3" name="feedbackRating" type="radio" value="3" />
+                            <label for="feedbackRate3" title="3 stars"></label>
+                            <input id="feedbackRate2" name="feedbackRating" type="radio" value="2" />
+                            <label for="feedbackRate2" title="2 stars"></label>
+                            <input id="feedbackRate1" name="feedbackRating" type="radio" value="1" />
+                            <label for="feedbackRate1" title="1 star"></label>
+                        </div>
+                        <div id="feedbackRatingValue" class="feedback__ratingValue">Your rating: none</div>
+                    </div>
+                    <textarea id="feedbackMessage" placeholder="Write your feedback here..." required></textarea>
+                    <div class="feedback__actions">
+                        <button id="feedbackCancel" class="feedback__btn" type="button">Cancel</button>
+                        <button class="feedback__btn feedback__btn--primary" type="submit">Send feedback</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="app-title app-title--top">Secure File Sharing Platform</div>
         <div class="main">
             <div class="background">
             <div class="shape"></div>
             <div class="shape"></div>
         </div>
         <form id="loginForm" action="">
-            <div class="app-title">Secure File Sharing Platform</div>
             <h3>Login Here</h3>
             <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
             <label for="">Username</label>
@@ -492,6 +690,77 @@
 
                 document.addEventListener("keydown", (e) => {
                     if (e.key === "Escape") setOpen(false);
+                });
+            })();
+        </script>
+        <script>
+            (function () {
+                const fab = document.getElementById("feedbackFab");
+                const modal = document.getElementById("feedbackModal");
+                const form = document.getElementById("feedbackForm");
+                const cancelBtn = document.getElementById("feedbackCancel");
+                const msgEl = document.getElementById("feedbackMessage");
+                const ratingValueEl = document.getElementById("feedbackRatingValue");
+                const ratingInputs = form ? form.querySelectorAll('input[name="feedbackRating"]') : [];
+                if (!fab || !modal || !form || !cancelBtn || !msgEl || !ratingValueEl) return;
+
+                function updateRatingLabel() {
+                    const current = String(form.querySelector('input[name="feedbackRating"]:checked')?.value || "").trim();
+                    ratingValueEl.textContent = current ? `Your rating: ${current}/5` : "Your rating: none";
+                }
+
+                ratingInputs.forEach((input) => {
+                    input.addEventListener("change", updateRatingLabel);
+                });
+
+                function setOpen(open) {
+                    modal.classList.toggle("is-open", Boolean(open));
+                    fab.setAttribute("aria-expanded", open ? "true" : "false");
+                    if (open) {
+                        setTimeout(() => msgEl.focus(), 0);
+                    }
+                }
+
+                updateRatingLabel();
+
+                fab.addEventListener("click", () => setOpen(true));
+                cancelBtn.addEventListener("click", () => setOpen(false));
+                modal.addEventListener("click", (e) => {
+                    if (e.target === modal) setOpen(false);
+                });
+
+                document.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape") setOpen(false);
+                });
+
+                form.addEventListener("submit", (e) => {
+                    e.preventDefault();
+                    const name = String(document.getElementById("feedbackName")?.value || "").trim();
+                    const email = String(document.getElementById("feedbackEmail")?.value || "").trim();
+                    const rating = String(form.querySelector('input[name="feedbackRating"]:checked')?.value || "").trim();
+                    const message = String(msgEl.value || "").trim();
+                    if (!message || !rating) return;
+
+                    const lines = [
+                        "Visitor Feedback",
+                        "",
+                        `Name: ${name || "N/A"}`,
+                        `Email: ${email || "N/A"}`,
+                        `Rating: ${rating}/5`,
+                        `Page: ${location.href}`,
+                        `Time: ${new Date().toISOString()}`,
+                        "",
+                        "Message:",
+                        message
+                    ];
+
+                    const subject = encodeURIComponent("Visitor Feedback - Secure File Sharing Platform");
+                    const body = encodeURIComponent(lines.join("\n"));
+                    window.location.href = `mailto:ramakrishnauggam11@gmail.com?subject=${subject}&body=${body}`;
+
+                    form.reset();
+                    updateRatingLabel();
+                    setOpen(false);
                 });
             })();
         </script>

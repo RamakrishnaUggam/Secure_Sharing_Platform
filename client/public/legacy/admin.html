@@ -20,22 +20,22 @@
 		<style>
 			/* Same styling as root admin.html (kept inline for legacy static hosting). */
 			:root {
-				--bg-1: #05060b;
-				--bg-2: #0a1222;
+				--bg-1: #05070f;
+				--bg-2: #1b0f13;
 				--card: rgba(255, 255, 255, 0.075);
 				--card-2: rgba(255, 255, 255, 0.045);
 				--card-border: rgba(255, 255, 255, 0.14);
 				--text: rgba(255, 255, 255, 0.92);
 				--muted: rgba(255, 255, 255, 0.7);
-				--primary-1: #a78bfa;
-				--primary-2: #22d3ee;
-				--focus: rgba(34, 211, 238, 0.26);
+				--primary-1: #ef4444;
+				--primary-2: #f59e0b;
+				--focus: rgba(239, 68, 68, 0.28);
 				--shadow: 0 38px 110px rgba(0, 0, 0, 0.62);
 			}
 
 			html[data-theme="light"] {
-				--bg-1: #f6f7fb;
-				--bg-2: #e9effa;
+				--bg-1: #ffffff;
+				--bg-2: #f3f4f6;
 				--card: rgba(255, 255, 255, 0.78);
 				--card-2: rgba(255, 255, 255, 0.62);
 				--card-border: rgba(15, 23, 42, 0.1);
@@ -53,8 +53,8 @@
 			body {
 				font-family: "Poppins", sans-serif;
 				color: var(--text);
-				background: radial-gradient(900px circle at 15% 20%, rgba(167, 139, 250, 0.22), transparent 48%),
-					radial-gradient(900px circle at 80% 12%, rgba(34, 211, 238, 0.18), transparent 42%),
+				background: radial-gradient(900px circle at 15% 20%, rgba(239, 68, 68, 0.20), transparent 48%),
+					radial-gradient(900px circle at 80% 12%, rgba(245, 158, 11, 0.18), transparent 42%),
 					linear-gradient(180deg, var(--bg-1), var(--bg-2));
 				min-height: 100vh;
 				-webkit-font-smoothing: antialiased;
@@ -229,11 +229,29 @@
 				padding: 0 12px;
 				border-radius: 12px;
 				cursor: pointer;
-				border: 1px solid var(--card-border);
-				background: rgba(255, 255, 255, 0.06);
-				color: var(--text);
+				border: 1px solid rgba(245, 158, 11, 0.60);
+				background: rgba(245, 158, 11, 0.22);
+				color: rgba(255, 255, 255, 0.96);
 				font-weight: 600;
 				font-size: 13px;
+				transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+			}
+
+			html[data-theme="light"] .btn {
+				border-color: rgba(180, 83, 9, 0.95);
+				background: rgba(217, 119, 6, 0.95);
+				color: rgba(255, 255, 255, 0.98);
+			}
+
+			.btn:hover {
+				background: rgba(245, 158, 11, 0.34);
+				border-color: rgba(251, 191, 36, 0.90);
+				transform: translateY(-1px);
+			}
+
+			html[data-theme="light"] .btn:hover {
+				background: rgba(180, 83, 9, 0.98);
+				border-color: rgba(245, 158, 11, 0.85);
 			}
 
 			.btn:focus {

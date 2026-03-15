@@ -76,29 +76,29 @@
 			}
 
 			:root {
-				--bg-1: #070a12;
-				--bg-2: #0b1832;
+				--bg-1: #05070f;
+				--bg-2: #1b0f13;
 				--card: rgba(255, 255, 255, 0.085);
 				--card-2: rgba(255, 255, 255, 0.052);
 				--card-border: rgba(255, 255, 255, 0.16);
 				--text: rgba(255, 255, 255, 0.92);
 				--muted: rgba(255, 255, 255, 0.70);
-				--primary-1: #8b5cf6;
-				--primary-2: #22d3ee;
-				--focus: rgba(139, 92, 246, 0.24);
+				--primary-1: #ef4444;
+				--primary-2: #f59e0b;
+				--focus: rgba(239, 68, 68, 0.24);
 				--shadow: 0 26px 80px rgba(0, 0, 0, 0.55);
 				--shadow-sm: 0 12px 30px rgba(0, 0, 0, 0.22);
 			}
 
 			html[data-theme="light"] {
-				--bg-1: #f7f9ff;
-				--bg-2: #eef2ff;
+				--bg-1: #ffffff;
+				--bg-2: #f3f4f6;
 				--card: rgba(255, 255, 255, 0.82);
 				--card-2: rgba(255, 255, 255, 0.68);
 				--card-border: rgba(15, 23, 42, 0.10);
 				--text: rgba(15, 23, 42, 0.92);
 				--muted: rgba(15, 23, 42, 0.68);
-				--focus: rgba(34, 211, 238, 0.20);
+				--focus: rgba(245, 158, 11, 0.18);
 				--shadow: 0 24px 70px rgba(2, 6, 23, 0.12);
 				--shadow-sm: 0 12px 30px rgba(2, 6, 23, 0.10);
 			}
@@ -148,7 +148,7 @@
 			}
 
 			html[data-theme="light"] .btn--primary {
-				color: rgba(15, 23, 42, 0.92);
+				color: rgba(255, 255, 255, 0.96);
 			}
 
 			* {
@@ -164,8 +164,8 @@
 			body {
 				font-family: "Poppins", sans-serif;
 				color: var(--text);
-				background: radial-gradient(900px circle at 15% 20%, rgba(167, 139, 250, 0.22), transparent 48%),
-					radial-gradient(900px circle at 80% 12%, rgba(34, 211, 238, 0.18), transparent 42%),
+				background: radial-gradient(900px circle at 15% 20%, rgba(239, 68, 68, 0.20), transparent 48%),
+					radial-gradient(900px circle at 80% 12%, rgba(245, 158, 11, 0.18), transparent 42%),
 					linear-gradient(180deg, var(--bg-1), var(--bg-2));
 				min-height: 100vh;
 				-webkit-font-smoothing: antialiased;
@@ -338,7 +338,7 @@
 				height: 28px;
 				border-radius: 10px;
 				background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
-				box-shadow: 0 14px 40px rgba(124, 58, 237, 0.20);
+				box-shadow: 0 14px 40px rgba(239, 68, 68, 0.24);
 				display: inline-flex;
 				align-items: center;
 				justify-content: center;
@@ -532,18 +532,29 @@
 				border-radius: 12px;
 				font-weight: 600;
 				font-size: 13px;
-				border: 1px solid rgba(255, 255, 255, 0.14);
-				background: rgba(255, 255, 255, 0.06);
-				color: var(--text);
+				border: 1px solid rgba(245, 158, 11, 0.60);
+				background: rgba(245, 158, 11, 0.22);
+				color: rgba(255, 255, 255, 0.96);
 				cursor: pointer;
 				user-select: none;
 				transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 			}
 
+			html[data-theme="light"] .btn {
+				border-color: rgba(180, 83, 9, 0.95);
+				background: rgba(217, 119, 6, 0.95);
+				color: rgba(255, 255, 255, 0.98);
+			}
+
 			.btn:hover:not(:disabled) {
-				background: rgba(255, 255, 255, 0.08);
-				border-color: rgba(255, 255, 255, 0.18);
+				background: rgba(245, 158, 11, 0.34);
+				border-color: rgba(251, 191, 36, 0.90);
 				transform: translateY(-1px);
+			}
+
+			html[data-theme="light"] .btn:hover:not(:disabled) {
+				background: rgba(180, 83, 9, 0.98);
+				border-color: rgba(245, 158, 11, 0.85);
 			}
 
 			.btn:active:not(:disabled) {
@@ -1400,7 +1411,7 @@
 
 				.chatcomposer__input:focus,
 				.chatcomposer__select:focus {
-					box-shadow: 0 0 0 4px var(--focus, rgba(34, 211, 238, 0.26));
+					box-shadow: 0 0 0 4px var(--focus, rgba(239, 68, 68, 0.28));
 				}
 
 					.filepicker {
@@ -1583,7 +1594,7 @@
 
 			.itemselect input:checked {
 				border-color: rgba(34, 211, 238, 0.65);
-				background: rgba(34, 211, 238, 0.22);
+				background: rgba(239, 68, 68, 0.22);
 			}
 
 			.itemselect input:checked::after {
@@ -2070,15 +2081,15 @@
 						<div id="statusMessage" class="upload__message" role="status" aria-live="polite" hidden></div>
 
 						<div class="tabbar" role="tablist" aria-label="Sections" style="margin-top: 12px;">
-									<button class="tabbar__btn is-active" id="tabUploadedBtn" type="button" role="tab" aria-selected="true">Uploads</button>
-							<button class="tabbar__btn" id="tabChatsBtn" type="button" role="tab" aria-selected="false">Chats</button>
-							<button class="tabbar__btn" id="tabGroupsBtn" type="button" role="tab" aria-selected="false">Groups</button>
+									<button class="tabbar__btn is-active" id="tabUploadedBtn" type="button" role="tab" aria-selected="true">Stored</button>
+							<button class="tabbar__btn" id="tabChatsBtn" type="button" role="tab" aria-selected="false">Shared</button>
+							<button class="tabbar__btn" id="tabGroupsBtn" type="button" role="tab" aria-selected="false">Community</button>
 						</div>
 
 						<div class="messenger is-single" id="messenger" aria-label="Messenger">
 							<div class="messenger__pane" id="paneUploaded" aria-label="Files pane">
 									<div class="upload__metaRow" style="justify-content: space-between; gap: 12px; margin-bottom: 6px;">
-										<div class="upload__meta">Uploads</div>
+										<div class="upload__meta">Stored</div>
 										<div class="upload__metaRow" style="justify-content: flex-end; gap: 8px;">
 											<button class="btn btn--sm" id="uploadedSearchBtn" type="button" aria-expanded="false" aria-controls="uploadedSearchRow">Search</button>
 											<div class="filepicker" id="uploadedOptionsWrap" style="max-width: none;">
@@ -2116,7 +2127,7 @@
 
 							<div class="messenger__pane" id="paneChats" aria-label="Messages pane" hidden>
 								<div class="upload__metaRow" style="justify-content: space-between; gap: 12px;">
-									<div class="upload__meta" style="margin-bottom: 6px;">Chats</div>
+									<div class="upload__meta" style="margin-bottom: 6px;">Shared</div>
 								</div>
 								<div class="chatui__topbar" id="chatTopbar" aria-label="Chat header" hidden>
 									<div style="min-width: 0;">
@@ -2174,7 +2185,7 @@
 
 							<div class="messenger__pane" id="paneGroups" aria-label="Groups pane" hidden>
 								<div class="upload__metaRow" style="justify-content: space-between; gap: 12px;">
-									<div class="upload__meta" style="margin-bottom: 6px;">Groups</div>
+									<div class="upload__meta" style="margin-bottom: 6px;">Community</div>
 									<div style="display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
 										<button class="btn btn--sm" id="backGroupsBtn" type="button">Back</button>
 										<button class="btn btn--primary btn--sm" id="createGroupBtn" type="button">Create group</button>
@@ -3633,7 +3644,7 @@
 						const meta2 = document.createElement("div");
 						meta2.className = "upload__meta";
 						const when = c.latestAt ? formatRelativeTime(c.latestAt) : "";
-						const directionLabel = c.latestDirection === "in" ? "Received" : c.latestDirection === "out" ? "Sent" : "";
+						const directionLabel = c.latestDirection === "in" ? "Shared" : c.latestDirection === "out" ? "Sent" : "";
 						const commentPreview = c.latestDirection === "in" && c.latestComment ? c.latestComment : "";
 						meta2.textContent = [commentPreview || directionLabel, when].filter(Boolean).join(" • ");
 						left.appendChild(name);
@@ -4347,7 +4358,7 @@
 									await loadGroupDetails(gid);
 									renderGroups(groupsCache);
 									renderGroupThreadForSelected();
-									setMessage(`Group refreshed. Received: ${receivedItemsCache.length}, Sent: ${sentItemsCache.length}`);
+									setMessage(`Group refreshed. Shared: ${receivedItemsCache.length}, Sent: ${sentItemsCache.length}`);
 								}
 
 								async function refreshGroupsDynamic() {
@@ -4360,7 +4371,7 @@
 									rebuildGroupConversationsCache();
 									renderGroups(groupsCache);
 									renderGroupThreadForSelected();
-									setMessage(`Refreshed. Received: ${receivedItemsCache.length}, Sent: ${sentItemsCache.length}`);
+									setMessage(`Refreshed. Shared: ${receivedItemsCache.length}, Sent: ${sentItemsCache.length}`);
 								}
 
 				async function loadGroupDetails(groupId) {
@@ -4754,7 +4765,7 @@
 					selectAll.type = "checkbox";
 					selectAll.checked = allSelected;
 					selectAll.indeterminate = !allSelected && someSelected;
-					selectAll.setAttribute("aria-label", "Select all received files");
+					selectAll.setAttribute("aria-label", "Select all shared files");
 					selectAll.addEventListener("change", () => {
 						if (selectAll.checked) {
 							for (const id of allShareIds) selectedReceivedShareIds.add(id);
@@ -4799,7 +4810,7 @@
 					btnDelete.disabled = selectedReceivedShareIds.size === 0;
 					btnDelete.addEventListener("click", async () => {
 						const selected = items.filter((it) => selectedReceivedShareIds.has(String(it.shareId)));
-						const ok = confirm(`Delete ${selected.length} received item(s)?`);
+						const ok = confirm(`Delete ${selected.length} shared item(s)?`);
 						if (!ok) return;
 						for (const it of selected) {
 							await deleteReceivedShare(it);
